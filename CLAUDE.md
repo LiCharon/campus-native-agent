@@ -21,8 +21,7 @@
 | docs/TECH_DECISIONS.md | 面试备答、选型变更时 |
 | docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
 | docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
-| docs/PLANNING_REVIEW.md | ⚠️ 已过期标注（头部有说明），仅参考历史评审 |
-| docs/inputs/需求分析文档.md | Qwen 需求分析原文，仅溯源用 |
+| （已归档） | PLANNING_REVIEW 评析报告与 Qwen 需求分析原文已于 2026-08-05 删，历史在 docs 私有仓库 git 可恢复 |
 
 ## 1. 为什么做（面试叙事，防止跑偏）
 - InterviewAI 教训：AI 占比有限，多 Agent 像多次 LLM 调用，无记忆/skill/FC/规划
@@ -55,7 +54,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 
 ## 5. AI Coding 顺序规范
 ### 阶段 0 开工（每个新会话）
-1. 读本文件 + 相关 docs + mem-search
+1. 读本文件 + **记忆索引（MEMORY.md）指向的记忆文件**（教训 2026-08-05：只读 CLAUDE.md 漏读记忆 → 基于过期状态操作）+ 相关 docs + mem-search
 2. TodoWrite 列任务清单（先列再动）
 ### 阶段 1 想清楚再动
 3. 方案先给（改哪些文件/目标/验收标准），**用户确认后才写码**
