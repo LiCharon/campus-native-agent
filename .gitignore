@@ -1,0 +1,17 @@
+# Python 自动产物（运行时自动生成，可随时重建）
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# 密钥（CLAUDE.md §4 规定密钥不入库）
+.env
+
+# 规划文档（docs/ 独立本地私有仓库管理，不公开，见 docs/.git）
+docs/
+
+# 工具/个人产物
+.qoderwork/
+.workbuddy/
+.claude/
