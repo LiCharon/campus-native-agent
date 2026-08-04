@@ -30,7 +30,7 @@
 - 目标岗位：Agent / LLM 应用开发（求职备考并行，约 5-6 周）
 
 ## 2. 技术栈（已拍板）
-Python 3.11 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度，M6 再试自托管）· DeepSeek · Vue3 最小闭环 · pytest + ruff + sse-starlette + httpx · MCP（扩展期演示加分）
+Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DEV_JOURNAL M1）· LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度，M6 再试自托管）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + sse-starlette + httpx · MCP（扩展期演示加分）
 **MVP 不引入**：Redis（M6+ 加：热点缓存 FAQ/公告/排班——会话历史由 checkpointer 管，Redis 不背会话）、Celery（不引入，APScheduler 够用）
 ⚠️ LangGraph/LangChain API 变动快：**写框架代码前先 context7 查文档**，禁凭记忆写
 
@@ -99,7 +99,8 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - [x] 需求待定项按里程碑时间表拍死（5 待拍板 + 2 后置）
 - [x] Qwen 二轮审查吸收（状态机边清单补全 / 投诉楼栋可选 / login 接口 / 评测行为断言 / 回访触达；驳回 3 项误报）
 - [x] CLAUDE.md 审查修复 + git 初始化（指标对齐 9 项 / 通知载体标注 / 别再犯清单 / DoD / §9 环境占位）
-- [ ] M1 骨架（下一步；前置：git init + 环境待定项拍板，见 §9）
+- [x] M1 骨架：环境 5 待定项拍板（§9）+ 包骨架 + 环境验证 3 项全 PASS + pytest 5 绿 + 锁文件
+- [ ] M2 入口分流 + 评测集（下一步，1 周；待定项拍板：意图识别实现 LLM 结构化输出起步、评测集对话剧本 scripted）
 
 ## 8. 别再犯清单（历史教训精简版，细节在 DEV_JOURNAL）
 - 外部评审建议默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关（三问：服务"演示能跑+面试能讲"？文档契约还是代码模块？与 8:2/演进式冲突吗？）
@@ -107,11 +108,13 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - AI 评审工具的"审查对象"声明不可信（可能用旧快照），无论第几轮审查都对照当前磁盘文档逐条核验
 - 写框架代码前先 context7 查 API（LangGraph/LangChain API 变动快），禁凭记忆写
 
-## 9. 环境与运行（M1 拍板占位：开工时逐项与用户商量后回填，回填前保持待定）
-| 待定项 | 说明 |
-|--------|------|
-| Python 版本与安装 | 技术栈已定 3.11，安装/管理方式待定 |
-| venv 与依赖管理 | pip + requirements.txt 锁定？（待定，M1 商量） |
-| .env 变量命名 | DeepSeek / Langfuse key 变量名（待定） |
-| 启动与测试命令 | pytest / uvicorn 用法（待定） |
-| 测试数据库策略 | SQLite 内存 or 本地 MySQL/Compose（待定，工程决策不进 requirements 待定项表） |
+## 9. 环境与运行（M1 已拍板，2026-08-04）
+| 项 | 拍板结果 |
+|----|---------|
+| Python | **3.14.6**（本机 py launcher，M1 用 pip dry-run 实测核心库 requires-python 全兼容后拍板） |
+| venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
+| 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
+| .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
+| 命令 | 测试 `py -3.14 -m pytest`；lint `py -3.14 -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；⚠️ Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 测试数据库 | **M1 全 SQLite**（临时文件 + checkpointer 文件库）；MySQL 8 + Docker Compose 到 M3 报修链路再搭 |
+| 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
