@@ -1,0 +1,10 @@
+pyproject.toml
+src/campus_desk/__init__.py
+src/campus_desk/config.py
+src/campus_desk/env_check.py
+src/campus_desk.egg-info/PKG-INFO
+src/campus_desk.egg-info/SOURCES.txt
+src/campus_desk.egg-info/dependency_links.txt
+src/campus_desk.egg-info/requires.txt
+src/campus_desk.egg-info/top_level.txt
+tests/test_skeleton.py
