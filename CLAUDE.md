@@ -20,6 +20,7 @@
 | docs/PROJECT_REQUIREMENTS.md | 写需求细节/状态机/工具/评测前 |
 | docs/TECH_DECISIONS.md | 面试备答、选型变更时 |
 | docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
+| docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
 | docs/PLANNING_REVIEW.md | ⚠️ 已过期标注（头部有说明），仅参考历史评审 |
 | docs/inputs/需求分析文档.md | Qwen 需求分析原文，仅溯源用 |
 
@@ -45,7 +46,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 
 ## 4. 工程化标准（贯穿，不做就白做）
 - Langfuse 全链路埋点（agent 步骤/工具调用/状态跳转/LLM call）
-- 评测数据集开工第一周造：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 15-20 条 + 多意图 5-10 条 + 重复报修 2-3 条，存 MySQL
+- 评测数据集（M2 已落地 72 条）：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 16 条 + 多意图 6 + 重复报修 2，**JSON 文件入 git**（M3 建 MySQL 时做入库脚本同步）
 - 量化指标（9 项，细节见 requirements §10）：意图分类准确率/分类定级准确率/自助解决率/人工介入率/平均对话轮次/工单闭环率/工单响应时间/超时率/满意度——**目标值均为示例基线，M5 评测后按实测校准，不拍死**
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
 - CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
@@ -100,13 +101,15 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - [x] Qwen 二轮审查吸收（状态机边清单补全 / 投诉楼栋可选 / login 接口 / 评测行为断言 / 回访触达；驳回 3 项误报）
 - [x] CLAUDE.md 审查修复 + git 初始化（指标对齐 9 项 / 通知载体标注 / 别再犯清单 / DoD / §9 环境占位）
 - [x] M1 骨架：环境 5 待定项拍板（§9）+ 包骨架 + 环境验证 3 项全 PASS + pytest 5 绿 + 锁文件
-- [ ] M2 入口分流 + 评测集（下一步，1 周；待定项拍板：意图识别实现 LLM 结构化输出起步、评测集对话剧本 scripted）
+- [x] M2 入口分流 + 评测集：entry/（三层防线 + 门控条件边 + 多意图）+ eval/（72 条剧本 JSON + 运行器），意图准确率实测 94.4%，pytest 36 绿
+- [ ] M3 报修主链路 + 状态机 + 工具（下一步；前置：MySQL Compose + 数据模型 + alembic + 评测集入库脚本）
 
 ## 8. 别再犯清单（历史教训精简版，细节在 DEV_JOURNAL）
 - 外部评审建议默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关（三问：服务"演示能跑+面试能讲"？文档契约还是代码模块？与 8:2/演进式冲突吗？）
 - 同一评审倾向会反复出现（如通知模块），裁决保持一致，不为"通知"加实体
 - AI 评审工具的"审查对象"声明不可信（可能用旧快照），无论第几轮审查都对照当前磁盘文档逐条核验
 - 写框架代码前先 context7 查 API（LangGraph/LangChain API 变动快），禁凭记忆写
+- **DeepSeek（v4-flash thinking 模式）不支持 langchain with_structured_output 三种 method**（实测 2026-08-04：json_schema/json_mode/function_calling 全 400）——所有 LLM 结构化输出统一用**自写 prompt（含 "json" 字样）+ response_format=json_object + pydantic 校验**（intent.py 已沉淀模板，M3/M4 复用）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -115,6 +118,6 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `py -3.14 -m pytest`；lint `py -3.14 -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；⚠️ Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | **M1 全 SQLite**（临时文件 + checkpointer 文件库）；MySQL 8 + Docker Compose 到 M3 报修链路再搭 |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
