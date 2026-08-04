@@ -1,0 +1,8 @@
+[
+  {"id": "multi_intent-001", "category": "multi_intent", "student_input": "宿舍灯坏了，顺便问下校园网密码怎么改", "intent": "repair", "expected_route": "repair", "secondary_intents": ["consult"], "note": "主报修+次咨询"},
+  {"id": "multi_intent-002", "category": "multi_intent", "student_input": "我要投诉食堂，顺便问下图书馆座位怎么预约", "intent": "complaint", "expected_route": "complaint", "secondary_intents": ["consult"], "note": "主投诉+次咨询"},
+  {"id": "multi_intent-003", "category": "multi_intent", "student_input": "网连不上了，另外空调也坏了", "intent": "consult", "expected_route": "consult", "secondary_intents": ["repair"], "note": "主咨询+次报修"},
+  {"id": "multi_intent-004", "category": "multi_intent", "student_input": "报修下宿舍空调，然后我想查一下期末成绩", "intent": "repair", "expected_route": "repair", "secondary_intents": ["consult"], "note": "主报修+次教务查询"},
+  {"id": "multi_intent-005", "category": "multi_intent", "student_input": "密码忘了，宿舍水管也漏了", "intent": "consult", "expected_route": "consult", "secondary_intents": ["repair"], "note": "主咨询+次报修：并列双问题"},
+  {"id": "multi_intent-006", "category": "multi_intent", "student_input": "食堂太难吃了要投诉，顺便问下校园网什么时候恢复", "intent": "complaint", "expected_route": "complaint", "secondary_intents": ["consult"], "note": "主投诉+次公告咨询"}
+]

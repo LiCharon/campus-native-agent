@@ -1,0 +1,18 @@
+[
+  {"id": "chitchat-001", "category": "chitchat", "student_input": "你好", "intent": "other", "expected_route": "human_handoff", "note": "问候"},
+  {"id": "chitchat-002", "category": "chitchat", "student_input": "在吗？", "intent": "other", "expected_route": "human_handoff", "note": "招呼"},
+  {"id": "chitchat-003", "category": "chitchat", "student_input": "谢谢你们，服务很好", "intent": "other", "expected_route": "human_handoff", "note": "感谢"},
+  {"id": "chitchat-004", "category": "chitchat", "student_input": "你是谁呀，介绍一下你自己", "intent": "other", "expected_route": "human_handoff", "note": "询问身份"},
+  {"id": "chitchat-005", "category": "chitchat", "student_input": "今天天气怎么样", "intent": "other", "expected_route": "human_handoff", "note": "天气闲聊：不在服务范围"},
+  {"id": "chitchat-006", "category": "chitchat", "student_input": "能给我讲个笑话吗", "intent": "other", "expected_route": "human_handoff", "note": "娱乐请求"},
+  {"id": "chitchat-007", "category": "chitchat", "student_input": "好无聊啊，陪我聊聊天吧", "intent": "other", "expected_route": "human_handoff", "note": "闲聊请求"},
+  {"id": "chitchat-008", "category": "chitchat", "student_input": "今天食堂有什么好吃的推荐吗", "intent": "other", "expected_route": "human_handoff", "note": "食堂推荐：非工单非FAQ场景"},
+  {"id": "chitchat-009", "category": "chitchat", "student_input": "最近有什么好看的电影推荐吗", "intent": "other", "expected_route": "human_handoff", "note": "娱乐咨询：不在范围"},
+  {"id": "chitchat-010", "category": "chitchat", "student_input": "为什么天空是蓝色的", "intent": "other", "expected_route": "human_handoff", "note": "科普闲聊"},
+  {"id": "chitchat-011", "category": "chitchat", "student_input": "好的，再见", "intent": "other", "expected_route": "human_handoff", "note": "道别"},
+  {"id": "chitchat-012", "category": "chitchat", "student_input": "嗯嗯", "intent": "other", "expected_route": "human_handoff", "note": "语气词回复"},
+  {"id": "chitchat-013", "category": "chitchat", "student_input": "你是真人还是机器人啊", "intent": "other", "expected_route": "human_handoff", "note": "身份询问"},
+  {"id": "chitchat-014", "category": "chitchat", "student_input": "给你们的服务点个赞", "intent": "other", "expected_route": "human_handoff", "note": "表扬"},
+  {"id": "chitchat-015", "category": "chitchat", "student_input": "帮我看看我是什么星座的", "intent": "other", "expected_route": "human_handoff", "note": "星座闲聊"},
+  {"id": "chitchat-016", "category": "chitchat", "student_input": "有道高数题不会做，帮我看下呗", "intent": "other", "expected_route": "human_handoff", "note": "课业求助：不在服务范围"}
+]

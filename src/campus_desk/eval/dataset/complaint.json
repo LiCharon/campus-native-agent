@@ -1,0 +1,18 @@
+[
+  {"id": "complaint-001", "category": "complaint", "student_input": "食堂打饭的阿姨态度太差了，我要投诉", "intent": "complaint", "expected_route": "complaint", "note": "服务态度投诉：明确说投诉"},
+  {"id": "complaint-002", "category": "complaint", "student_input": "食堂明明标价5块，收了我6块，乱收费", "intent": "complaint", "expected_route": "complaint", "note": "乱收费投诉：无楼栋，位置/对象通用字段场景"},
+  {"id": "complaint-003", "category": "complaint", "student_input": "食堂的菜里有头发，太不卫生了", "intent": "complaint", "expected_route": "complaint", "note": "食品卫生投诉"},
+  {"id": "complaint-004", "category": "complaint", "student_input": "宿舍楼半夜还有施工噪音，根本睡不着觉", "intent": "complaint", "expected_route": "complaint", "note": "噪音扰民投诉"},
+  {"id": "complaint-005", "category": "complaint", "student_input": "保洁阿姨打扫得越来越敷衍，楼道全是灰", "intent": "complaint", "expected_route": "complaint", "note": "保洁质量投诉"},
+  {"id": "complaint-006", "category": "complaint", "student_input": "快递点的服务太差了，取个件等半小时", "intent": "complaint", "expected_route": "complaint", "note": "快递服务投诉"},
+  {"id": "complaint-007", "category": "complaint", "student_input": "宿舍热水供应总是时断时续，严重投诉", "intent": "complaint", "expected_route": "complaint", "note": "设施服务投诉：热水供应"},
+  {"id": "complaint-008", "category": "complaint", "student_input": "楼下的洗衣机洗一次要8块钱，太不合理了", "intent": "complaint", "expected_route": "complaint", "note": "收费不合理投诉"},
+  {"id": "complaint-009", "category": "complaint", "student_input": "校车从来不准点，说好的时间总不来", "intent": "complaint", "expected_route": "complaint", "note": "校车服务投诉"},
+  {"id": "complaint-010", "category": "complaint", "student_input": "校园网这个月掉了十几次，我要投诉网络质量", "intent": "complaint", "expected_route": "complaint", "note": "网络质量投诉（区别于咨询：明确投诉意图）"},
+  {"id": "complaint-011", "category": "complaint", "student_input": "上次报修的门锁，维修师傅态度特别差", "intent": "complaint", "expected_route": "complaint", "note": "维修服务投诉：报修后的服务评价"},
+  {"id": "complaint-012", "category": "complaint", "student_input": "宿管阿姨对我们一直大呼小叫的，很不尊重人", "intent": "complaint", "expected_route": "complaint", "note": "宿管态度投诉"},
+  {"id": "complaint-013", "category": "complaint", "student_input": "食堂打饭插队现象太严重了，没人管", "intent": "complaint", "expected_route": "complaint", "note": "秩序问题投诉"},
+  {"id": "complaint-014", "category": "complaint", "student_input": "图书馆占座问题越来越严重，一到考试季就抢不到座", "intent": "complaint", "expected_route": "complaint", "note": "公共设施秩序投诉"},
+  {"id": "complaint-015", "category": "complaint", "student_input": "我要投诉，食堂的饭越来越难吃还越来越贵", "intent": "complaint", "expected_route": "complaint", "note": "无具体对象的泛投诉（明确说投诉）"},
+  {"id": "complaint-016", "category": "complaint", "student_input": "操场上的灯晚上九点就关了，我们还想打球，太不合理", "intent": "complaint", "expected_route": "complaint", "note": "设施管理投诉"}
+]
