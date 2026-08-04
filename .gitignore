@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 venv/
 .venv/
+*.egg-info/
 
 # 密钥（CLAUDE.md §4 规定密钥不入库）
 .env
