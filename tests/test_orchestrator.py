@@ -175,6 +175,28 @@ class TestPendingOtherInput:
         assert out2["finished"] is True
         assert out2["ticket_id"] == 1
 
+    def test_other_reply_during_consult_pending_resumes_consult(self, db_session_factory):
+        """咨询挂起时 other 类输入（如"学号2024001"）→ resume 进 ConsultGraph，
+        不落人工占位（M4 真 LLM 评测 outcome=None 抓出，报修坑同源）。"""
+        cg = _consult(
+            db_session_factory,
+            FakeConsultDecider(
+                sequence=[
+                    ConsultDecision(
+                        action="ask", questions=["您的学号是多少？"], reply="请补充学号"
+                    ),
+                    ConsultDecision(action="answer", reply="账号状态正常。"),
+                ]
+            ),
+        )
+        rg = _repair(db_session_factory)
+        out1 = turn(_entry("consult"), rg, cg, TID, "帮我查下账号")
+        assert out1["outcome"] == "ask"  # 咨询追问挂起
+        out2 = turn(_entry("other", confidence=0.4), rg, cg, TID, "2024001")  # Entry 判 other
+        assert out2["route"] == "consult"  # 挂起中 other → 仍进咨询
+        assert out2["outcome"] == "answer"
+        assert out2["finished"] is True
+
 
 class TestSessionIsolation:
     def test_new_thread_new_repair(self, db_session_factory):

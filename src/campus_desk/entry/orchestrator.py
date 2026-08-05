@@ -124,6 +124,21 @@ def turn(
             "status_events": state.get("status_events", []),
         }
 
+    # 咨询挂起中补信息被判 HUMAN_HANDOFF → resume 进 ConsultGraph（M4 同源坑：
+    # 学生回答"3号楼/学号2024001"被 Entry 无上下文判 other → 落占位，
+    # ConsultGraph 永不 resume，真 LLM 评测 outcome=None 抓出）
+    if consult_pending and route == HUMAN_HANDOFF:
+        state = consult_graph.invoke(Command(resume=msg), cfg)
+        return {
+            "reply": state.get("reply", ""),
+            "route": CONSULT,
+            "pending_question": state.get("pending_question"),
+            "finished": state.get("finished"),
+            "outcome": state.get("outcome"),
+            "handoff_package": state.get("handoff_package"),
+            "tool_calls": state.get("tool_calls", []),
+        }
+
     return {
         "reply": _NON_AGENT_REPLIES.get(route, entry_out.get("reply", "")),
         "route": route,
