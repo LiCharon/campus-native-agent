@@ -83,19 +83,24 @@ def create_repair_tools(
             )
 
     @tool("update_ticket_status", parse_docstring=True)
-    def update_ticket_status(ticket_id: int, event: str, note: str = "") -> str:
+    def update_ticket_status(
+        ticket_id: int, event: str, note: str = "", repairman_id: str | None = None
+    ) -> str:
         """推进工单状态（状态机白名单校验，非法跳转拒绝）。事件: assign 派单 / cancel 撤回 / start 接单 / complete 完工 / verify_ok 验收通过 / rework 返工 / auto_close 自动关闭。
 
         Args:
             ticket_id: 工单号
             event: 状态事件（assign/cancel/start/complete/verify_ok/rework/auto_close）
             note: 备注（如验收意见）
+            repairman_id: 派单时指定维修工（如 rm-001，仅 assign 事件用）
         """
         if event not in EVENT_TRANSITIONS:
             return f"错误: 未知事件 {event}（可选: {', '.join(EVENT_TRANSITIONS)}）"
         with session_factory() as session, session.begin():
             try:
-                record = apply_transition(session, ticket_id, event, actor, note=note)
+                record = apply_transition(
+                    session, ticket_id, event, actor, note=note, repairman_id=repairman_id
+                )
             except TicketNotFound:
                 return f"错误: 工单 #{ticket_id} 不存在"
             except TransitionError as exc:  # 状态机白名单校验失败

@@ -46,6 +46,42 @@ class FakeIntentClassifier:
         return self.result
 
 
+class FakeFieldExtractor:
+    """字段抽取器 stub：序列消费（每轮抽取弹出一个），用尽返回 default。
+
+    extract(text) 与真实抽取器同签名；description 取输入原文（merge 语义对齐）。
+    """
+
+    def __init__(self, sequence=None, default=None):
+        self.sequence = list(sequence or [])
+        self.default = default
+
+    def extract(self, text):
+        if self.sequence:
+            item = self.sequence.pop(0)
+            if not item.description:  # 序列项可只给抽取字段，description 用输入
+                item = item.model_copy(update={"description": text})
+            return item
+        if self.default is not None:
+            return self.default.model_copy(update={"description": text})
+        from campus_desk.repair.drafting import rule_extract
+
+        return rule_extract(text)
+
+
+class FakeRepairClassifier:
+    """分类定级 stub：序列消费（每轮 classify 弹出一个），用尽返回 default。"""
+
+    def __init__(self, sequence=None, default=None):
+        self.sequence = list(sequence or [])
+        self.default = default
+
+    def classify(self, description):
+        if self.sequence:
+            return self.sequence.pop(0)
+        return self.default
+
+
 @pytest.fixture
 def db_session_factory():
     """SQLite 内存库会话工厂（全表 + 种子）。每个测试独立库，互不污染。

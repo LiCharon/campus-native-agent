@@ -1,0 +1,339 @@
+"""RepairGraph（M3 核心）：报修主链路图。
+
+节点链：collect（消费输入/抽字段/算缺项）→ wait（唯一 interrupt）→
+classify（规则+LLM 分类定级+人工确认门控）→ create（建单+自动派单）→ finalize。
+
+核心语义（M1 已验证 + 本会话实测确认）：
+- interrupt 收敛到唯一节点 wait：collect/classify 是纯逻辑节点（问句+计数
+  由 return 持久化）；interrupt 重入不落盘，节点内不得依赖"中断前修改"
+- 恢复：graph.invoke(Command(resume=msg), cfg)，interrupt() 返回 msg；
+  中断时 get_state().next=('wait',)，终态 next=()
+- 终态 thread 再 invoke = 旧 state 残留 + 再次中断（实测混乱）→ 新会话必须新 thread_id
+- 状态变更不嵌套状态机子图（规避嵌套子图未验证面）：create 节点直接调工具
+  （create_ticket → apply_transition assign），8 条边白名单由 machine.py 锁
+
+每轮输出契约：reply（给学生的话）/ pending_question（等待中的问题，
+None = 本轮可继续）/ tool_calls、status_events（评测断言）。
+"""
+
+import re
+from typing import Literal, TypedDict
+
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import interrupt  # resume 由编排层传 Command
+
+from campus_desk.db.models import Repairman
+from campus_desk.db.session import SessionFactory
+from campus_desk.repair.classify import RepairClassifier
+from campus_desk.repair.drafting import (
+    MAX_ROUNDS,
+    FieldExtractor,
+    merge_extract,
+    pick_question,
+    required_missing,
+)
+from campus_desk.tools.repair_tools import create_repair_tools
+
+CONFIRM_WORDS = ("对", "好", "可以", "没问题", "确认", "是的", "是", "行")
+# 否定词优先判定（"不对"含"对"子串——M3 测试抓出，先查否定再查确认）
+_DENY_WORDS = ("不对", "不是", "错了", "不行", "不用", "别", "错")
+
+# 类别 → (部门, 工种) 派单映射（需求 §4：网络/账号→信息中心；水电/家具/门窗→后勤）
+CATEGORY_DEPT_TRADE: dict[str, tuple[str | None, str | None]] = {
+    "网络": ("信息中心", "网络"),
+    "水电": ("后勤", "水电"),
+    "门窗": ("后勤", "门窗"),
+    "设备": ("后勤", "家具"),
+    "环境": ("后勤", "家具"),
+    "其他": (None, None),  # 兜底：后勤在岗第一个
+}
+
+
+class RepairState(TypedDict):
+    user_input: str
+    student_answer: str | None
+    draft: dict  # description/contact/building/room/rounds
+    pending_question: str | None
+    pending_stage: Literal["collect", "classify"] | None
+    classification: dict | None
+    ticket_id: int | None
+    ticket_status: str | None
+    repairman: dict | None
+    reply: str
+    tool_calls: list[str]
+    status_events: list[str]
+    finished: bool
+    _consumed: bool
+
+
+def _is_confirm(answer: str) -> bool:
+    """确认语义判定：否定词优先（"不对"含"对"，先查否定再查确认）。"""
+    if any(word in answer for word in _DENY_WORDS):
+        return False
+    return any(word in answer for word in CONFIRM_WORDS)
+
+
+def dispatch(
+    session_factory: SessionFactory, category: str | None, priority: str | None
+) -> dict | None:
+    """自动派单：部门+工种两层匹配，在岗优先（规则优先拍板）。
+
+    返回 {"id","name","dept","trade"}；无在岗维修工时返回 None（人工待派）。
+    P1 紧急单在此无额外标记（在岗列表第一个即最高优先级可用人选，M5 可加）。
+    """
+    dept, trade = CATEGORY_DEPT_TRADE.get(category or "", (None, None))
+    with session_factory() as session, session.begin():
+        query = session.query(Repairman).filter(Repairman.on_duty.is_(True))
+        if trade:
+            query = query.filter(Repairman.trade == trade)
+        elif dept:
+            query = query.filter(Repairman.dept == dept)
+        else:  # 其他/未分类：后勤兜底
+            query = query.filter(Repairman.dept == "后勤")
+        rm = query.order_by(Repairman.id).first()
+    if rm is None:
+        return None
+    return {"id": rm.id, "name": rm.name, "dept": rm.dept, "trade": rm.trade}
+
+
+class _NodeDeps:
+    """节点闭包依赖（构造注入，节点签名保持 (state)）。"""
+
+    def __init__(
+        self,
+        session_factory: SessionFactory,
+        extractor: FieldExtractor,
+        classifier: RepairClassifier,
+        *,
+        user_id: str,
+        actor: str,
+        default_contact: str,
+    ):
+        self.session_factory = session_factory
+        self.extractor = extractor
+        self.classifier = classifier
+        self.default_contact = default_contact
+        self.tools = {
+            t.name: t for t in create_repair_tools(session_factory, user_id=user_id, actor=actor)
+        }
+
+
+def _make_collect(deps: _NodeDeps):
+    def collect(state: RepairState) -> dict:
+        """纯逻辑节点：消费输入 → 抽字段 → 算缺项 → 追问或放行。
+
+        问句 + 追问计数由 return 持久化（wait 节点负责暂停）——
+        若在此节点内直接 interrupt，重入不落盘导致计数永远数不上。
+        """
+        draft = dict(state.get("draft", {}))
+        tool_calls = list(state.get("tool_calls", []))
+
+        if not state.get("_consumed"):
+            ext = deps.extractor.extract(state["user_input"])
+            draft = merge_extract(draft, ext)
+            draft.setdefault("rounds", 0)
+            consumed = True
+        elif state.get("student_answer"):
+            ext = deps.extractor.extract(state["student_answer"])
+            draft = merge_extract(draft, ext)
+            draft["rounds"] = draft.get("rounds", 0) + 1
+            consumed = True
+        else:
+            consumed = state.get("_consumed", False)
+
+        missing = required_missing(draft)
+        if missing and draft.get("rounds", 0) < MAX_ROUNDS:
+            question = pick_question(missing)
+            return {
+                "draft": draft,
+                "pending_question": question,
+                "pending_stage": "collect",
+                "reply": question,
+                "tool_calls": [*tool_calls, "ask_collect"],
+                "student_answer": None,
+                "_consumed": consumed,
+            }
+        return {
+            "draft": draft,
+            "pending_question": None,
+            "student_answer": None,
+            "_consumed": consumed,
+        }
+
+    return collect
+
+
+def _make_wait():
+    def wait(state: RepairState) -> dict:
+        """唯一 interrupt 节点。用 state 里已持久化的同一 value 暂停——
+        interrupt 按 value 匹配暂停点，重入时返回 Command(resume=) 的值。"""
+        answer = interrupt(state["pending_question"])
+        return {"student_answer": str(answer)}
+
+    return wait
+
+
+def _make_classify(deps: _NodeDeps):
+    def classify(state: RepairState) -> dict:
+        """分类定级 + 人工确认门控（确认轮复用 wait 暂停机制）。"""
+        draft = state["draft"]
+        description = draft.get("description", "")
+        tool_calls = list(state.get("tool_calls", []))
+
+        # 确认轮：学生回答"对/好"→ 放行；有异议 → 保留分类但标记人工复核
+        if state.get("pending_stage") == "classify" and state.get("student_answer"):
+            classification = state["classification"]
+            answer = state["student_answer"]
+            confirmed = _is_confirm(answer)
+            if not confirmed:
+                classification = dict(classification)
+                classification["reason"] = (
+                    classification.get("reason", "") + "；学生提出异议，人工复核"
+                )
+            return {
+                "classification": classification,
+                "pending_question": None,
+                "pending_stage": None,
+                "student_answer": None,
+                "tool_calls": [*tool_calls, "ask_confirm"],
+            }
+
+        result = deps.classifier.classify(description)
+        classification = result.model_dump()
+        if result.needs_human_confirm:
+            question = (
+                f"您的报修归为【{result.category}】类、按【{result.priority}】"
+                f"处理，对吗？确认后为您创建工单。"
+            )
+            return {
+                "classification": classification,
+                "pending_question": question,
+                "pending_stage": "classify",
+                "reply": question,
+                "tool_calls": [*tool_calls, "ask_confirm"],
+                "student_answer": None,
+            }
+        return {"classification": classification, "student_answer": None}
+
+    return classify
+
+
+def _make_create(deps: _NodeDeps):
+    def create(state: RepairState) -> dict:
+        """建单 + 自动派单（SUBMITTED → ASSIGNED 两步，审计日志落库）。"""
+        draft = state["draft"]
+        classification = state.get("classification") or {}
+        tool_calls = list(state.get("tool_calls", []))
+        status_events = list(state.get("status_events", []))
+
+        contact = draft.get("contact") or deps.default_contact
+        building = draft.get("building")
+        room = draft.get("room")
+        location = f"{room}室" if room else None
+
+        out = deps.tools["create_ticket"].func(
+            description=draft.get("description", ""),
+            contact=contact,
+            building=building,
+            location=location,
+        )
+        m = re.search(r"工单 #(\d+)", out)
+        if m is None:
+            return {"reply": f"建单失败：{out}", "finished": True}
+        ticket_id = int(m.group(1))
+        tool_calls.append("create_ticket")
+        status_events.append("SUBMITTED")
+
+        rm = dispatch(
+            deps.session_factory, classification.get("category"), classification.get("priority")
+        )
+        if rm is not None:
+            assign_out = deps.tools["update_ticket_status"].func(
+                ticket_id, "assign", note=f"自动派单给 {rm['name']}", repairman_id=rm["id"]
+            )
+            if "已更新" in assign_out:
+                tool_calls.append("update_ticket_status")
+                status_events.append("SUBMITTED->ASSIGNED")
+                ticket_status = "ASSIGNED"
+            else:
+                rm = None  # 派单失败不阻塞建单（返回状态仍 SUBMITTED）
+                ticket_status = "SUBMITTED"
+        else:
+            ticket_status = "SUBMITTED"
+
+        return {
+            "ticket_id": ticket_id,
+            "ticket_status": ticket_status,
+            "repairman": rm,
+            "tool_calls": tool_calls,
+            "status_events": status_events,
+        }
+
+    return create
+
+
+def _make_finalize():
+    def finalize(state: RepairState) -> dict:
+        ticket_id = state.get("ticket_id")
+        rm = state.get("repairman")
+        status = state.get("ticket_status")
+        if rm:
+            reply = (
+                f"您的报修工单 #{ticket_id} 已创建并派给 {rm['name']}"
+                f"（{rm['dept']}·{rm['trade']}），当前状态 {status}。"
+                f"维修完成后会通知您验收。"
+            )
+        else:
+            reply = f"您的报修工单 #{ticket_id} 已创建（{status}），正在等待派单，请耐心等待。"
+        return {"reply": reply, "finished": True}
+
+    return finalize
+
+
+def _collect_after(state: RepairState) -> Literal["wait", "classify"]:
+    return "wait" if state.get("pending_question") else "classify"
+
+
+def _wait_after(state: RepairState) -> Literal["collect", "classify"]:
+    return "collect" if state.get("pending_stage") == "collect" else "classify"
+
+
+def _classify_after(state: RepairState) -> Literal["wait", "create"]:
+    return "wait" if state.get("pending_question") else "create"
+
+
+def build_repair_graph(
+    session_factory: SessionFactory,
+    *,
+    extractor: FieldExtractor | None = None,
+    classifier: RepairClassifier | None = None,
+    checkpointer=None,
+    user_id: str = "student-001",
+    actor: str = "student-001",
+    default_contact: str = "学生",
+):
+    """构建 RepairGraph。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。"""
+    deps = _NodeDeps(
+        session_factory,
+        extractor if extractor is not None else FieldExtractor(),
+        classifier if classifier is not None else RepairClassifier(),
+        user_id=user_id,
+        actor=actor,
+        default_contact=default_contact,
+    )
+
+    graph = (
+        StateGraph(RepairState)
+        .add_node("collect", _make_collect(deps))
+        .add_node("wait", _make_wait())
+        .add_node("classify", _make_classify(deps))
+        .add_node("create", _make_create(deps))
+        .add_node("finalize", _make_finalize())
+        .add_edge(START, "collect")
+        .add_conditional_edges("collect", _collect_after, {"wait": "wait", "classify": "classify"})
+        .add_conditional_edges("wait", _wait_after, {"collect": "collect", "classify": "classify"})
+        .add_conditional_edges("classify", _classify_after, {"wait": "wait", "create": "create"})
+        .add_edge("create", "finalize")
+        .add_edge("finalize", END)
+    )
+    return graph.compile(checkpointer=checkpointer)
