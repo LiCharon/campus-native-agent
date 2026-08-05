@@ -51,7 +51,7 @@ def apply_transition(
         if ticket is None:
             raise TicketNotFound(ticket_id)
 
-        sources, target = EVENT_TRANSITIONS[event]
+        _, target = EVENT_TRANSITIONS[event]  # sources 校验由 validate_transition 完成
         validate_transition(ticket.status, target, event, actor)
 
         from_status: TicketStatus = ticket.status
