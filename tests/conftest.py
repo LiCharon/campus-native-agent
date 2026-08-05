@@ -107,6 +107,74 @@ class FakeConsultDecider:
 
 
 @pytest.fixture
+def api_client(db_session_factory):
+    """M6 API 测试客户端：全 Fake LLM 图 + SQLite 内存库 + TestClient。
+
+    绝不无参 create_app()（会建真 LLM + 写 checkpointer.db）；测试只走注入版。
+    """
+    from fastapi.testclient import TestClient
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    from campus_desk.api.app import create_app
+    from campus_desk.api.graphs import GraphBundle, GraphRegistry
+    from campus_desk.consult.decide import ConsultDecision
+    from campus_desk.consult.graph import build_consult_graph
+    from campus_desk.entry.entry_graph import build_entry_graph
+    from campus_desk.entry.intent import IntentResult
+    from campus_desk.quality.graph import build_quality_graph
+    from campus_desk.repair.classify import ClassificationResult
+    from campus_desk.repair.drafting import DraftExtract
+    from campus_desk.repair.graph import build_repair_graph
+
+    def _bundle(user_id: str) -> GraphBundle:
+        entry = build_entry_graph(
+            classifier=FakeIntentClassifier(
+                IntentResult(intent="repair", confidence=0.9, secondary_intents=[], reason="测试")
+            )
+        )
+        repair = build_repair_graph(
+            db_session_factory,
+            extractor=FakeFieldExtractor(
+                default=DraftExtract(description="", building="3号楼", room="502", contact="李华")
+            ),
+            classifier=FakeRepairClassifier(
+                default=ClassificationResult(category="水电", priority="P2", confidence=0.9)
+            ),
+            checkpointer=InMemorySaver(),
+            user_id=user_id,
+            actor=user_id,
+        )
+        complaint = build_repair_graph(
+            db_session_factory,
+            extractor=FakeFieldExtractor(
+                default=DraftExtract(description="", building=None, room=None, contact="李华")
+            ),
+            checkpointer=InMemorySaver(),
+            user_id=user_id,
+            actor=user_id,
+            ticket_type="complaint",
+        )
+        consult = build_consult_graph(
+            db_session_factory,
+            decider=FakeConsultDecider(
+                default=ConsultDecision(
+                    action="answer", reply="教务密码可在教务系统点忘记密码重置。"
+                )
+            ),
+            checkpointer=InMemorySaver(),
+            student_no="2024001",
+        )
+        quality = build_quality_graph(db_session_factory, checkpointer=InMemorySaver())
+        return GraphBundle(
+            entry=entry, repair=repair, consult=consult, quality=quality, complaint=complaint
+        )
+
+    registry = GraphRegistry(db_session_factory, bundle_factory=_bundle)
+    app = create_app(session_factory=db_session_factory, registry=registry)
+    return TestClient(app)
+
+
+@pytest.fixture
 def db_session_factory():
     """SQLite 内存库会话工厂（全表 + 种子）。每个测试独立库，互不污染。
 

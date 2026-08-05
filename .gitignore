@@ -19,3 +19,7 @@ docs/
 .qoderwork/
 .workbuddy/
 .claude/
+
+# SQLite WAL/SHM 附属文件（checkpointer 运行期生成）
+*.db-shm
+*.db-wal
