@@ -166,6 +166,7 @@ def run_repair_evaluation(
     entry_graph=None,
     repair_graph=None,
     consult_graph=None,
+    quality_graph=None,
     max_cases: int | None = None,
 ) -> RepairEvalReport:
     """报修链路评测：仅 repair/repeat_repair 剧本，多轮驱动。
@@ -173,13 +174,14 @@ def run_repair_evaluation(
     - 首轮走 orchestrator.turn（Entry → RepairGraph 新会话，thread_id=case.id）
     - 每轮 turns：先断言上轮 paused（get_state().next 非空）——scripted
       答非所问的失真防线（Qwen 二轮审查拍板）；再 resume 并检查 expect
-    - entry_graph/repair_graph/consult_graph 可注入（测试用 fake/规则版；
-      默认真 LLM + InMemorySaver）
+    - entry_graph/repair_graph/consult_graph/quality_graph 可注入（测试用
+      fake/规则版；默认真 LLM + InMemorySaver）
     """
     from langgraph.checkpoint.memory import InMemorySaver
 
     from campus_desk.consult.graph import build_consult_graph
     from campus_desk.db.session import default_session_factory
+    from campus_desk.quality.graph import build_quality_graph
     from campus_desk.repair.graph import build_repair_graph
 
     cases = [c for c in cases if c.category in ("repair", "repeat_repair")]
@@ -197,6 +199,9 @@ def run_repair_evaluation(
     consult_graph = consult_graph or build_consult_graph(
         session_factory or default_session_factory(), checkpointer=InMemorySaver()
     )
+    quality_graph = quality_graph or build_quality_graph(
+        session_factory or default_session_factory(), checkpointer=InMemorySaver()
+    )
 
     results: list[RepairCaseResult] = []
     start = time.monotonic()
@@ -209,7 +214,12 @@ def run_repair_evaluation(
 
         # 首轮：进 RepairGraph（可能是追问轮）
         first = turn(
-            entry_graph, repair_graph, consult_graph, f"eval-{case.id}", case.student_input
+            entry_graph,
+            repair_graph,
+            consult_graph,
+            f"eval-{case.id}",
+            case.student_input,
+            quality_graph=quality_graph,
         )
         prev_tools = set(first.get("tool_calls", []))
 
@@ -219,7 +229,12 @@ def run_repair_evaluation(
                 failures.append(f"第{idx}轮: 剧本失配（上轮未等待学生回复，脚本答非所问）")
                 break
             out = turn(
-                entry_graph, repair_graph, consult_graph, f"eval-{case.id}", scripted.student_reply
+                entry_graph,
+                repair_graph,
+                consult_graph,
+                f"eval-{case.id}",
+                scripted.student_reply,
+                quality_graph=quality_graph,
             )
             failures.extend(
                 f"第{idx}轮: {fail}" for fail in check_expect(prev_tools, out, scripted.expect)

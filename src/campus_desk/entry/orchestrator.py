@@ -1,4 +1,4 @@
-"""每轮编排（M3 Repair + M4 Consult）：Entry 分流 → REPAIR 进 RepairGraph / CONSULT 进 ConsultGraph。
+"""每轮编排（M3 Repair + M4 Consult/Quality）：Entry 分流 → 下游 Agent 图。
 
 "入口路由处挂下游 Agent 边"的落地 = 编排层分支（而非图结构嵌套）：
 1. Entry 图每轮重跑（无 checkpointer，便宜）——多意图正确性：报修中插咨询
@@ -8,14 +8,18 @@
    （终态 thread 复用已实测产生 state 残留 + 重复中断，必须新 thread）
 3. route == CONSULT → ConsultGraph（同款 invoke/resume；咨询侧 thread 独立，
    与报修会话互不干扰——多意图分流的关键）
-4. 其余（COMPLAINT/HUMAN_HANDOFF）→ 占位回复（M5 接投诉管道/转人工）
+4. M4 QualityAgent 惰性触发（需求 §6 触达方式已拍死）：user_id 非空时每轮先查
+   "关闭超 24h 未回访"工单 → 有则先进 QualityGraph（提醒/采集），再进主流程
+5. 其余（COMPLAINT/HUMAN_HANDOFF）→ 占位回复（M5 接投诉管道/转人工）
 
 thread_id 由调用方管理（M6 前端会话 id；M3/M4 评测 runner 用 case id）。
+Quality 用独立 thread（quality-{thread_id}）与主流程隔离。
 """
 
 from langgraph.types import Command
 
 from campus_desk.entry.routes import COMPLAINT, CONSULT, HUMAN_HANDOFF, REPAIR
+from campus_desk.quality.pending import find_pending_reviews
 
 # 非 REPAIR/CONSULT 路由的占位回复（M5 接投诉管道后替换）
 _NON_AGENT_REPLIES = {
@@ -24,11 +28,46 @@ _NON_AGENT_REPLIES = {
 }
 
 
-def turn(entry_graph, repair_graph, consult_graph, thread_id: str, msg: str) -> dict:
-    """一轮对话：Entry 分流 → 按需进 Repair/ConsultGraph。返回给调用方（reply/route/state 摘要）。
+def _quality_out(state: dict) -> dict:
+    """Quality 轮输出（route=quality 标记，评测/调用方可识别）。"""
+    return {
+        "route": "quality",
+        "reply": state.get("reply", ""),
+        "pending_question": state.get("pending_question"),
+        "outcome": state.get("outcome"),
+        "finished": state.get("finished"),
+    }
 
-    consult_graph 必传（M4 起 CONSULT 路由已实装；测试传 fake 图或真图）。
+
+def turn(
+    entry_graph,
+    repair_graph,
+    consult_graph,
+    thread_id: str,
+    msg: str,
+    *,
+    quality_graph=None,
+    user_id: str | None = None,
+    session_factory=None,
+) -> dict:
+    """一轮对话：Quality 回访（可选）→ Entry 分流 → 按需进 Repair/ConsultGraph。
+
+    quality_graph + user_id + session_factory 全提供时才触发回访检查
+    （评测/无身份场景缺省跳过；M4 起 QualityAgent 已实装）。
     """
+    # M4 QualityAgent 惰性触发：有待回访工单 → 先回访（提醒/采集），再进主流程
+    if user_id and session_factory is not None and quality_graph is not None:
+        quality_cfg = {"configurable": {"thread_id": f"quality-{thread_id}"}}
+        if quality_graph.get_state(quality_cfg).next != ():
+            # 回访进行中（等评分）→ 学生回答作为 resume 值采集
+            return _quality_out(quality_graph.invoke(Command(resume=msg), quality_cfg))
+        pending = find_pending_reviews(session_factory, user_id)
+        if pending:
+            state = quality_graph.invoke(
+                {"user_input": msg, "pending_tickets": pending}, quality_cfg
+            )
+            return _quality_out(state)
+
     entry_out = entry_graph.invoke({"user_input": msg})
     route = entry_out["route"]
     cfg = {"configurable": {"thread_id": thread_id}}

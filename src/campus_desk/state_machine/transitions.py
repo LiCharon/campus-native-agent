@@ -56,6 +56,9 @@ def apply_transition(
 
         from_status: TicketStatus = ticket.status
         ticket.status = target
+        if target == "CLOSED":
+            # 关闭时间（M4 QualityAgent 回访 24h 判定用；关闭 = 字段不是状态）
+            ticket.closed_at = datetime.now(UTC)
         if event == "assign":
             if repairman_id is not None:
                 ticket.repairman_id = repairman_id
