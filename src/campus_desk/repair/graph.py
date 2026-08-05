@@ -288,6 +288,7 @@ def _make_create(deps: _NodeDeps):
                 building=None,
                 location=draft.get("location"),
                 ticket_type="complaint",
+                priority="P1",  # 需求拍死：投诉 = P1 工单（不分类不定级，直接 P1）
             )
         else:
             building = draft.get("building")

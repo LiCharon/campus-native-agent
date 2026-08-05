@@ -35,6 +35,7 @@ def create_repair_tools(
         building: str | None = None,
         location: str | None = None,
         ticket_type: str = "repair",
+        priority: str = "P2",
     ) -> str:
         """创建报修/投诉工单（状态 SUBMITTED）。报修类必填楼栋，投诉类用位置/对象描述。
 
@@ -44,9 +45,12 @@ def create_repair_tools(
             building: 楼栋（报修类必填，投诉类可空）
             location: 位置/对象（投诉类用，如"食堂阿姨"；报修类可空）
             ticket_type: 工单类型 repair 报修 / complaint 投诉
+            priority: 优先级 P1 紧急 / P2 普通 / P3 预约（投诉单由管道传 P1）
         """
         if not description.strip() or not contact.strip():
             return "错误: 问题描述和联系人是必填项"
+        if priority not in ("P1", "P2", "P3"):
+            return f"错误: 未知优先级 {priority}（可选: P1/P2/P3）"
         if ticket_type == "repair" and not (building and building.strip()):
             return "错误: 报修工单需要楼栋信息"
         with session_factory() as session, session.begin():
@@ -57,6 +61,7 @@ def create_repair_tools(
                 contact=contact.strip(),
                 building=building.strip() if building else None,
                 location=location.strip() if location else None,
+                priority=priority,
             )
             session.add(ticket)
             session.flush()

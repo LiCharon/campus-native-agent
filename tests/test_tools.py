@@ -58,6 +58,26 @@ class TestCreateTicket:
             assert t.location == "食堂"
             assert t.building is None
 
+    def test_priority_param_persisted(self, db_session_factory):
+        """priority 参数落库：传值生效、默认 P2 保持现状、非法值拒绝（M5 投诉 P1 依据）。"""
+        tools = _repair_tools(db_session_factory)
+        # 传 P1 落库（投诉管道用）
+        tools["create_ticket"].func(
+            description="食堂态度差", contact="李华", ticket_type="complaint", priority="P1"
+        )
+        # 不传 → 默认 P2（报修路径零行为变化）
+        tools["create_ticket"].func(description="灯坏了", contact="李华", building="3号楼")
+        # 非法值拒绝（错误文案不抛）
+        out = tools["create_ticket"].func(
+            description="灯坏了", contact="李华", building="3号楼", priority="P9"
+        )
+        assert "错误" in out and "P9" in out
+        with db_session_factory() as session, session.begin():
+            t1 = session.get(Ticket, 1)
+            assert t1.priority == "P1"
+            assert session.get(Ticket, 2).priority == "P2"
+            assert session.get(Ticket, 3) is None  # 非法值不落库
+
 
 class TestGetTicket:
     def test_get_existing(self, db_session_factory):

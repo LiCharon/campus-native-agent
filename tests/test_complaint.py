@@ -84,6 +84,7 @@ class TestComplaintGraph:
         assert t.status == "SUBMITTED"
         assert t.repairman_id is None
         assert t.contact == "李华"
+        assert t.priority == "P1"  # 需求拍死：投诉 = P1 工单（管道固定传 P1）
         # 画像门控：投诉不污染报修画像（无新行）
         with db_session_factory() as session, session.begin():
             assert session.get(UserProfile, "student-001") is None
@@ -211,6 +212,7 @@ class TestComplaintOrchestrator:
         assert "投诉单" in out["reply"]
         t = _ticket(db_session_factory, 1)
         assert t.ticket_type == "complaint"
+        assert t.priority == "P1"
 
     def test_pending_other_reply_resumes_complaint(self, db_session_factory):
         """投诉挂起时 other 类输入（"李华"）→ resume 进 complaint_graph，
