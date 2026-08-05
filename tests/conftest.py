@@ -70,13 +70,18 @@ class FakeFieldExtractor:
 
 
 class FakeRepairClassifier:
-    """分类定级 stub：序列消费（每轮 classify 弹出一个），用尽返回 default。"""
+    """分类定级 stub：序列消费（每轮 classify 弹出一个），用尽返回 default。
+
+    calls 记录每次 (description, profile_context)——M4 画像注入断言用。
+    """
 
     def __init__(self, sequence=None, default=None):
         self.sequence = list(sequence or [])
         self.default = default
+        self.calls: list[tuple[str, str | None]] = []
 
-    def classify(self, description):
+    def classify(self, description, profile_context=None):
+        self.calls.append((description, profile_context))
         if self.sequence:
             return self.sequence.pop(0)
         return self.default

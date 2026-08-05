@@ -27,7 +27,7 @@ def test_mysql_connect_and_seed(mysql_factory):
     with mysql_factory() as session:
         assert session.query(User).count() == 9
         assert session.query(Repairman).count() == 8
-        assert session.query(Faq).count() == 9
+        assert session.query(Faq).count() == 24
 
 
 def test_mysql_ticket_roundtrip(mysql_factory):

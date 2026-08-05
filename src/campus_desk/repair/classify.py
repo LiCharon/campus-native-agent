@@ -135,14 +135,23 @@ class RepairClassifier:
             model_kwargs={"response_format": {"type": "json_object"}},
         )
 
-    def classify(self, description: str) -> ClassificationResult:
+    def classify(
+        self, description: str, profile_context: str | None = None
+    ) -> ClassificationResult:
         """规则优先 + LLM 辅助 + 门控，保证不抛异常、必有结果。
+
+        profile_context（M4 用户画像，可选）：只拼进 LLM prompt——"又坏了"
+        场景让 LLM 看到上次工单摘要；规则层仍用原始 description（防画像
+        关键词干扰规则计分）。
 
         合并规则：规则 P1 覆盖 LLM 定级（安全规则优先）；类别按 LLM 结果
         （规则只做兜底/辅助）；低置信 → needs_human_confirm。
         """
         rule = _rule_fallback(description)
-        llm_result = self._invoke_llm(description) if self.llm is not None else None
+        llm_input = (
+            f"{profile_context}\n本次报修描述: {description}" if profile_context else description
+        )
+        llm_result = self._invoke_llm(llm_input) if self.llm is not None else None
 
         if llm_result is None:
             return rule

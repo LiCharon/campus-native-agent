@@ -32,6 +32,11 @@ from campus_desk.repair.drafting import (
     pick_question,
     required_missing,
 )
+from campus_desk.repair.profile import (
+    ProfileStore,
+    profile_text,
+    same_category_as_before,
+)
 from campus_desk.tools.repair_tools import create_repair_tools
 
 CONFIRM_WORDS = ("对", "好", "可以", "没问题", "确认", "是的", "是", "行")
@@ -56,6 +61,7 @@ class RepairState(TypedDict):
     pending_question: str | None
     pending_stage: Literal["collect", "classify"] | None
     classification: dict | None
+    profile: dict | None  # 画像快照（M4：classify 前读取，finalize 判断"上次同类"用）
     ticket_id: int | None
     ticket_status: str | None
     repairman: dict | None
@@ -108,11 +114,14 @@ class _NodeDeps:
         user_id: str,
         actor: str,
         default_contact: str,
+        profile_store: ProfileStore,
     ):
         self.session_factory = session_factory
         self.extractor = extractor
         self.classifier = classifier
         self.default_contact = default_contact
+        self.user_id = user_id
+        self.profile_store = profile_store
         self.tools = {
             t.name: t for t in create_repair_tools(session_factory, user_id=user_id, actor=actor)
         }
@@ -175,7 +184,11 @@ def _make_wait():
 
 def _make_classify(deps: _NodeDeps):
     def classify(state: RepairState) -> dict:
-        """分类定级 + 人工确认门控（确认轮复用 wait 暂停机制）。"""
+        """分类定级 + 人工确认门控（确认轮复用 wait 暂停机制）。
+
+        M4 画像注入（需求 §7，时机已拍死 = 分类定级前）：读取画像 → 只拼进
+        LLM prompt（profile_text），并快照进 state 供 finalize"上次同类"提示。
+        """
         draft = state["draft"]
         description = draft.get("description", "")
         tool_calls = list(state.get("tool_calls", []))
@@ -198,7 +211,8 @@ def _make_classify(deps: _NodeDeps):
                 "tool_calls": [*tool_calls, "ask_confirm"],
             }
 
-        result = deps.classifier.classify(description)
+        profile = deps.profile_store.get_profile(deps.user_id)
+        result = deps.classifier.classify(description, profile_text(profile) if profile else None)
         classification = result.model_dump()
         if result.needs_human_confirm:
             question = (
@@ -207,13 +221,18 @@ def _make_classify(deps: _NodeDeps):
             )
             return {
                 "classification": classification,
+                "profile": profile,
                 "pending_question": question,
                 "pending_stage": "classify",
                 "reply": question,
                 "tool_calls": [*tool_calls, "ask_confirm"],
                 "student_answer": None,
             }
-        return {"classification": classification, "student_answer": None}
+        return {
+            "classification": classification,
+            "profile": profile,
+            "student_answer": None,
+        }
 
     return classify
 
@@ -243,6 +262,13 @@ def _make_create(deps: _NodeDeps):
         ticket_id = int(m.group(1))
         tool_calls.append("create_ticket")
         status_events.append("SUBMITTED")
+        # M4 画像随工单提交更新（需求 §7）：楼栋/类别计数/上次摘要
+        deps.profile_store.update_profile(
+            deps.user_id,
+            building=draft.get("building"),
+            category=classification.get("category", ""),
+            description=draft.get("description", ""),
+        )
 
         rm = dispatch(
             deps.session_factory, classification.get("category"), classification.get("priority")
@@ -272,7 +298,7 @@ def _make_create(deps: _NodeDeps):
     return create
 
 
-def _make_finalize():
+def _make_finalize(deps: _NodeDeps):
     def finalize(state: RepairState) -> dict:
         ticket_id = state.get("ticket_id")
         rm = state.get("repairman")
@@ -285,6 +311,11 @@ def _make_finalize():
             )
         else:
             reply = f"您的报修工单 #{ticket_id} 已创建（{status}），正在等待派单，请耐心等待。"
+        # M4 画像提示：上次也报修过同类问题（用 classify 前快照，非本次更新后的画像）
+        classification = state.get("classification") or {}
+        category = classification.get("category", "")
+        if category and same_category_as_before(state.get("profile"), category):
+            reply += " 检测到您之前也报修过同类问题，已优先跟进。"
         return {"reply": reply, "finished": True}
 
     return finalize
@@ -311,8 +342,12 @@ def build_repair_graph(
     user_id: str = "student-001",
     actor: str = "student-001",
     default_contact: str = "学生",
+    profile_store: ProfileStore | None = None,
 ):
-    """构建 RepairGraph。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。"""
+    """构建 RepairGraph。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。
+
+    profile_store 可注入（测试用 SQLite 工厂实例，默认同 session_factory）。
+    """
     deps = _NodeDeps(
         session_factory,
         extractor if extractor is not None else FieldExtractor(),
@@ -320,6 +355,7 @@ def build_repair_graph(
         user_id=user_id,
         actor=actor,
         default_contact=default_contact,
+        profile_store=profile_store if profile_store is not None else ProfileStore(session_factory),
     )
 
     graph = (
@@ -328,7 +364,7 @@ def build_repair_graph(
         .add_node("wait", _make_wait())
         .add_node("classify", _make_classify(deps))
         .add_node("create", _make_create(deps))
-        .add_node("finalize", _make_finalize())
+        .add_node("finalize", _make_finalize(deps))
         .add_edge(START, "collect")
         .add_conditional_edges("collect", _collect_after, {"wait": "wait", "classify": "classify"})
         .add_conditional_edges("wait", _wait_after, {"collect": "collect", "classify": "classify"})
