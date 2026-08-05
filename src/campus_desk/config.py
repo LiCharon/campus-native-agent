@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+    # M3 起业务数据源：mysql+pymysql://...（空串 = 未配置，业务运行会报错，测试注入 SQLite）
+    database_url: str = ""
 
     @property
     def langfuse_enabled(self) -> bool:
