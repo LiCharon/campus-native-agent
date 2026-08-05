@@ -23,7 +23,10 @@ from campus_desk.db.models import Ticket, TicketLog
 from campus_desk.db.session import default_session_factory
 
 _NOW = datetime.now(UTC)
-D = lambda days, hours=0: _NOW - timedelta(days=days, hours=hours)  # noqa: E731
+
+
+def D(days, hours=0):
+    return _NOW - timedelta(days=days, hours=hours)
 
 # (id, user_id, type, description, contact, category, priority, status, building, location, dept, repairman_id, 创建偏移, 关闭偏移, rating, comment)
 TICKETS = [
@@ -44,9 +47,9 @@ TICKETS = [
     (15, "student-002", "complaint", "快递驿站取件时要额外收保管费，没有公示", "王芳", "其他", "P1", "CLOSED", None, "快递驿站", "后勤", None, 5, 4, 4, "驿站解释了原因并整改了收费公示"),
 ]
 
-# 状态流转日志（按工单状态生成时间线）
+# 状态流转日志（按工单状态生成时间线；只需 id/user/status/维修工/创建偏移）
 def _logs(t):
-    tid, uid, _, desc, contact, cat, pri, status, building, loc, dept, rid, d0, d1, rating, comment = t
+    tid, uid, status, rid, d0 = t[0], t[1], t[7], t[11], t[12]
     seq = [("SUBMITTED", "SUBMITTED", uid, "提交报修工单")]
     if status == "CANCELLED":
         seq.append(("SUBMITTED", "CANCELLED", uid, "学生申请撤回"))
