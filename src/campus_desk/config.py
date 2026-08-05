@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     langfuse_host: str = "https://cloud.langfuse.com"
     # M3 起业务数据源：mysql+pymysql://...（空串 = 未配置，业务运行会报错，测试注入 SQLite）
     database_url: str = ""
+    # M5 超时升级扫描（scheduler/escalation.py，需求 §3）：P1 超 4h / P2 超 48h
+    # 升级一次（escalation 字段），PENDING_VERIFY 挂起超 72h 自动关闭；周期 60s
+    escalation_p1_hours: int = 4
+    escalation_p2_hours: int = 48
+    auto_close_hours: int = 72
+    scan_interval_seconds: int = 60
 
     @property
     def langfuse_enabled(self) -> bool:
