@@ -68,3 +68,26 @@ class TestSeedIdempotent:
         with db_session_factory() as session:
             rm = session.get(Repairman, "rm-001")
             assert rm.on_duty is True  # force 重写回种子值
+
+
+class TestSeedPassword:
+    """M6 登录鉴权：种子用户带可验证的密码哈希（统一演示密码 123456）。"""
+
+    def test_seed_users_have_password_hash(self, db_session_factory):
+        from campus_desk.security import verify_password
+
+        with db_session_factory() as session:
+            users = session.query(User).all()
+        assert len(users) == 9
+        for u in users:
+            assert u.password_hash, f"{u.id} 缺 password_hash"
+            assert verify_password("123456", u.password_hash), f"{u.id} 密码校验失败"
+
+    def test_seed_rerun_keeps_password_verifiable(self, db_session_factory):
+        """force 重跑种子（覆盖更新路径）后密码仍可验证。"""
+        from campus_desk.security import verify_password
+
+        seed_all(db_session_factory, force=True)
+        with db_session_factory() as session:
+            u = session.query(User).filter(User.id == "student-001").one()
+        assert verify_password("123456", u.password_hash)

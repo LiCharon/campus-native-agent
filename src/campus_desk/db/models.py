@@ -42,6 +42,9 @@ class User(Base):
     student_no: Mapped[str | None] = mapped_column(String(32), nullable=True)
     dept: Mapped[str | None] = mapped_column(String(64), nullable=True)  # staff 所在部门
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # M6 登录鉴权：pbkdf2 哈希串（格式 pbkdf2_sha256$迭代次数$salt$hash，见 security.py）；
+    # nullable 兼容存量行，种子负责回填
+    password_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
 
 class UserProfile(Base):

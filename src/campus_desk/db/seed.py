@@ -15,20 +15,23 @@ from sqlalchemy import select
 
 from campus_desk.db.models import Account, Announcement, Dorm, Faq, Repairman, User
 from campus_desk.db.session import SessionFactory
+from campus_desk.security import hash_password
 
 # 种子数据：每项 = (模型, 幂等键列名, 种子列名列表, 行元组列表)
 # 幂等键列必须是种子列之一；自增 id 表不显式插 id（幂等键用业务唯一列）。
+# M6 登录鉴权：所有演示账号统一密码 "123456"（seed_all 内转哈希入库）。
+_DEMO_PASSWORD = "123456"
 _USERS = [
-    # (id, name, role, student_no, dept, phone)
-    ("student-001", "李华", "student", "2024001", None, "13800000001"),
-    ("student-002", "王芳", "student", "2024002", None, "13800000002"),
-    ("student-003", "张伟", "student", "2024003", None, "13800000003"),
-    ("staff-001", "陈师傅", "staff", None, "后勤", "13800000011"),
-    ("staff-002", "刘师傅", "staff", None, "后勤", "13800000012"),
-    ("staff-003", "周工", "staff", None, "信息中心", "13800000013"),
-    ("it-001", "赵工", "it_staff", None, "信息中心", "13800000021"),
-    ("it-002", "孙工", "it_staff", None, "信息中心", "13800000022"),
-    ("admin-001", "系统管理员", "admin", None, "信息中心", "13800000031"),
+    # (id, name, role, student_no, dept, phone, password)
+    ("student-001", "李华", "student", "2024001", None, "13800000001", _DEMO_PASSWORD),
+    ("student-002", "王芳", "student", "2024002", None, "13800000002", _DEMO_PASSWORD),
+    ("student-003", "张伟", "student", "2024003", None, "13800000003", _DEMO_PASSWORD),
+    ("staff-001", "陈师傅", "staff", None, "后勤", "13800000011", _DEMO_PASSWORD),
+    ("staff-002", "刘师傅", "staff", None, "后勤", "13800000012", _DEMO_PASSWORD),
+    ("staff-003", "周工", "staff", None, "信息中心", "13800000013", _DEMO_PASSWORD),
+    ("it-001", "赵工", "it_staff", None, "信息中心", "13800000021", _DEMO_PASSWORD),
+    ("it-002", "孙工", "it_staff", None, "信息中心", "13800000022", _DEMO_PASSWORD),
+    ("admin-001", "系统管理员", "admin", None, "信息中心", "13800000031", _DEMO_PASSWORD),
 ]
 
 _REPAIRMEN = [
@@ -218,7 +221,7 @@ _FAQ = [
 # (模型, 幂等键列列表, 种子列, 行数据)——种子列顺序与行元组一一对应；
 # 幂等键：字符串 id 表用 id，自增表用业务唯一列/复合键
 _SEED_SPECS = [
-    (User, ["id"], ["id", "name", "role", "student_no", "dept", "phone"], _USERS),
+    (User, ["id"], ["id", "name", "role", "student_no", "dept", "phone", "password"], _USERS),
     (Repairman, ["id"], ["id", "name", "dept", "trade", "phone", "on_duty"], _REPAIRMEN),
     (Dorm, ["building"], ["building", "room_range", "manager", "note"], _DORMS),
     (Account, ["student_no"], ["student_no", "status", "note"], _ACCOUNTS),
@@ -230,6 +233,17 @@ _SEED_SPECS = [
         _FAQ,
     ),
 ]
+
+
+# M6：演示密码哈希缓存（按明文缓存——pbkdf2 100k 迭代一次 ~0.1s，
+# 9 个用户 × 每个用 db_session_factory 的测试都算一次会显著拖慢全量）
+_PASSWORD_HASH_CACHE: dict[str, str] = {}
+
+
+def _hash_cached(plain: str) -> str:
+    if plain not in _PASSWORD_HASH_CACHE:
+        _PASSWORD_HASH_CACHE[plain] = hash_password(plain)
+    return _PASSWORD_HASH_CACHE[plain]
 
 
 def seed_all(factory: SessionFactory, *, force: bool = False) -> dict[str, int]:
@@ -244,13 +258,18 @@ def seed_all(factory: SessionFactory, *, force: bool = False) -> dict[str, int]:
             touched = 0
             for row in rows:
                 data = dict(zip(cols, row))
+                if model is User and data.get("password"):
+                    # 种子明文密码 → 哈希入库（force 路径同样生效）
+                    data["password_hash"] = _hash_cached(data.pop("password"))
                 obj = session.execute(
                     select(model).where(*(getattr(model, c) == data[c] for c in key_cols))
                 ).scalar_one_or_none()
                 if obj is None:
                     session.add(model(**data))
                     touched += 1
-                elif force:
+                elif force or (model is User and obj.password_hash is None):
+                    # M6 密码回填：存量用户缺 password_hash 时也更新（demo 补丁语义，
+                    # 幂等——重跑后已有哈希即跳过；普通模式不影响其他表存量行）
                     for c, v in data.items():
                         setattr(obj, c, v)
                     touched += 1
