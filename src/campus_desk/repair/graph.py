@@ -1,7 +1,12 @@
-"""RepairGraph（M3 核心）：报修主链路图。
+"""RepairGraph（M3 核心，M5-T2 扩展）：报修主链路图，ticket_type="complaint" 复用为投诉管道。
 
 节点链：collect（消费输入/抽字段/算缺项）→ wait（唯一 interrupt）→
 classify（规则+LLM 分类定级+人工确认门控）→ create（建单+自动派单）→ finalize。
+
+投诉模式（M5：complaint 复用同图，构建参数 ticket_type 驱动）：
+- 必填集仅 contact（不追问楼栋）；跳过 classify（省一次 LLM、无确认轮）
+- create 建 complaint 单停 SUBMITTED：不自动派单、不更新报修画像（投诉不污染画像）
+- 无实质描述（<4 字）转人工不建单：collect 标记 rejected → finalize 直出转人工文案
 
 核心语义（M1 已验证 + 本会话实测确认）：
 - interrupt 收敛到唯一节点 wait：collect/classify 是纯逻辑节点（问句+计数
@@ -27,6 +32,7 @@ from campus_desk.db.session import SessionFactory
 from campus_desk.repair.classify import RepairClassifier
 from campus_desk.repair.drafting import (
     MAX_ROUNDS,
+    REQUIRED,
     FieldExtractor,
     merge_extract,
     pick_question,
@@ -65,6 +71,7 @@ class RepairState(TypedDict):
     ticket_id: int | None
     ticket_status: str | None
     repairman: dict | None
+    rejected: bool  # M5：投诉无实质 → 转人工不建单（collect 标记，finalize 出文案）
     reply: str
     tool_calls: list[str]
     status_events: list[str]
@@ -115,6 +122,7 @@ class _NodeDeps:
         actor: str,
         default_contact: str,
         profile_store: ProfileStore,
+        mode: str = "repair",
     ):
         self.session_factory = session_factory
         self.extractor = extractor
@@ -122,6 +130,8 @@ class _NodeDeps:
         self.default_contact = default_contact
         self.user_id = user_id
         self.profile_store = profile_store
+        # mode 是构建参数不是 state 字段（M5：ticket_type="complaint" 复用为投诉管道）
+        self.mode = "complaint" if mode == "complaint" else "repair"
         self.tools = {
             t.name: t for t in create_repair_tools(session_factory, user_id=user_id, actor=actor)
         }
@@ -150,9 +160,30 @@ def _make_collect(deps: _NodeDeps):
         else:
             consumed = state.get("_consumed", False)
 
-        missing = required_missing(draft)
+        missing = required_missing(
+            draft, required=("contact",) if deps.mode == "complaint" else REQUIRED
+        )
+
+        # 投诉无实质判定（描述 <4 字，如"我投诉"）：首轮仍先走 contact 追问
+        # （保证剧本可断言：先问联系人），resume 轮再次判定仍无实质 → 拒绝
+        # 转人工不建单（rejected 标记，finalize 出转人工文案）
+        if deps.mode == "complaint" and len(draft.get("description", "").strip()) < 4:
+            first_ask = (
+                not state.get("_consumed") and missing and draft.get("rounds", 0) < MAX_ROUNDS
+            )
+            if not first_ask:
+                return {
+                    "draft": draft,
+                    "pending_question": None,
+                    "pending_stage": None,
+                    "student_answer": None,
+                    "tool_calls": [*tool_calls, "handoff_reject"],
+                    "rejected": True,
+                    "_consumed": consumed,
+                }
+
         if missing and draft.get("rounds", 0) < MAX_ROUNDS:
-            question = pick_question(missing)
+            question = pick_question(missing, mode=deps.mode)
             return {
                 "draft": draft,
                 "pending_question": question,
@@ -239,29 +270,51 @@ def _make_classify(deps: _NodeDeps):
 
 def _make_create(deps: _NodeDeps):
     def create(state: RepairState) -> dict:
-        """建单 + 自动派单（SUBMITTED → ASSIGNED 两步，审计日志落库）。"""
+        """建单 + 自动派单（SUBMITTED → ASSIGNED 两步，审计日志落库）。
+
+        投诉分支：建 complaint 单停 SUBMITTED——不自动派单（待管理员）、
+        不更新报修画像（投诉不污染画像）。
+        """
         draft = state["draft"]
         classification = state.get("classification") or {}
         tool_calls = list(state.get("tool_calls", []))
         status_events = list(state.get("status_events", []))
 
         contact = draft.get("contact") or deps.default_contact
-        building = draft.get("building")
-        room = draft.get("room")
-        location = f"{room}室" if room else None
-
-        out = deps.tools["create_ticket"].func(
-            description=draft.get("description", ""),
-            contact=contact,
-            building=building,
-            location=location,
-        )
+        if deps.mode == "complaint":
+            out = deps.tools["create_ticket"].func(
+                description=draft.get("description", ""),
+                contact=contact,
+                building=None,
+                location=draft.get("location"),
+                ticket_type="complaint",
+                priority="P1",  # 需求拍死：投诉 = P1 工单（不分类不定级，直接 P1）
+            )
+        else:
+            building = draft.get("building")
+            room = draft.get("room")
+            location = f"{room}室" if room else None
+            out = deps.tools["create_ticket"].func(
+                description=draft.get("description", ""),
+                contact=contact,
+                building=building,
+                location=location,
+            )
         m = re.search(r"工单 #(\d+)", out)
         if m is None:
             return {"reply": f"建单失败：{out}", "finished": True}
         ticket_id = int(m.group(1))
         tool_calls.append("create_ticket")
         status_events.append("SUBMITTED")
+        if deps.mode == "complaint":
+            # 投诉：停在 SUBMITTED 待管理员，跳过 dispatch 与画像更新
+            return {
+                "ticket_id": ticket_id,
+                "ticket_status": "SUBMITTED",
+                "repairman": None,
+                "tool_calls": tool_calls,
+                "status_events": status_events,
+            }
         # M4 画像随工单提交更新（需求 §7）：楼栋/类别计数/上次摘要
         deps.profile_store.update_profile(
             deps.user_id,
@@ -300,7 +353,20 @@ def _make_create(deps: _NodeDeps):
 
 def _make_finalize(deps: _NodeDeps):
     def finalize(state: RepairState) -> dict:
+        # 投诉无实质 → 转人工不建单（不出现工单号）
+        if state.get("rejected"):
+            return {
+                "reply": "您的投诉内容不明确，已为您转人工核实，请保持在线。",
+                "finished": True,
+            }
         ticket_id = state.get("ticket_id")
+        if deps.mode == "complaint":
+            return {
+                "reply": (
+                    f"您的投诉单 #{ticket_id} 已创建（SUBMITTED），已转交管理员处理，请耐心等待。"
+                ),
+                "finished": True,
+            }
         rm = state.get("repairman")
         status = state.get("ticket_status")
         if rm:
@@ -321,16 +387,34 @@ def _make_finalize(deps: _NodeDeps):
     return finalize
 
 
-def _collect_after(state: RepairState) -> Literal["wait", "classify"]:
-    return "wait" if state.get("pending_question") else "classify"
+def _make_collect_after(deps: _NodeDeps):
+    def collect_after(
+        state: RepairState,
+    ) -> Literal["wait", "classify", "create", "finalize"]:
+        """collect 出口：rejected → finalize（转人工不建单）；
+        投诉跳过 classify 直接 create（无确认轮）；报修走原逻辑。"""
+        if state.get("rejected"):
+            return "finalize"
+        if deps.mode == "complaint":
+            return "create" if not state.get("pending_question") else "wait"
+        return "wait" if state.get("pending_question") else "classify"
+
+    return collect_after
 
 
-def _wait_after(state: RepairState) -> Literal["collect", "classify"]:
-    return "collect" if state.get("pending_stage") == "collect" else "classify"
+def _make_wait_after():
+    def wait_after(state: RepairState) -> Literal["collect", "classify"]:
+        # 投诉永不进 classify（pending_stage 只有 collect），此函数保持原逻辑
+        return "collect" if state.get("pending_stage") == "collect" else "classify"
+
+    return wait_after
 
 
-def _classify_after(state: RepairState) -> Literal["wait", "create"]:
-    return "wait" if state.get("pending_question") else "create"
+def _make_classify_after():
+    def classify_after(state: RepairState) -> Literal["wait", "create"]:
+        return "wait" if state.get("pending_question") else "create"
+
+    return classify_after
 
 
 def build_repair_graph(
@@ -343,10 +427,14 @@ def build_repair_graph(
     actor: str = "student-001",
     default_contact: str = "学生",
     profile_store: ProfileStore | None = None,
+    ticket_type: str = "repair",
 ):
     """构建 RepairGraph。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。
 
     profile_store 可注入（测试用 SQLite 工厂实例，默认同 session_factory）。
+    ticket_type="complaint"（M5）复用为投诉管道：必填集仅 contact、跳过
+    classify、建单停 SUBMITTED 不派单、不更新报修画像、无实质描述转人工。
+    默认 "repair" 保证现有调用方零改动。
     """
     deps = _NodeDeps(
         session_factory,
@@ -356,7 +444,11 @@ def build_repair_graph(
         actor=actor,
         default_contact=default_contact,
         profile_store=profile_store if profile_store is not None else ProfileStore(session_factory),
+        mode=ticket_type,
     )
+    collect_after = _make_collect_after(deps)
+    wait_after = _make_wait_after()
+    classify_after = _make_classify_after()
 
     graph = (
         StateGraph(RepairState)
@@ -366,9 +458,18 @@ def build_repair_graph(
         .add_node("create", _make_create(deps))
         .add_node("finalize", _make_finalize(deps))
         .add_edge(START, "collect")
-        .add_conditional_edges("collect", _collect_after, {"wait": "wait", "classify": "classify"})
-        .add_conditional_edges("wait", _wait_after, {"collect": "collect", "classify": "classify"})
-        .add_conditional_edges("classify", _classify_after, {"wait": "wait", "create": "create"})
+        .add_conditional_edges(
+            "collect",
+            collect_after,
+            {
+                "wait": "wait",
+                "classify": "classify",
+                "create": "create",
+                "finalize": "finalize",
+            },
+        )
+        .add_conditional_edges("wait", wait_after, {"collect": "collect", "classify": "classify"})
+        .add_conditional_edges("classify", classify_after, {"wait": "wait", "create": "create"})
         .add_edge("create", "finalize")
         .add_edge("finalize", END)
     )
