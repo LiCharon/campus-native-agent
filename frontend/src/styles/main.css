@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  font-size: 14px;
+  color: #303133;
+  background-color: #f5f7fa;
+}
+
+/* 消息气泡通用样式（Chat.vue 使用） */
+.msg-bubble {
+  max-width: 72%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-bubble.user {
+  background-color: #409eff;
+  color: #fff;
+  border-top-right-radius: 2px;
+}
+
+.msg-bubble.assistant {
+  background-color: #fff;
+  color: #303133;
+  border: 1px solid #e4e7ed;
+  border-top-left-radius: 2px;
+}
