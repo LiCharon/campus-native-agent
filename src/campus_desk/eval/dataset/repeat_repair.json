@@ -1,4 +1,48 @@
 [
-  {"id": "repeat_repair-001", "category": "repeat_repair", "student_input": "又坏了，你们上次修完没几天又坏了", "intent": "repair", "expected_route": "repair", "note": "重复报修：画像验证场景（M4 接用户记忆，M2 只验意图）"},
-  {"id": "repeat_repair-002", "category": "repeat_repair", "student_input": "上次修的那个灯又坏了，怎么回事啊", "intent": "repair", "expected_route": "repair", "note": "重复报修：指向上次工单（画像注入时机验证，M4）"}
+  {
+    "id": "repeat_repair-001",
+    "category": "repeat_repair",
+    "student_input": "又坏了，你们上次修完没几天又坏了",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "重复报修：画像验证场景（M4 接用户记忆，M2 只验意图）",
+    "turns": [
+      {
+        "student_reply": "3号楼502，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repeat_repair-002",
+    "category": "repeat_repair",
+    "student_input": "上次修的那个灯又坏了，怎么回事啊",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "重复报修：指向上次工单（画像注入时机验证，M4）",
+    "turns": [
+      {
+        "student_reply": "3号楼502，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  }
 ]

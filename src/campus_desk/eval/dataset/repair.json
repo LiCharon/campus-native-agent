@@ -1,18 +1,358 @@
 [
-  {"id": "repair-001", "category": "repair", "student_input": "宿舍的灯坏了，一直闪，能来修一下吗", "intent": "repair", "expected_route": "repair", "note": "灯光故障：闪烁，请求维修"},
-  {"id": "repair-002", "category": "repair", "student_input": "我们宿舍水管漏水，水漫了一地", "intent": "repair", "expected_route": "repair", "note": "水管漏水：紧急语气"},
-  {"id": "repair-003", "category": "repair", "student_input": "3号楼502停电了，整个宿舍都没电", "intent": "repair", "expected_route": "repair", "note": "断电：带楼栋房间号"},
-  {"id": "repair-004", "category": "repair", "student_input": "门锁坏了，锁不上门，有点担心安全问题", "intent": "repair", "expected_route": "repair", "note": "门锁故障：带安全担忧"},
-  {"id": "repair-005", "category": "repair", "student_input": "窗户关不上了，一直有风进来", "intent": "repair", "expected_route": "repair", "note": "门窗故障"},
-  {"id": "repair-006", "category": "repair", "student_input": "宿舍空调不制冷了，大热天的没法睡", "intent": "repair", "expected_route": "repair", "note": "空调故障：生活受影响描述"},
-  {"id": "repair-007", "category": "repair", "student_input": "马桶堵了，冲不下去", "intent": "repair", "expected_route": "repair", "note": "卫生间设施堵塞"},
-  {"id": "repair-008", "category": "repair", "student_input": "上铺的床板塌了一块，睡觉都提心吊胆", "intent": "repair", "expected_route": "repair", "note": "家具损坏：安全隐患"},
-  {"id": "repair-009", "category": "repair", "student_input": "宿舍墙上的网线接口坏了，插上去没反应", "intent": "repair", "expected_route": "repair", "note": "网络物理接口故障（报修侧，区别于咨询侧网络账号问题）"},
-  {"id": "repair-010", "category": "repair", "student_input": "热水器不出热水了，洗不了澡", "intent": "repair", "expected_route": "repair", "note": "热水器故障"},
-  {"id": "repair-011", "category": "repair", "student_input": "衣柜的门掉下来了，一直靠墙放着", "intent": "repair", "expected_route": "repair", "note": "家具故障"},
-  {"id": "repair-012", "category": "repair", "student_input": "我要报修，宿舍空调坏了", "intent": "repair", "expected_route": "repair", "note": "报修请求式表述"},
-  {"id": "repair-013", "category": "repair", "student_input": "我们屋灯不亮了，麻烦给看看呗", "intent": "repair", "expected_route": "repair", "note": "口语化（我们屋=我们宿舍）"},
-  {"id": "repair-014", "category": "repair", "student_input": "6号楼303的水管裂了，一直滴水", "intent": "repair", "expected_route": "repair", "note": "直接给楼栋+故障的省略式"},
-  {"id": "repair-015", "category": "repair", "student_input": "宿舍里有个东西坏了，具体说不清，你们派人来看看吧", "intent": "repair", "expected_route": "repair", "note": "低信息量表述：故障对象不明但意图明确"},
-  {"id": "repair-016", "category": "repair", "student_input": "卫生间漏水漏得厉害，能来个人吗，着急", "intent": "repair", "expected_route": "repair", "note": "紧急催促语气"}
+  {
+    "id": "repair-001",
+    "category": "repair",
+    "student_input": "宿舍的灯坏了，一直闪，能来修一下吗",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "灯光故障：闪烁，请求维修",
+    "turns": [
+      {
+        "student_reply": "3号楼501，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-002",
+    "category": "repair",
+    "student_input": "我们宿舍水管漏水，水漫了一地",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "水管漏水：紧急语气",
+    "turns": [
+      {
+        "student_reply": "3号楼502，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对，就按这个处理",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-003",
+    "category": "repair",
+    "student_input": "3号楼502停电了，整个宿舍都没电",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "断电：带楼栋房间号",
+    "turns": [
+      {
+        "student_reply": "李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我姓李，叫李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-004",
+    "category": "repair",
+    "student_input": "门锁坏了，锁不上门，有点担心安全问题",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "门锁故障：带安全担忧",
+    "turns": [
+      {
+        "student_reply": "6号楼401，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-005",
+    "category": "repair",
+    "student_input": "窗户关不上了，一直有风进来",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "门窗故障",
+    "turns": [
+      {
+        "student_reply": "2号楼305，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-006",
+    "category": "repair",
+    "student_input": "宿舍空调不制冷了，大热天的没法睡",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "空调故障：生活受影响描述",
+    "turns": [
+      {
+        "student_reply": "3号楼601，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-007",
+    "category": "repair",
+    "student_input": "马桶堵了，冲不下去",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "卫生间设施堵塞",
+    "turns": [
+      {
+        "student_reply": "1号楼208，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-008",
+    "category": "repair",
+    "student_input": "上铺的床板塌了一块，睡觉都提心吊胆",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "家具损坏：安全隐患",
+    "turns": [
+      {
+        "student_reply": "3号楼503，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-009",
+    "category": "repair",
+    "student_input": "宿舍墙上的网线接口坏了，插上去没反应",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "网络物理接口故障（报修侧，区别于咨询侧网络账号问题）",
+    "turns": [
+      {
+        "student_reply": "4号楼302，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-010",
+    "category": "repair",
+    "student_input": "热水器不出热水了，洗不了澡",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "热水器故障",
+    "turns": [
+      {
+        "student_reply": "6号楼405，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-011",
+    "category": "repair",
+    "student_input": "衣柜的门掉下来了，一直靠墙放着",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "家具故障",
+    "turns": [
+      {
+        "student_reply": "2号楼202，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-012",
+    "category": "repair",
+    "student_input": "我要报修，宿舍空调坏了",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "报修请求式表述",
+    "turns": [
+      {
+        "student_reply": "3号楼502，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-013",
+    "category": "repair",
+    "student_input": "我们屋灯不亮了，麻烦给看看呗",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "口语化（我们屋=我们宿舍）",
+    "turns": [
+      {
+        "student_reply": "4号楼103，联系人李华",
+        "expect": []
+      },
+      {
+        "student_reply": "李华",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-014",
+    "category": "repair",
+    "student_input": "6号楼303的水管裂了，一直滴水",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "直接给楼栋+故障的省略式",
+    "turns": [
+      {
+        "student_reply": "李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-015",
+    "category": "repair",
+    "student_input": "宿舍里有个东西坏了，具体说不清，你们派人来看看吧",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "低信息量表述：故障对象不明但意图明确",
+    "turns": [
+      {
+        "student_reply": "3号楼502，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "我叫李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repair-016",
+    "category": "repair",
+    "student_input": "卫生间漏水漏得厉害，能来个人吗，着急",
+    "intent": "repair",
+    "expected_route": "repair",
+    "note": "紧急催促语气",
+    "turns": [
+      {
+        "student_reply": "3号楼501，李华",
+        "expect": []
+      },
+      {
+        "student_reply": "李华",
+        "expect": []
+      },
+      {
+        "student_reply": "对",
+        "expect": [
+          "tool:create_ticket",
+          "status:ASSIGNED"
+        ]
+      }
+    ]
+  }
 ]

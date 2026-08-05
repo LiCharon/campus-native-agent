@@ -71,4 +71,15 @@ def validate_dataset(cases: list[ScriptedCase]) -> list[str]:
             )
         if case.intent in case.secondary_intents:
             problems.append(f"{case.id}: 次要意图与主意图重复")
+        for idx, turn in enumerate(case.turns, start=1):
+            if not turn.student_reply.strip():
+                problems.append(f"{case.id}: 第 {idx} 轮 student_reply 为空")
+            for assertion in turn.expect:
+                if assertion.startswith("tool:") and len(assertion) > 5:
+                    continue
+                if assertion.startswith("status:") and len(assertion) > 7:
+                    continue
+                problems.append(
+                    f"{case.id}: 第 {idx} 轮非法断言 '{assertion}'（仅支持 tool:xxx / status:xxx）"
+                )
     return problems
