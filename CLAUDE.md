@@ -24,6 +24,7 @@
 | docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
 | docs/eval_report_m3.md | M3 评测：意图 95.8% + 报修链路成功率 94.4%（17/18），本地私有管理 |
 | docs/eval_report_m4.md | M4 评测：咨询自助解决率/介入率/轮次基线 + 报修维持，本地私有管理 |
+| docs/eval_report_m5.md | M5 评测：意图 100% + 投诉链路 100% + §10 目标值已按实测校准，本地私有管理 |
 | （已归档） | PLANNING_REVIEW 评析报告与 Qwen 需求分析原文已于 2026-08-05 删，历史在 docs 私有仓库 git 可恢复 |
 
 ## 1. 为什么做（面试叙事，防止跑偏）
@@ -45,7 +46,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 
 ## 4. 工程化标准（贯穿，不做就白做）
 - Langfuse 全链路埋点（agent 步骤/工具调用/状态跳转/LLM call）
-- 评测数据集（M2 落地 72 条 + M3 扩展 turns）：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 16 条 + 多意图 6 + 重复报修 2，**JSON 文件入 git + M3 已做入库脚本同步 MySQL**（scripts/ingest_eval_data.py）；报修 18 条剧本 turns 按真 LLM 口径设计（断言=tool:/status: 行为）
+- 评测数据集（M2 落地 72 条 + M3 扩展 turns + M5 校准至 76 条）：**对话剧本格式（scripted，预写学生每轮回复）**，报修 16 + 咨询 16 + 投诉 20（M5 补 4 条带 turns）+ 闲聊 16 + 多意图 6 + 重复报修 2，**JSON 文件入 git + M3 已做入库脚本同步 MySQL**（scripts/ingest_eval_data.py）；报修 18 条剧本 turns 按真 LLM 口径设计（断言=tool:/status: 行为）；M5 加投诉链路评测段（run_complaint_evaluation，失配判失败同报修）+ 咨询失配不判失败 + outcome=ask 无回应不计失败（口径见 §10 文档）
 - 量化指标 9 项 + 目标值 → requirements §10（目标均为示例基线，M5 后按实测校准）
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
 - CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
@@ -86,7 +87,8 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 - **Consult 工具轮 act→act 自环**：同一 invoke 内连续决策到 ask/终态（不暂停）——测试/评测不要假设"工具轮后需再次 invoke"
 - **咨询剧本失配不判失败**：LLM 自由对话下"学生补充信息被提前解答"= 合理自助解决，非答非所问失真；失真防线仅保留给报修确定性追问轮
 - **画像上下文只进 LLM prompt 不进规则层**：classify(description, profile_context)，规则计分用原始描述防画像关键词干扰（M4 设计）
-- 回访=字段不是状态（closed_at/rating/review_comment/reviewed_at）：closed_at 在 apply_transition 唯一写入口进 CLOSED 时写；Quality 惰性触发（学生进对话时查，不装 APScheduler——用户拍板，超时升级扫描留 M5）
+- 回访=字段不是状态（closed_at/rating/review_comment/reviewed_at）：closed_at 在 apply_transition 唯一写入口进 CLOSED 时写；Quality 惰性触发（学生进对话时查，不装 APScheduler——用户拍板）；超时升级扫描=纯函数时钟注入 + APScheduler（M5 实装，apscheduler 必须 <4，v4 异步重构）
+- **worktree 基线错位（多 agent 并行必查）**：worktree baseRef 取 origin/main（可落后本地 main 数十 commit）——子 agent 开工第一件事 `git log --oneline -1` 核基线，不对就 checkout -B 对齐 main；worktree 的 .venv editable 可能指向主仓库 src，worktree 里跑 python 脚本需 `PYTHONPATH=src`（pytest 不受影响）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -95,6 +97,6 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m4.md`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m5.md`（--no-repair/--no-consult/--no-complaint 分段落）；Langfuse 冒烟 `.venv/Scripts/python scripts/smoke_langfuse.py`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码）；docker-compose.yml 备着（供无本机 MySQL 环境，实际开发不用） |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
