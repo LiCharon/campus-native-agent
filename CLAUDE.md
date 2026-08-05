@@ -34,58 +34,29 @@
 ## 2. 技术栈（已拍板）
 Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DEV_JOURNAL M1）· LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度，M6 再试自托管）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + sse-starlette + httpx · MCP（扩展期演示加分）
 **MVP 不引入**：Redis（M6+ 加：热点缓存 FAQ/公告/排班——会话历史由 checkpointer 管，Redis 不背会话）、Celery（不引入，APScheduler 够用）
-⚠️ LangGraph/LangChain API 变动快：**写框架代码前先 context7 查文档**，禁凭记忆写
 
-## 3. 核心设计（细节 → docs/PROJECT_REQUIREMENTS.md）
-- 入口分流：EntryAgent 意图识别（报修/咨询/投诉/其他）→ 置信度门控 → 低置信兜底转人工；多意图取主意图处理、次要问题提示继续问；**投诉 = 创建 P1 工单 + 通知管理员**（复用 Repair 管道；通知载体 = 管理列表标红/界面可见，不建通知模块，见 §14）
-- 工单状态机 6 态：SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED（仅 SUBMITTED/ASSIGNED 可撤）；**超时升级=字段不是状态**（escalation_count+escalated_at+审计日志，P1 4h/P2 48h/P3 不适用）；**跳转=白名单**（完整边清单 8 条，测试照单锁定；M3 落地：纯函数白名单 machine.py 为权威 + apply_transition SAVEPOINT 原子写库（状态+审计日志，唯一写入口）+ TicketStateGraph 图渲染条件边——"跳转=图的边"叙事保留但 RepairGraph 不嵌套子图，状态变更全走 apply_transition）：验收不通过 PENDING_VERIFY→IN_PROGRESS 返工；挂起 3 天无响应自动 CLOSED（备注"超时自动关闭"，APScheduler 定时 M4 挂，同为事件非状态）
-- 4 Agent：Entry（分流）/ Repair（报修主流程）/ Consult（**诊断式咨询**：追问≤8 轮、每轮≤2 问 → 工具排查 → 三态分支，转人工打包排查记录）/ Quality（关闭 24h 后回访）
-- 9 确定性工具（每工具独立单测，不依赖 LLM）：报修侧 6（create_ticket / get_ticket / update_ticket_status / list_repairmen / query_dorm_info / urgent_followup）+ 咨询侧 3（query_account_status / query_announcement / search_faq 关键词匹配）
-- 5 类上下文隔离：当前任务（LangGraph state）/ 会话（checkpointer SQLite）/ 用户长期画像（MySQL）/ 工具只读数据 / 全局 FAQ
-- 边界声明：业务办理=工单类（报修+投诉+咨询）；咨询=IT 诊断工具 + FAQ 问答；外部接入/通知/多端 = **演示不实装**（requirements 12-14 节，仅面试备答）
-- **待定项：5 个待拍板**（报修采集形态/意图识别实现/派单规则/FAQ 库/评测集细节）+ **2 项后置**（few-shot/MCP）→ 按里程碑时间表拍死（requirements 第 11 节），不边写边吵
+## 3. 核心设计（拍板结论；边清单/工具表/细节 → docs/PROJECT_REQUIREMENTS.md）
+- 入口分流：EntryAgent 意图识别 + 置信度门控 + 多意图取主意图；**投诉 = 复用 Repair 管道建 P1 工单**（不建独立流程/通知模块）
+- 工单状态机 6 态 8 边（SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED）；**跳转=白名单**：纯函数 machine.py 为权威 + apply_transition SAVEPOINT 原子写库（状态+审计日志，唯一写入口）+ 图渲染双保险；**超时升级=字段不是状态**（escalation_count/escalated_at）；验收不通过返工；挂起 3 天自动关闭
+- 4 Agent：Entry（分流）/ Repair（报修）/ Consult（诊断式咨询）/ Quality（关闭 24h 后回访）
+- 9 确定性工具（报修侧 6 + 咨询侧 3，每工具独立单测不依赖 LLM）+ 5 类上下文隔离（任务/会话/画像/工具只读/FAQ）
+- **已拍板**：采集=固定信息一次性收集+Agent 只问缺项 ≤2 轮；派单=规则优先（类别→部门/工种 + 在岗优先）；边界=业务办理仅工单类，外部接入/通知/多端演示不实装
 
 ## 4. 工程化标准（贯穿，不做就白做）
 - Langfuse 全链路埋点（agent 步骤/工具调用/状态跳转/LLM call）
 - 评测数据集（M2 落地 72 条 + M3 扩展 turns）：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 16 条 + 多意图 6 + 重复报修 2，**JSON 文件入 git + M3 已做入库脚本同步 MySQL**（scripts/ingest_eval_data.py）；报修 18 条剧本 turns 按真 LLM 口径设计（断言=tool:/status: 行为）
-- 量化指标（9 项，细节见 requirements §10）：意图分类准确率/分类定级准确率/自助解决率/人工介入率/平均对话轮次/工单闭环率/工单响应时间/超时率/满意度——**目标值均为示例基线，M5 评测后按实测校准，不拍死**
+- 量化指标 9 项 + 目标值 → requirements §10（目标均为示例基线，M5 后按实测校准）
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
 - CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
 - 安全：.env gitignore + 密钥不入库；alembic 迁移脚本，禁手改表
 - Docker Compose 一键起：MySQL + 后端 + 前端（Langfuse 开发期用 Cloud，自托管 M6 再试）
 
-## 5. AI Coding 顺序规范
-### 阶段 0 开工（每个新会话）
-1. 读本文件 + **记忆索引（MEMORY.md）指向的记忆文件**（教训 2026-08-05：只读 CLAUDE.md 漏读记忆 → 基于过期状态操作）+ 相关 docs + mem-search
-2. TodoWrite 列任务清单（先列再动）
-### 阶段 1 想清楚再动
-3. 方案先给（改哪些文件/目标/验收标准），**用户确认后才写码**
-4. 3+ 文件或动 DB/权限 → Plan 模式；大改动按全局规范多 agent 协同
-### 阶段 2 小步循环（每个功能点）
-5. 一次一个功能点，不跨任务；写码前 context7 核实框架 API
-6. **先写失败的测试**，测试定义"完成"的标准
-7. 改完立即验证（pytest/冒烟），不靠"应该没问题"
-8. 一个 commit 一件事；受保护文件（migrations/.env/锁文件）改动先报备
-9. 报错给 AI 完整资料包（日志+源码+步骤+预期/实际），AI 答四问：出错位置/原因/修改点/验证方案
-10. commit 前自查 Diff：文件清单/原因/冗余改动/逻辑误删/硬编码/安全隐患
-### 阶段 3 收尾（任务完成/会话结束）
-11. 全量测试 + 冒烟 + CI 绿；验收过异常/空数据/保存能力（不只走正常流程）
-12. **更新 DEV_JOURNAL.md**（做了什么/为什么/坑/量化数据/面试可讲点）
-13. **里程碑（Mx）跑完先跑 /neat 洁癖收尾**（全局规范 2026-08-05 确认）：核对代码/文档/规则/记忆/工作区一致，删除候选与推送项列清单交用户确认，未确认不动
-14. 存档（记忆+本文件当前状态），提议新会话
-### 防忘清单（每个 commit 前 + 会话收尾时各过一遍）
-- [ ] .env gitignore，密钥不入库　[ ] 依赖锁版本　[ ] 改动有测试或冒烟验证
-- [ ] 工具有独立单测　[ ] DB 变更走迁移　[ ] 状态机跳转有测试锁定
-- [ ] Langfuse 有 trace（不靠猜排障）　[ ] 提交信息规范
-- 分支策略：feature/* from main（多 agent worktree 用）
-### 额外纪律（防 AI 翻车）
-- AI 写坏代码 → 修环境（加测试/lint 规则），不修 prompt
-- 上下文当预算：超 40% 在干净边界重置会话（/compact）
-- 审查用对抗性视角："找出你能找到的每个问题，不要鼓励"
-- 自主循环迭代上限 5 次，改进 <5% 提前停
-- 禁危险命令：git push --force / git reset --hard
-- AI 犯过的错 → 沉淀进本文件"别再犯"
-- **外部评审吸收先过三问**（教训 2026-08-04：无条件吸收 hy3 通知/provider 抽象层 → 过度建设）：① 服务"演示能跑+面试能讲"？② 加的是文档契约还是代码模块？③ 与 8:2/演进式冲突吗？——本作是演示项目，生产级设计（真实接入/通知/适配器）一律不实装
+## 5. AI Coding 顺序规范（项目特有；通用纪律 → 全局 CLAUDE.md）
+- 开工：读本文件 + 记忆索引（MEMORY.md，教训 2026-08-05：只读 CLAUDE.md 漏读记忆）+ 相关 docs；TodoWrite 先列清单
+- 想清楚再动：方案先给用户确认才写码；3+ 文件或动 DB/权限 → Plan 模式；大改动多 agent 协同
+- 小步循环：一次一个功能点，改完立即 pytest 验证
+- 收尾：更新 DEV_JOURNAL.md（做了什么/为什么/坑/量化/面试点）；里程碑跑完先 /neat 再存档、提议新会话
+- 防忘清单（项目特有）：工具有独立单测 ・ DB 变更走迁移 ・ 状态机跳转有测试锁定 ・ Langfuse 有 trace ・ 分支 feature/* from main
 
 ## 6. 里程碑（生存线/加分线）
 **生存线（做不完加分线，项目不成立）**：M1 骨架 → M2 入口分流+评测集 → M3 报修主链路+状态机+工具 → M4 记忆+咨询+回访 → M5 评测闭环+Langfuse
