@@ -22,8 +22,8 @@ class TestIngest:
                 .order_by(EvalTurn.seq)
                 .all()
             )
-            assert len(turn_rows) == 2
-            assert turn_rows[1].expect == '["tool:create_ticket", "status:ASSIGNED"]'
+            assert len(turn_rows) == 1  # 真 LLM 口径：1 轮补全即建单
+            assert turn_rows[0].expect == '["tool:create_ticket", "status:ASSIGNED"]'
 
     def test_ingest_idempotent(self, db_session_factory):
         """重入库不累积（EvalCase upsert + EvalTurn 先删后插）。"""

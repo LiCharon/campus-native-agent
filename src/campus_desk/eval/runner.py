@@ -174,8 +174,10 @@ def run_repair_evaluation(
       答非所问的失真防线（Qwen 二轮审查拍板）；再 resume 并检查 expect
     - entry_graph/repair_graph 可注入（测试用 fake/规则版；默认真 LLM + SqliteSaver）
     """
+    from langgraph.checkpoint.memory import InMemorySaver
+
     from campus_desk.db.session import default_session_factory
-    from campus_desk.repair.agent import build_repair_agent
+    from campus_desk.repair.graph import build_repair_graph
 
     cases = [c for c in cases if c.category in ("repair", "repeat_repair")]
     if max_cases:
@@ -184,7 +186,11 @@ def run_repair_evaluation(
         return RepairEvalReport()
 
     entry_graph = entry_graph or build_entry_graph()
-    repair_graph = repair_graph or build_repair_agent(session_factory or default_session_factory())
+    # 评测用 InMemorySaver：文件级 SqliteSaver（生产 checkpointer.db）会残留
+    # 上次评测的终态 thread——重跑时 get_state 命中旧终态 → 全剧本失配（实测抓出）
+    repair_graph = repair_graph or build_repair_graph(
+        session_factory or default_session_factory(), checkpointer=InMemorySaver()
+    )
 
     results: list[RepairCaseResult] = []
     start = time.monotonic()

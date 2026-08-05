@@ -110,6 +110,25 @@ class TestMultiIntentNotSwallowed:
         assert out2["ticket_id"] == 1
 
 
+class TestPendingOtherInput:
+    def test_other_reply_during_pending_resumes_repair(self, db_session_factory):
+        """报修挂起时 other 类输入（如"3号楼501，李华"）→ 视为回答 resume，
+        不被打到人工占位（真 LLM 评测抓出：Entry 无上下文判 other）。"""
+        extractor = FakeFieldExtractor(
+            sequence=[
+                DraftExtract(description="", building=None, room="502", contact="李华"),
+                DraftExtract(description="", building="3号楼", room=None, contact=None),
+            ]
+        )
+        rg = _repair(db_session_factory, extractor=extractor)
+        out1 = turn(_entry("repair"), rg, TID, "502室灯坏了，李华")
+        assert out1["pending_question"]  # 追问挂起
+        out2 = turn(_entry("other", confidence=0.4), rg, TID, "3号楼")  # Entry 判 other
+        assert out2["route"] == "repair"  # 挂起中 other → 仍进报修
+        assert out2["finished"] is True
+        assert out2["ticket_id"] == 1
+
+
 class TestSessionIsolation:
     def test_new_thread_new_repair(self, db_session_factory):
         """不同 thread_id = 不同报修会话（互不干扰）。"""

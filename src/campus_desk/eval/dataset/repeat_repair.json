@@ -8,11 +8,7 @@
     "note": "重复报修：画像验证场景（M4 接用户记忆，M2 只验意图）",
     "turns": [
       {
-        "student_reply": "3号楼502，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "李华",
+        "student_reply": "3号楼502，联系人李华",
         "expect": []
       },
       {
@@ -33,11 +29,7 @@
     "note": "重复报修：指向上次工单（画像注入时机验证，M4）",
     "turns": [
       {
-        "student_reply": "3号楼502，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "3号楼502，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"

@@ -9,10 +9,6 @@
     "turns": [
       {
         "student_reply": "3号楼501，联系人李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -33,10 +29,6 @@
         "expect": []
       },
       {
-        "student_reply": "我叫李华",
-        "expect": []
-      },
-      {
         "student_reply": "对，就按这个处理",
         "expect": [
           "tool:create_ticket",
@@ -54,11 +46,7 @@
     "note": "断电：带楼栋房间号",
     "turns": [
       {
-        "student_reply": "李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我姓李，叫李华",
+        "student_reply": "我叫李华",
         "expect": []
       },
       {
@@ -80,10 +68,6 @@
     "turns": [
       {
         "student_reply": "6号楼401，联系人李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -100,11 +84,7 @@
     "note": "门窗故障",
     "turns": [
       {
-        "student_reply": "2号楼305，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "2号楼305，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -122,10 +102,6 @@
     "turns": [
       {
         "student_reply": "3号楼601，联系人李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -142,11 +118,7 @@
     "note": "卫生间设施堵塞",
     "turns": [
       {
-        "student_reply": "1号楼208，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "李华",
+        "student_reply": "1号楼208，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -163,11 +135,7 @@
     "note": "家具损坏：安全隐患",
     "turns": [
       {
-        "student_reply": "3号楼503，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "3号楼503，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -185,10 +153,6 @@
     "turns": [
       {
         "student_reply": "4号楼302，联系人李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -205,11 +169,7 @@
     "note": "热水器故障",
     "turns": [
       {
-        "student_reply": "6号楼405，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "李华",
+        "student_reply": "6号楼405，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -226,11 +186,7 @@
     "note": "家具故障",
     "turns": [
       {
-        "student_reply": "2号楼202，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "2号楼202，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -247,11 +203,7 @@
     "note": "报修请求式表述",
     "turns": [
       {
-        "student_reply": "3号楼502，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "3号楼502，联系人李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -269,10 +221,6 @@
     "turns": [
       {
         "student_reply": "4号楼103，联系人李华",
-        "expect": []
-      },
-      {
-        "student_reply": "李华",
         "expect": [
           "tool:create_ticket",
           "status:ASSIGNED"
@@ -288,10 +236,6 @@
     "expected_route": "repair",
     "note": "直接给楼栋+故障的省略式",
     "turns": [
-      {
-        "student_reply": "李华",
-        "expect": []
-      },
       {
         "student_reply": "我叫李华",
         "expect": []
@@ -314,11 +258,7 @@
     "note": "低信息量表述：故障对象不明但意图明确",
     "turns": [
       {
-        "student_reply": "3号楼502，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "我叫李华",
+        "student_reply": "3号楼502，联系人李华",
         "expect": []
       },
       {
@@ -339,11 +279,7 @@
     "note": "紧急催促语气",
     "turns": [
       {
-        "student_reply": "3号楼501，李华",
-        "expect": []
-      },
-      {
-        "student_reply": "李华",
+        "student_reply": "3号楼501，联系人李华",
         "expect": []
       },
       {

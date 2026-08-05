@@ -28,8 +28,10 @@ def turn(entry_graph, repair_graph, thread_id: str, msg: str) -> dict:
     """一轮对话：Entry 分流 → 按需进 RepairGraph。返回给调用方（reply/route/state 摘要）。"""
     entry_out = entry_graph.invoke({"user_input": msg})
     route = entry_out["route"]
+    cfg = {"configurable": {"thread_id": thread_id}}
+    has_pending = repair_graph.get_state(cfg).next != ()
 
-    if route != REPAIR:
+    if route != REPAIR and not (has_pending and route == HUMAN_HANDOFF):
         return {
             "reply": _NON_REPAIR_REPLIES.get(route, entry_out.get("reply", "")),
             "route": route,
@@ -38,9 +40,11 @@ def turn(entry_graph, repair_graph, thread_id: str, msg: str) -> dict:
             or [],
         }
 
-    cfg = {"configurable": {"thread_id": thread_id}}
-    if repair_graph.get_state(cfg).next:
-        # 有挂起的报修会话（等在 wait 节点）→ 学生回复作为 resume 值续跑
+    if has_pending:
+        # 有挂起的报修会话（等在 wait 节点）→ 学生回复作为 resume 值续跑。
+        # 含"other 类补充信息"：挂起中学生的回答（"3号楼501，李华"）被 Entry
+        # 无上下文地判为 other——但这是对追问的回答不是新话题，仍进报修流程
+        # （真 LLM 评测抓出：修复前这类回复走人工占位，RepairGraph 永不 resume）
         state = repair_graph.invoke(Command(resume=msg), cfg)
     else:
         # 无挂起 → 新报修会话（thread_id 语义 = 报修会话 id，调用方保证唯一）
