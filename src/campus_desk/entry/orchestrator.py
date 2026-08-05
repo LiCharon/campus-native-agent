@@ -10,7 +10,10 @@
    与报修会话互不干扰——多意图分流的关键）
 4. M4 QualityAgent 惰性触发（需求 §6 触达方式已拍死）：user_id 非空时每轮先查
    "关闭超 24h 未回访"工单 → 有则先进 QualityGraph（提醒/采集），再进主流程
-5. 其余（COMPLAINT/HUMAN_HANDOFF）→ 占位回复（M5 接投诉管道/转人工）
+5. M5 投诉管道：route == COMPLAINT 且 complaint_graph 已注入 → 复用 RepairGraph
+   （ticket_type="complaint"）建投诉单（同款 resume/invoke 判定）；
+   complaint_graph 未注入 → 走占位回复（向后兼容旧调用方）
+6. 其余（HUMAN_HANDOFF）→ 占位回复（转人工）
 
 thread_id 由调用方管理（M6 前端会话 id；M3/M4 评测 runner 用 case id）。
 Quality 用独立 thread（quality-{thread_id}）与主流程隔离。
@@ -21,9 +24,9 @@ from langgraph.types import Command
 from campus_desk.entry.routes import COMPLAINT, CONSULT, HUMAN_HANDOFF, REPAIR
 from campus_desk.quality.pending import find_pending_reviews
 
-# 非 REPAIR/CONSULT 路由的占位回复（M5 接投诉管道后替换）
+# 非 REPAIR/CONSULT/COMPLAINT 路由的占位回复（COMPLAINT 已接投诉管道，
+# 仅 HUMAN_HANDOFF 留占位；未注入 complaint_graph 时兜底用 entry 回复文案）
 _NON_AGENT_REPLIES = {
-    COMPLAINT: "收到您的投诉，已为您升级处理，稍后有专人跟进。",
     HUMAN_HANDOFF: "已为您转人工处理，稍后会有工作人员与您联系，请保持在线。",
 }
 
@@ -49,11 +52,14 @@ def turn(
     quality_graph=None,
     user_id: str | None = None,
     session_factory=None,
+    complaint_graph=None,
 ) -> dict:
-    """一轮对话：Quality 回访（可选）→ Entry 分流 → 按需进 Repair/ConsultGraph。
+    """一轮对话：Quality 回访（可选）→ Entry 分流 → 按需进 Repair/Consult/Complaint 图。
 
     quality_graph + user_id + session_factory 全提供时才触发回访检查
     （评测/无身份场景缺省跳过；M4 起 QualityAgent 已实装）。
+    complaint_graph（M5）：COMPLAINT 路由时复用 RepairGraph 建投诉单；
+    未注入（None）时 COMPLAINT 走占位回复，兼容旧调用方。
     """
     # M4 QualityAgent 惰性触发：有待回访工单 → 先回访（提醒/采集），再进主流程
     if user_id and session_factory is not None and quality_graph is not None:
@@ -73,6 +79,7 @@ def turn(
     cfg = {"configurable": {"thread_id": thread_id}}
     repair_pending = repair_graph.get_state(cfg).next != ()
     consult_pending = consult_graph.get_state(cfg).next != ()
+    complaint_pending = complaint_graph is not None and complaint_graph.get_state(cfg).next != ()
 
     if route == REPAIR:
         if repair_pending:
@@ -110,6 +117,33 @@ def turn(
             "tool_calls": state.get("tool_calls", []),
         }
 
+    if route == COMPLAINT:
+        if complaint_graph is None:
+            # 未注入投诉管道（旧调用方）→ 走占位回复（文案来自 entry 图）
+            return {
+                "reply": entry_out.get("reply", ""),
+                "route": COMPLAINT,
+                "secondary_intents": entry_out.get("intent", None)
+                and entry_out["intent"].secondary_intents
+                or [],
+            }
+        # 镜像 REPAIR 分支：有挂起的投诉会话（等联系人追问）→ resume 续跑；
+        # 无挂起 → 新投诉会话（thread_id 语义 = 投诉会话 id，与报修会话隔离）
+        if complaint_pending:
+            state = complaint_graph.invoke(Command(resume=msg), cfg)
+        else:
+            state = complaint_graph.invoke({"user_input": msg}, cfg)
+        return {
+            "reply": state.get("reply", ""),
+            "route": COMPLAINT,
+            "pending_question": state.get("pending_question"),
+            "ticket_id": state.get("ticket_id"),
+            "ticket_status": state.get("ticket_status"),
+            "finished": state.get("finished"),
+            "tool_calls": state.get("tool_calls", []),
+            "status_events": state.get("status_events", []),
+        }
+
     # 报修挂起中补信息被判 HUMAN_HANDOFF → resume 进 RepairGraph（M3 坑，见上）
     if repair_pending and route == HUMAN_HANDOFF:
         state = repair_graph.invoke(Command(resume=msg), cfg)
@@ -137,6 +171,21 @@ def turn(
             "outcome": state.get("outcome"),
             "handoff_package": state.get("handoff_package"),
             "tool_calls": state.get("tool_calls", []),
+        }
+
+    # 投诉挂起中补信息被判 HUMAN_HANDOFF → resume 进 complaint_graph
+    # （M5 同源坑：学生回答"李华"被 Entry 无上下文判 other → 落占位永不 resume）
+    if complaint_pending and route == HUMAN_HANDOFF:
+        state = complaint_graph.invoke(Command(resume=msg), cfg)
+        return {
+            "reply": state.get("reply", ""),
+            "route": COMPLAINT,
+            "pending_question": state.get("pending_question"),
+            "ticket_id": state.get("ticket_id"),
+            "ticket_status": state.get("ticket_status"),
+            "finished": state.get("finished"),
+            "tool_calls": state.get("tool_calls", []),
+            "status_events": state.get("status_events", []),
         }
 
     return {
