@@ -87,6 +87,24 @@ class FakeRepairClassifier:
         return self.default
 
 
+class FakeConsultDecider:
+    """咨询决策 stub（M4）：序列消费（每轮 decide 弹出一个），用尽返回 default。
+
+    calls 记录每次 (history, user_text, tool_results)——工具调用/追问断言用。
+    """
+
+    def __init__(self, sequence=None, default=None):
+        self.sequence = list(sequence or [])
+        self.default = default
+        self.calls: list[tuple[list, str, list | None]] = []
+
+    def decide(self, history, user_text, tool_results=None, student_no=None):
+        self.calls.append((list(history), user_text, tool_results))
+        if self.sequence:
+            return self.sequence.pop(0)
+        return self.default
+
+
 @pytest.fixture
 def db_session_factory():
     """SQLite 内存库会话工厂（全表 + 种子）。每个测试独立库，互不污染。
