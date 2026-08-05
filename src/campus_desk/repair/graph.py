@@ -27,6 +27,15 @@ from typing import Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt  # resume 由编排层传 Command
 
+# 业务参数（M6 可配化）：确认/否定词表 + 派单映射从 config/business_rules.json 加载，
+# 模块级重导出保持调用面零改动（行为不变底线：parity 测试锁死）。
+# 否定词优先判定（"不对"含"对"子串——M3 测试抓出，先查否定再查确认）
+from campus_desk.business_config import (
+    CATEGORY_DEPT_TRADE,
+    CONFIRM_WORDS,
+    DENY_WORDS,
+    FALLBACK_DEPT,
+)
 from campus_desk.db.models import Repairman
 from campus_desk.db.session import SessionFactory
 from campus_desk.repair.classify import RepairClassifier
@@ -44,20 +53,6 @@ from campus_desk.repair.profile import (
     same_category_as_before,
 )
 from campus_desk.tools.repair_tools import create_repair_tools
-
-CONFIRM_WORDS = ("对", "好", "可以", "没问题", "确认", "是的", "是", "行")
-# 否定词优先判定（"不对"含"对"子串——M3 测试抓出，先查否定再查确认）
-_DENY_WORDS = ("不对", "不是", "错了", "不行", "不用", "别", "错")
-
-# 类别 → (部门, 工种) 派单映射（需求 §4：网络/账号→信息中心；水电/家具/门窗→后勤）
-CATEGORY_DEPT_TRADE: dict[str, tuple[str | None, str | None]] = {
-    "网络": ("信息中心", "网络"),
-    "水电": ("后勤", "水电"),
-    "门窗": ("后勤", "门窗"),
-    "设备": ("后勤", "家具"),
-    "环境": ("后勤", "家具"),
-    "其他": (None, None),  # 兜底：后勤在岗第一个
-}
 
 
 class RepairState(TypedDict):
@@ -81,7 +76,7 @@ class RepairState(TypedDict):
 
 def _is_confirm(answer: str) -> bool:
     """确认语义判定：否定词优先（"不对"含"对"，先查否定再查确认）。"""
-    if any(word in answer for word in _DENY_WORDS):
+    if any(word in answer for word in DENY_WORDS):
         return False
     return any(word in answer for word in CONFIRM_WORDS)
 
@@ -101,8 +96,8 @@ def dispatch(
             query = query.filter(Repairman.trade == trade)
         elif dept:
             query = query.filter(Repairman.dept == dept)
-        else:  # 其他/未分类：后勤兜底
-            query = query.filter(Repairman.dept == "后勤")
+        else:  # 其他/未分类：兜底部门（业务配置）
+            query = query.filter(Repairman.dept == FALLBACK_DEPT)
         rm = query.order_by(Repairman.id).first()
     if rm is None:
         return None

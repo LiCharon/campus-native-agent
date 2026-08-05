@@ -17,6 +17,13 @@ from typing import Literal
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field, ValidationError
 
+from campus_desk.business_config import (
+    CATEGORIES,
+    CATEGORY_DEFINITIONS,
+    CATEGORY_KEYWORDS,
+    CONFIRM_THRESHOLD,
+    P1_KEYWORDS,
+)
 from campus_desk.llm import build_llm
 
 # sentinel：区分"默认构造（用真 LLM）"与"显式禁用 LLM（llm=None，纯规则模式）"
@@ -25,36 +32,10 @@ _USE_DEFAULT_LLM = object()
 Category = Literal["水电", "网络", "门窗", "设备", "环境", "其他"]
 Priority = Literal["P1", "P2", "P3"]
 
-# 类别关键词表（确定性规则层，计分取最高）
+# 业务参数（M6 可配化）：类别关键词表/P1 词表/置信阈值从 config/business_rules.json
+# 加载——加"空调/电梯"类目改配置不改代码；模块级重导出保持调用面零改动
+# （行为不变底线：parity 测试锁死配置值与旧代码快照一致）。
 # 用词组不用单字（"水"会误命中"风水"、"电"会误命中"电话"——M3 测试抓出）
-_CATEGORY_KEYWORDS: dict[Category, list[str]] = {
-    "水电": [
-        "漏水",
-        "停水",
-        "水龙头",
-        "热水器",
-        "水表",
-        "电闸",
-        "插座",
-        "灯",
-        "开关",
-        "断电",
-        "停电",
-        "管道",
-        "短路",
-    ],
-    "网络": ["网络", "网线", "wifi", "无线", "宽带", "信号", "连不上", "网速"],
-    "门窗": ["门", "窗", "锁", "把手", "玻璃", "合页"],
-    "设备": ["空调", "风扇", "洗衣机", "马桶", "床", "桌", "椅", "衣柜", "投影仪", "饮水机"],
-    "环境": ["卫生", "蟑螂", "老鼠", "异味", "堵塞", "垃圾"],
-    "其他": [],
-}
-
-# P1 安全规则：命中即 P1（影响面规则判定，需求 §4；LLM 辅助不推翻）
-_P1_KEYWORDS = ["漏水", "漏电", "断电", "停电", "火", "冒烟", "爆裂", "渗水", "水淹", "电火花"]
-
-# LLM 低置信门控阈值（与 entry 门控口径一致）
-CONFIRM_THRESHOLD = 0.7
 
 _PRIORITY_CN = {"P1": "紧急", "P2": "普通", "P3": "预约"}
 
@@ -72,15 +53,15 @@ class ClassificationResult(BaseModel):
 
 
 # 结构化输出 prompt：必须含 "json" 字样（DeepSeek json_object 模式硬性要求）
-_CLASSIFY_PROMPT = """你是校园服务台的报修分类定级器。请根据学生的报修描述，输出一个 JSON 对象。
+# 类别定义块按业务配置渲染（categories 进 prompt 与关键词表保持双源一致——
+# M6 可配化：加类目改 JSON，prompt 自动同步；优先级定义非业务参数保持静态）。
+def _build_classify_prompt() -> str:
+    category_lines = "\n".join(f"- {name}: {desc}" for name, desc in CATEGORY_DEFINITIONS.items())
+    category_choices = "|".join(CATEGORIES)
+    return f"""你是校园服务台的报修分类定级器。请根据学生的报修描述，输出一个 JSON 对象。
 
 类别定义：
-- 水电: 水/电/照明/管道/插座/热水器等设施故障
-- 网络: 网络/宽带/wifi/网线/信号故障
-- 门窗: 门/窗/锁/玻璃故障
-- 设备: 空调/风扇/洗衣机/家具/电器等设备故障
-- 环境: 卫生/虫害/异味/堵塞等环境问题
-- 其他: 无法归入上述类别
+{category_lines}
 
 优先级定义：
 - P1: 紧急（漏水/漏电/断电/安全隐患，影响面大，需 4 小时内处理）
@@ -88,7 +69,7 @@ _CLASSIFY_PROMPT = """你是校园服务台的报修分类定级器。请根据�
 - P3: 预约（可预约时间处理）
 
 JSON 格式（严格只输出 JSON，不要任何其他文字）：
-{"category": "水电|网络|门窗|设备|环境|其他", "priority": "P1|P2|P3", "confidence": 0到1之间的小数, "reason": "一句话依据"}
+{{"category": "{category_choices}", "priority": "P1|P2|P3", "confidence": 0到1之间的小数, "reason": "一句话依据"}}
 
 注意：
 - confidence 表示你对分类定级的把握：确定时 0.8-1.0，不确定时 0.4-0.6
@@ -96,15 +77,18 @@ JSON 格式（严格只输出 JSON，不要任何其他文字）：
 """
 
 
+_CLASSIFY_PROMPT = _build_classify_prompt()
+
+
 def _rule_fallback(description: str) -> ClassificationResult:
     """规则层（确定性）：类别关键词计分取最高；P1 安全规则命中即 P1。"""
     best_category: Category = "其他"
     best_score = 0
-    for cat, keywords in _CATEGORY_KEYWORDS.items():
+    for cat, keywords in CATEGORY_KEYWORDS.items():
         score = sum(1 for kw in keywords if kw.lower() in description.lower())
         if score > best_score:
             best_category, best_score = cat, score
-    priority: Priority = "P1" if any(kw in description for kw in _P1_KEYWORDS) else "P2"
+    priority: Priority = "P1" if any(kw in description for kw in P1_KEYWORDS) else "P2"
     return ClassificationResult(
         category=best_category,
         priority=priority,
