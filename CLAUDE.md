@@ -46,7 +46,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 
 ## 4. 工程化标准（贯穿，不做就白做）
 - Langfuse 全链路埋点（agent 步骤/工具调用/状态跳转/LLM call）
-- 评测数据集（M2 已落地 72 条）：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 16 条 + 多意图 6 + 重复报修 2，**JSON 文件入 git**（M3 建 MySQL 时做入库脚本同步）
+- 评测数据集（M2 落地 72 条 + M3 扩展 turns）：**对话剧本格式（scripted，预写学生每轮回复）**，报修/咨询/投诉/闲聊各 16 条 + 多意图 6 + 重复报修 2，**JSON 文件入 git + M3 已做入库脚本同步 MySQL**（scripts/ingest_eval_data.py）；报修 18 条剧本 turns 按真 LLM 口径设计（断言=tool:/status: 行为）
 - 量化指标（9 项，细节见 requirements §10）：意图分类准确率/分类定级准确率/自助解决率/人工介入率/平均对话轮次/工单闭环率/工单响应时间/超时率/满意度——**目标值均为示例基线，M5 评测后按实测校准，不拍死**
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
 - CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
