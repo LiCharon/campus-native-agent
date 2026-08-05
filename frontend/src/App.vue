@@ -64,7 +64,11 @@ const router = useRouter()
 
 const isLoginPage = computed(() => route.path === '/login')
 
+// 注意：computed 必须有响应式依赖——localStorage 不是响应式的，
+// 不加依赖会缓存首次挂载时的旧值（登录跳转后仍显示"未知/用户"，
+// 刷新才正常，验收抓出）。route.path 变化（登录/登出跳转）时强制重算。
 const user = computed(() => {
+  void route.path
   try {
     return JSON.parse(localStorage.getItem('cd_user') || '{}')
   } catch {

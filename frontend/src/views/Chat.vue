@@ -147,8 +147,13 @@ const {
   switchConversation,
   deleteConversation,
   addMessageTo,
-  replaceLastIn
+  replaceLastIn,
+  reload
 } = useChat()
+
+// 切换账号后会话列表仍残留上一账号（模块级状态只 load 一次）——
+// 每次进入对话页强制按当前登录用户重载（验收抓出）
+reload()
 
 const draft = ref('')
 const sending = ref(false)

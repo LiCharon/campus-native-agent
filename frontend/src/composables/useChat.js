@@ -4,20 +4,29 @@ import { ref } from 'vue'
 // 后端硬约束：thread_id 决定对话上下文，新对话必须生成新 thread_id。
 // 会话结构：{ id, thread_id, title, createdAt, messages: [{role, content, ticket?, route?, pendingQuestion?, pending?, error?}] }
 
-const STORAGE_KEY = 'cd_conversations'
-const CURRENT_KEY = 'cd_current_conversation'
+// key 按登录用户隔离（同一浏览器多账号互不串）；未登录 guest 兜底
+function storageKeys() {
+  let uid = 'guest'
+  try {
+    uid = JSON.parse(localStorage.getItem('cd_user') || '{}').id || 'guest'
+  } catch {
+    /* 保持 guest */
+  }
+  return { conv: `cd_conversations_${uid}`, current: `cd_current_${uid}` }
+}
 
 const conversations = ref([])
 const currentId = ref(null)
 
 function load() {
+  const { conv, current } = storageKeys()
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(conv)
     conversations.value = raw ? JSON.parse(raw) : []
   } catch {
     conversations.value = []
   }
-  currentId.value = localStorage.getItem(CURRENT_KEY)
+  currentId.value = localStorage.getItem(current)
   // 若保存的当前会话已被清掉，落到第一条
   if (currentId.value && !findConv(currentId.value)) {
     currentId.value = conversations.value.length ? conversations.value[0].id : null
@@ -25,12 +34,19 @@ function load() {
 }
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.value))
+  const { conv, current } = storageKeys()
+  localStorage.setItem(conv, JSON.stringify(conversations.value))
   if (currentId.value) {
-    localStorage.setItem(CURRENT_KEY, currentId.value)
+    localStorage.setItem(current, currentId.value)
   } else {
-    localStorage.removeItem(CURRENT_KEY)
+    localStorage.removeItem(current)
   }
+}
+
+// 切换登录用户后重新加载会话（Chat.vue 挂载时调用——模块级状态在页面
+// 首次加载时只 load 一次，换账号不重新加载会残留上一账号的会话列表）
+export function reload() {
+  load()
 }
 
 function findConv(id) {
@@ -127,6 +143,7 @@ export function useChat() {
     addMessage,
     replaceLastMessage,
     addMessageTo,
-    replaceLastIn
+    replaceLastIn,
+    reload
   }
 }
