@@ -23,6 +23,7 @@
 | docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
 | docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
 | docs/eval_report_m3.md | M3 评测：意图 95.8% + 报修链路成功率 94.4%（17/18），本地私有管理 |
+| docs/eval_report_m4.md | M4 评测：咨询自助解决率/介入率/轮次基线 + 报修维持，本地私有管理 |
 | （已归档） | PLANNING_REVIEW 评析报告与 Qwen 需求分析原文已于 2026-08-05 删，历史在 docs 私有仓库 git 可恢复 |
 
 ## 1. 为什么做（面试叙事，防止跑偏）
@@ -38,7 +39,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 ## 3. 核心设计（拍板结论；边清单/工具表/细节 → docs/PROJECT_REQUIREMENTS.md）
 - 入口分流：EntryAgent 意图识别 + 置信度门控 + 多意图取主意图；**投诉 = 复用 Repair 管道建 P1 工单**（不建独立流程/通知模块）
 - 工单状态机 6 态 8 边（SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED）；**跳转=白名单**：纯函数 machine.py 为权威 + apply_transition SAVEPOINT 原子写库（状态+审计日志，唯一写入口）+ 图渲染双保险；**超时升级=字段不是状态**（escalation_count/escalated_at）；验收不通过返工；挂起 3 天自动关闭
-- 4 Agent：Entry（分流）/ Repair（报修）/ Consult（诊断式咨询）/ Quality（关闭 24h 后回访）
+- 4 Agent 全实装（M2 Entry / M3 Repair / M4 Consult+Quality）：Entry（分流）/ Repair（报修）/ Consult（诊断式：≤8 轮追问 → 3 工具排查 → 三态分支）/ Quality（关闭 24h 后回访，惰性触发）
 - 9 确定性工具（报修侧 6 + 咨询侧 3，每工具独立单测不依赖 LLM）+ 5 类上下文隔离（任务/会话/画像/工具只读/FAQ）
 - **已拍板**：采集=固定信息一次性收集+Agent 只问缺项 ≤2 轮；派单=规则优先（类别→部门/工种 + 在岗优先）；边界=业务办理仅工单类，外部接入/通知/多端演示不实装
 
@@ -82,6 +83,10 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 - alembic autogenerate 前验证表数（env.py 漏 import 业务 models → 只生成 2 张表的迁移）；alembic.ini 只写英文注释（configparser GBK 读取）；密码含 @ 需 %40 URL 编码
 - 规则抽取与真 LLM 行为差异（规则恒抽不到 contact）：turns 评测口径按真 LLM 设计，规则版只做机制验证
 - 编排层：报修挂起中 other 类输入（补充信息）要 resume 进 RepairGraph，不落到人工占位（真 LLM 评测抓出）
+- **Consult 工具轮 act→act 自环**：同一 invoke 内连续决策到 ask/终态（不暂停）——测试/评测不要假设"工具轮后需再次 invoke"
+- **咨询剧本失配不判失败**：LLM 自由对话下"学生补充信息被提前解答"= 合理自助解决，非答非所问失真；失真防线仅保留给报修确定性追问轮
+- **画像上下文只进 LLM prompt 不进规则层**：classify(description, profile_context)，规则计分用原始描述防画像关键词干扰（M4 设计）
+- 回访=字段不是状态（closed_at/rating/review_comment/reviewed_at）：closed_at 在 apply_transition 唯一写入口进 CLOSED 时写；Quality 惰性触发（学生进对话时查，不装 APScheduler——用户拍板，超时升级扫描留 M5）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |

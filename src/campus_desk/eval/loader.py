@@ -79,7 +79,10 @@ def validate_dataset(cases: list[ScriptedCase]) -> list[str]:
                     continue
                 if assertion.startswith("status:") and len(assertion) > 7:
                     continue
+                if assertion.startswith("outcome:") and len(assertion) > 8:
+                    continue
                 problems.append(
-                    f"{case.id}: 第 {idx} 轮非法断言 '{assertion}'（仅支持 tool:xxx / status:xxx）"
+                    f"{case.id}: 第 {idx} 轮非法断言 '{assertion}'"
+                    "（仅支持 tool:xxx / status:xxx / outcome:xxx）"
                 )
     return problems

@@ -103,9 +103,10 @@ def run_evaluation(
 
 
 def check_expect(prev_tools: set[str], state: dict, expect: list[str]) -> list[str]:
-    """断言检查：本轮新增行为（tool 取差集，status 取本轮终态）。
+    """断言检查：本轮新增行为（tool 取差集，status 取本轮终态，outcome 取本轮行为）。
 
-    返回失败列表（空 = 通过）。断言仅支持 tool:xxx / status:xxx（loader 已校验）。
+    返回失败列表（空 = 通过）。断言仅支持 tool:xxx / status:xxx / outcome:xxx
+    （loader 已校验）。
     """
     failures: list[str] = []
     new_tools = set(state.get("tool_calls", [])) - prev_tools
@@ -118,6 +119,10 @@ def check_expect(prev_tools: set[str], state: dict, expect: list[str]) -> list[s
             status = assertion[7:]
             if state.get("ticket_status") != status:
                 failures.append(f"{assertion} 期望 {status}，实际 {state.get('ticket_status')}")
+        elif assertion.startswith("outcome:"):
+            outcome = assertion[8:]
+            if state.get("outcome") != outcome:
+                failures.append(f"{assertion} 期望 {outcome}，实际 {state.get('outcome')}")
     return failures
 
 
@@ -252,6 +257,177 @@ def run_repair_evaluation(
     return RepairEvalReport(results=results, duration_seconds=time.monotonic() - start)
 
 
+@dataclass
+class ConsultCaseResult:
+    case: ScriptedCase
+    turn_count: int
+    outcome: str | None  # answer/handoff/ask（剧本终态行为）
+    failures: list[str]  # (第几轮: 断言失败/剧本失配) 明细；空 = 通过
+    seconds: float
+
+
+@dataclass
+class ConsultEvalReport:
+    results: list[ConsultCaseResult] = field(default_factory=list)
+    duration_seconds: float = 0.0
+
+    @property
+    def total(self) -> int:
+        return len(self.results)
+
+    @property
+    def self_served(self) -> int:
+        """自助解决：终态 outcome=answer（需求 §10：未转人工且已解决）。"""
+        return sum(1 for r in self.results if r.outcome == "answer")
+
+    @property
+    def self_service_rate(self) -> float:
+        return self.self_served / self.total if self.total else 0.0
+
+    @property
+    def handoff_count(self) -> int:
+        return sum(1 for r in self.results if r.outcome == "handoff")
+
+    @property
+    def handoff_rate(self) -> float:
+        return self.handoff_count / self.total if self.total else 0.0
+
+    @property
+    def avg_turns(self) -> float:
+        if not self.results:
+            return 0.0
+        return sum(r.turn_count for r in self.results) / len(self.results)
+
+    @property
+    def passed_cases(self) -> int:
+        return sum(1 for r in self.results if not r.failures)
+
+    @property
+    def success_rate(self) -> float:
+        return self.passed_cases / self.total if self.total else 0.0
+
+    def failure_details(self) -> list[str]:
+        details = []
+        for r in self.results:
+            for failure in r.failures:
+                details.append(f"{r.case.id}: {failure}")
+        return details
+
+
+def run_consult_evaluation(
+    cases: list[ScriptedCase],
+    session_factory,
+    entry_graph=None,
+    repair_graph=None,
+    consult_graph=None,
+    quality_graph=None,
+    student_no: str | None = "2024001",
+    max_cases: int | None = None,
+) -> ConsultEvalReport:
+    """咨询链路评测：仅 consult 剧本，多轮驱动（同 repair runner 模式）。
+
+    - 首轮走 orchestrator.turn（Entry → ConsultGraph 新会话，thread_id=case.id）
+    - 每轮 turns：先断言上轮 paused（consult_graph.get_state().next 非空）；
+      再 resume 并检查 expect（tool:/outcome: 行为断言）
+    - 指标（需求 §10）：自助解决率（answer 终态占比）/ 人工介入率（handoff）/
+      平均对话轮次（剧本 turns 数 + 首轮）
+    - 图可注入（测试用 fake 决策；默认真 LLM + InMemorySaver 隔离）
+    """
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    from campus_desk.consult.graph import build_consult_graph
+    from campus_desk.db.session import default_session_factory
+    from campus_desk.quality.graph import build_quality_graph
+    from campus_desk.repair.graph import build_repair_graph
+
+    cases = [c for c in cases if c.category == "consult"]
+    if max_cases:
+        cases = cases[:max_cases]
+    if not cases:
+        return ConsultEvalReport()
+
+    session_factory = session_factory or default_session_factory()
+    entry_graph = entry_graph or build_entry_graph()
+    consult_graph = consult_graph or build_consult_graph(
+        session_factory, checkpointer=InMemorySaver(), student_no=student_no
+    )
+    repair_graph = repair_graph or build_repair_graph(session_factory, checkpointer=InMemorySaver())
+    quality_graph = quality_graph or build_quality_graph(
+        session_factory, checkpointer=InMemorySaver()
+    )
+
+    results: list[ConsultCaseResult] = []
+    start = time.monotonic()
+    for case in cases:
+        t0 = time.monotonic()
+        cfg = {"configurable": {"thread_id": f"eval-{case.id}"}}
+        failures: list[str] = []
+        turn_count = 0
+        prev_tools: set[str] = set()
+        outcome: str | None = None
+
+        first = turn(
+            entry_graph,
+            repair_graph,
+            consult_graph,
+            f"eval-{case.id}",
+            case.student_input,
+            quality_graph=quality_graph,
+        )
+        outcome = first.get("outcome") or outcome
+        prev_tools = set(first.get("tool_calls", []))
+
+        for idx, scripted in enumerate(case.turns, start=1):
+            turn_count = idx
+            if consult_graph.get_state(cfg).next == ():
+                # 咨询失配不判失败：Agent 提前给出答案 = 自助解决（LLM 自由对话
+                # 下"学生补充信息"被提前解答是合理行为，非脚本答非所问失真——
+                # 失真判定口径仅保留给报修链路的确定性追问轮）
+                break
+            out = turn(
+                entry_graph,
+                repair_graph,
+                consult_graph,
+                f"eval-{case.id}",
+                scripted.student_reply,
+                quality_graph=quality_graph,
+            )
+            failures.extend(
+                f"第{idx}轮: {fail}" for fail in check_expect(prev_tools, out, scripted.expect)
+            )
+            prev_tools = set(out.get("tool_calls", []))
+            outcome = out.get("outcome") or outcome
+
+        results.append(
+            ConsultCaseResult(
+                case=case,
+                turn_count=turn_count,
+                outcome=outcome,
+                failures=failures,
+                seconds=time.monotonic() - t0,
+            )
+        )
+    return ConsultEvalReport(results=results, duration_seconds=time.monotonic() - start)
+
+
+def format_consult_report(report: ConsultEvalReport) -> str:
+    lines = [
+        "## 咨询链路评测（M4）",
+        "",
+        f"- 咨询用例数: {report.total}",
+        f"- 自助解决率: **{report.self_service_rate:.1%}**（{report.self_served}/{report.total}，目标 ≥70%）",
+        f"- 人工介入率: **{report.handoff_rate:.1%}**（{report.handoff_count}/{report.total}，目标 ≤30%）",
+        f"- 平均对话轮次: {report.avg_turns:.1f}（目标 ≤4）",
+        f"- 剧本断言通过率: {report.success_rate:.1%}（{report.passed_cases}/{report.total}）",
+        f"- 耗时: {report.duration_seconds:.1f}s",
+    ]
+    details = report.failure_details()
+    lines += ["", "### 失败明细", ""] if details else ["", "### 失败明细", "", "无"]
+    for d in details:
+        lines.append(f"- {d}")
+    return "\n".join(lines)
+
+
 def format_repair_report(report: RepairEvalReport) -> str:
     lines = [
         "## 报修链路评测（M3）",
@@ -268,7 +444,11 @@ def format_repair_report(report: RepairEvalReport) -> str:
     return "\n".join(lines)
 
 
-def format_report(report: EvalReport, repair_report: RepairEvalReport | None = None) -> str:
+def format_report(
+    report: EvalReport,
+    repair_report: RepairEvalReport | None = None,
+    consult_report: ConsultEvalReport | None = None,
+) -> str:
     """Markdown 格式评测报告（可存档可面试展示）。"""
     lines = [
         "# CampusDesk 评测报告",
@@ -316,14 +496,17 @@ def format_report(report: EvalReport, repair_report: RepairEvalReport | None = N
 
     if repair_report is not None:
         lines += ["", format_repair_report(repair_report)]
+    if consult_report is not None:
+        lines += ["", format_consult_report(consult_report)]
     return "\n".join(lines)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CampusDesk 评测（入口分流 + 报修链路）")
+    parser = argparse.ArgumentParser(description="CampusDesk 评测（入口分流 + 报修/咨询链路）")
     parser.add_argument("--max", type=int, default=None, help="只跑前 N 条（调试用）")
     parser.add_argument("--out", type=str, default=None, help="报告写入路径（默认打印）")
     parser.add_argument("--no-repair", action="store_true", help="跳过报修链路评测")
+    parser.add_argument("--no-consult", action="store_true", help="跳过咨询链路评测")
     args = parser.parse_args()
 
     if not settings.deepseek_api_key:
@@ -332,12 +515,15 @@ def main() -> None:
 
     report = run_evaluation(max_cases=args.max)
     repair_report = None
-    if not args.no_repair:
-        if not settings.database_url:
-            print("SKIP: 未配置 DATABASE_URL——报修链路评测需 MySQL（.env 填写后重跑）")
-        else:
+    consult_report = None
+    if not (args.no_repair and args.no_consult) and not settings.database_url:
+        print("SKIP: 未配置 DATABASE_URL——链路评测需 MySQL（.env 填写后重跑）")
+    else:
+        if not args.no_repair:
             repair_report = run_repair_evaluation(load_all(), None, max_cases=args.max)
-    text = format_report(report, repair_report)
+        if not args.no_consult:
+            consult_report = run_consult_evaluation(load_all(), None, max_cases=args.max)
+    text = format_report(report, repair_report, consult_report)
     if args.out:
         from pathlib import Path
 

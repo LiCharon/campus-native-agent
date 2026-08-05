@@ -9,7 +9,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.eval.loader import load_all
-from campus_desk.eval.runner import check_expect, run_repair_evaluation
+from campus_desk.eval.runner import (
+    check_expect,
+    run_consult_evaluation,
+    run_repair_evaluation,
+)
 from campus_desk.repair.agent import build_repair_agent  # noqa: F401 — 组装路径冒烟
 from campus_desk.repair.classify import RepairClassifier
 from campus_desk.repair.drafting import FieldExtractor
@@ -123,3 +127,146 @@ class TestRepairEvaluationRuleBased:
             cases, db_session_factory, entry_graph=entry, repair_graph=repair
         )
         assert report.total == 18  # 72 条中只有 18 条报修类
+
+
+class TestCheckExpectOutcome:
+    """M4 新增断言类型：outcome:xxx（咨询三态行为走向）。"""
+
+    def test_outcome_assertion_passed(self):
+        assert check_expect(set(), {"outcome": "answer"}, ["outcome:answer"]) == []
+
+    def test_outcome_assertion_failed(self):
+        failures = check_expect(set(), {"outcome": "handoff"}, ["outcome:answer"])
+        assert failures and "期望 answer" in failures[0]
+
+
+class TestConsultEvaluationRuleBased:
+    """咨询链路评测（fake decider 规则版）：指标计算 + 失配口径 + 类别过滤。"""
+
+    def _setup(self, db_session_factory, decider=None):
+        from campus_desk.consult.decide import ConsultDecision
+        from campus_desk.consult.graph import build_consult_graph
+        from campus_desk.entry.intent import IntentResult
+        from tests.conftest import FakeConsultDecider, FakeIntentClassifier
+
+        fake = FakeIntentClassifier(IntentResult(intent="consult", confidence=0.9, reason="测试"))
+        entry = build_entry_graph(classifier=fake)
+        consult = build_consult_graph(
+            db_session_factory,
+            decider=decider
+            or FakeConsultDecider(default=ConsultDecision(action="answer", reply="已为您解答。")),
+            checkpointer=InMemorySaver(),
+            student_no="2024001",
+        )
+        return entry, consult
+
+    @staticmethod
+    def _case(case_id: str, student_input: str, turns: list[dict] | None = None):
+        from campus_desk.eval.models import ScriptedCase
+
+        return ScriptedCase(
+            id=case_id,
+            category="consult",
+            student_input=student_input,
+            intent="consult",
+            expected_route="consult",
+            turns=turns or [],
+            note="测试",
+        )
+
+    def test_all_answer_self_service_full(self, db_session_factory):
+        """全部 answer → 自助解决率 100%、介入率 0、断言通过。"""
+        entry, consult = self._setup(db_session_factory)
+        cases = [self._case("consult-001", "密码忘了"), self._case("consult-002", "邮箱登不上")]
+        report = run_consult_evaluation(
+            cases, db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.total == 2
+        assert report.self_service_rate == 1.0
+        assert report.handoff_rate == 0.0
+        assert report.passed_cases == 2
+
+    def test_handoff_rate_counted(self, db_session_factory):
+        from campus_desk.consult.decide import ConsultDecision
+        from tests.conftest import FakeConsultDecider
+
+        entry, consult = self._setup(
+            db_session_factory,
+            FakeConsultDecider(default=ConsultDecision(action="handoff", reply="转人工")),
+        )
+        cases = [self._case("consult-001", "查账号")]
+        report = run_consult_evaluation(
+            cases, db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.handoff_rate == 1.0
+        assert report.self_service_rate == 0.0
+        assert report.avg_turns == 0.0  # 首轮即终态，无 turns 轮
+
+    def test_early_answer_mismatch_not_failed(self, db_session_factory):
+        """Agent 首轮直接 answer（终态）→ 剧本 turns 失配不判失败（咨询口径：
+        提前解答 = 合理自助解决，非答非所问失真）。"""
+        entry, consult = self._setup(db_session_factory)
+        case = self._case(
+            "consult-x", "密码怎么改", [{"student_reply": "再问一句", "expect": ["outcome:answer"]}]
+        )
+        report = run_consult_evaluation(
+            [case], db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.passed_cases == 1  # 失配不判失败
+        assert report.self_service_rate == 1.0  # outcome 仍统计
+
+    def test_outcome_mismatch_failed(self, db_session_factory):
+        """剧本期望 handoff 实际 answer → 断言失败（三态走向不符）。
+
+        构造：首轮 ask 暂停（Agent 等学生回答）→ turns 轮 resume 后 outcome=answer
+        ≠ 期望 handoff（失配场景下 turns 断言跳过是设计口径，此处验证暂停场景）。
+        """
+        from campus_desk.consult.decide import ConsultDecision
+        from tests.conftest import FakeConsultDecider
+
+        decider = FakeConsultDecider(
+            sequence=[
+                ConsultDecision(action="ask", questions=["学号？"], reply="请补充"),
+                ConsultDecision(action="answer", reply="已解答"),
+            ]
+        )
+        entry, consult = self._setup(db_session_factory, decider)
+        case = self._case(
+            "consult-y",
+            "密码怎么改",
+            [{"student_reply": "学号2024001", "expect": ["outcome:handoff"]}],
+        )
+        report = run_consult_evaluation(
+            [case], db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.passed_cases == 0
+        assert any("outcome:handoff" in f for f in report.failure_details())
+
+    def test_consult_only_cases_filtered(self, db_session_factory):
+        """只跑 consult 类别（72 条中 16 条）。"""
+        entry, consult = self._setup(db_session_factory)
+        report = run_consult_evaluation(
+            load_all(), db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.total == 16
+
+    def test_avg_turns_with_ask(self, db_session_factory):
+        """诊断式多轮：ask → resume answer → 轮次计入平均。"""
+        from campus_desk.consult.decide import ConsultDecision
+        from tests.conftest import FakeConsultDecider
+
+        decider = FakeConsultDecider(
+            sequence=[
+                ConsultDecision(action="ask", questions=["学号？"], reply="请补充"),
+                ConsultDecision(action="answer", reply="已解答"),
+            ]
+        )
+        entry, consult = self._setup(db_session_factory, decider)
+        case = self._case(
+            "consult-z", "查账号", [{"student_reply": "2024001", "expect": ["outcome:answer"]}]
+        )
+        report = run_consult_evaluation(
+            [case], db_session_factory, entry_graph=entry, consult_graph=consult
+        )
+        assert report.avg_turns == 1.0
+        assert report.passed_cases == 1
