@@ -5,6 +5,7 @@ draft（RepairState["draft"]）字段：
 - contact     联系人（必填，可 LLM/用户补）
 - building    楼栋（报修必填）
 - room        房间号（可选，描述里常有）
+- location    投诉对象/位置（投诉类用，如 食堂阿姨；报修类不用）
 - rounds      已追问轮数（≤ MAX_ROUNDS，双节点 ping-pong 的计数持久化点）
 
 抽取：LLM 结构化抽取优先 + 规则兜底（楼栋/房间正则，contact 规则无法抽取）。
@@ -40,17 +41,21 @@ class DraftExtract(BaseModel):
     building: str | None = Field(default=None, description="楼栋，如 3号楼；没有则 null")
     room: str | None = Field(default=None, description="房间号，如 502；没有则 null")
     contact: str | None = Field(default=None, description="联系人姓名；没有则 null")
+    location: str | None = Field(
+        default=None, description="投诉对象/位置，如 食堂阿姨；没有则 null"
+    )
 
 
 _EXTRACT_PROMPT = """你是校园服务台的报修信息抽取器。从学生的报修描述中抽取固定信息，输出 JSON。
 
 JSON 格式（严格只输出 JSON）：
-{"description": "问题描述原样保留", "building": "楼栋如3号楼或null", "room": "房间号如502或null", "contact": "联系人姓名或null"}
+{"description": "问题描述原样保留", "building": "楼栋如3号楼或null", "room": "房间号如502或null", "contact": "联系人姓名或null", "location": "投诉对象/位置如食堂阿姨或null"}
 
 注意：
 - description 保留学生的原始描述，不要改写
 - building 形如"3号楼"/"6栋"，只取楼栋名；房间号（3位数字）放 room
 - contact 是姓名/学号，无法确定时给 null
+- location 是投诉对象/位置（投诉类用，如"食堂阿姨"），报修类没有则给 null
 """
 
 
@@ -64,7 +69,9 @@ def rule_extract(text: str) -> DraftExtract:
     m2 = re.search(r"(\d{3})(?:室|房)?", text)
     if m2:
         room = m2.group(1)
-    return DraftExtract(description=text.strip(), building=building, room=room, contact=None)
+    return DraftExtract(
+        description=text.strip(), building=building, room=room, contact=None, location=None
+    )
 
 
 class FieldExtractor:
@@ -124,24 +131,27 @@ def merge_extract(draft: dict, ext: DraftExtract) -> dict:
     merged = dict(draft)
     if not merged.get("description"):
         merged["description"] = ext.description
-    for field in ("building", "room", "contact"):
+    for field in ("building", "room", "contact", "location"):
         value = getattr(ext, field)
         if value and not merged.get(field):
             merged[field] = value
     return merged
 
 
-def required_missing(draft: dict) -> list[str]:
-    """缺哪些必填字段（contact/building 为报修必填）。"""
-    return [f for f in REQUIRED if not draft.get(f)]
+def required_missing(draft: dict, required: tuple[str, ...] = REQUIRED) -> list[str]:
+    """缺哪些必填字段（报修类 contact/building；投诉类仅 contact）。"""
+    return [f for f in required if not draft.get(f)]
 
 
-def pick_question(missing: list[str]) -> str:
-    """缺啥问啥，一次问齐（不逐项追问，符合"表单收集固定信息"拍板）。"""
+def pick_question(missing: list[str], mode: str = "repair") -> str:
+    """缺啥问啥，一次问齐（不逐项追问，符合"表单收集固定信息"拍板）。
+
+    投诉类（mode="complaint"）不追问楼栋——投诉必填集只有联系人。
+    """
     parts = []
     if "contact" in missing:
         parts.append("您的联系人姓名或学号")
-    if "building" in missing:
+    if "building" in missing and mode != "complaint":
         parts.append("报修位置（楼栋，如 3号楼）")
     return "请补充：" + "、".join(parts) + "。"
 
