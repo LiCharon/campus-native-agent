@@ -16,6 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from campus_desk.config import settings
 from campus_desk.db.base import Base
 from campus_desk.db.seed import seed_all
 from campus_desk.eval import db_models  # noqa: F401 — 注册 eval 表进 Base.metadata
@@ -122,3 +123,18 @@ def db_session_factory():
     seed_all(factory)
     yield factory
     engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _disable_langfuse(monkeypatch):
+    """pytest 双保险：清空 LANGFUSE 双 key + 重置 telemetry 模块缓存。
+
+    保证测试/评测绝不外发 trace（即使开发机 .env 配了 key 也被清空）；
+    enabled() 依赖 settings 实时读取，清 key 后全链路走 no-op 路径。
+    """
+    from campus_desk import telemetry
+
+    monkeypatch.setattr(settings, "langfuse_public_key", "")
+    monkeypatch.setattr(settings, "langfuse_secret_key", "")
+    monkeypatch.setattr(telemetry, "_client", None)
+    monkeypatch.setattr(telemetry, "_handler", None)
