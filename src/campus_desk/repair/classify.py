@@ -15,10 +15,9 @@ import re
 from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
-from campus_desk.config import settings
+from campus_desk.llm import build_llm
 
 # sentinel：区分"默认构造（用真 LLM）"与"显式禁用 LLM（llm=None，纯规则模式）"
 _USE_DEFAULT_LLM = object()
@@ -126,14 +125,7 @@ class RepairClassifier:
 
     @staticmethod
     def _default_llm() -> BaseChatModel:
-        return ChatOpenAI(
-            model=settings.deepseek_model,
-            api_key=settings.deepseek_api_key,
-            base_url="https://api.deepseek.com",
-            temperature=0,
-            timeout=30,
-            model_kwargs={"response_format": {"type": "json_object"}},
-        )
+        return build_llm()
 
     def classify(
         self, description: str, profile_context: str | None = None

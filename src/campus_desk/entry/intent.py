@@ -18,10 +18,9 @@ import re
 from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
-from campus_desk.config import settings
+from campus_desk.llm import build_llm
 
 # 4 类意图（与路由分离，见 routes.py）
 IntentName = Literal["repair", "consult", "complaint", "other"]
@@ -91,15 +90,8 @@ class IntentClassifier:
 
     @staticmethod
     def _default_llm() -> BaseChatModel:
-        # response_format=json_object：DeepSeek 官方支持的结构化输出（OpenAI 兼容参数）
-        return ChatOpenAI(
-            model=settings.deepseek_model,
-            api_key=settings.deepseek_api_key,
-            base_url="https://api.deepseek.com",
-            temperature=0,  # 分类任务确定性优先
-            timeout=30,
-            model_kwargs={"response_format": {"type": "json_object"}},
-        )
+        # 统一构造（llm.py）：response_format=json_object 构造期声明（DeepSeek 铁律）
+        return build_llm()
 
     def classify(self, user_input: str) -> IntentResult:
         """三层防线：结构化输出 → 重试 → 规则兜底。保证不抛异常、必有结果。"""

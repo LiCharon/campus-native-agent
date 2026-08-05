@@ -16,10 +16,9 @@ import json
 import re
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
-from campus_desk.config import settings
+from campus_desk.llm import build_llm
 
 MAX_ROUNDS = 2  # 追问 ≤2 轮（需求 §4 已拍板）
 
@@ -84,14 +83,7 @@ class FieldExtractor:
 
     @staticmethod
     def _default_llm() -> BaseChatModel:
-        return ChatOpenAI(
-            model=settings.deepseek_model,
-            api_key=settings.deepseek_api_key,
-            base_url="https://api.deepseek.com",
-            temperature=0,
-            timeout=30,
-            model_kwargs={"response_format": {"type": "json_object"}},
-        )
+        return build_llm()
 
     def extract(self, text: str) -> DraftExtract:
         """LLM 抽取失败 → 规则兜底（保证不抛、必有结果）。"""
