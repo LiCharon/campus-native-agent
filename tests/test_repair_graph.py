@@ -69,6 +69,7 @@ class TestOneShotTicket:
             assert t.building == "3号楼"
             assert t.location == "502室"
             assert t.contact == "李华"
+            assert t.priority == "P2"  # 普通单落库 P2（默认值）
             logs = session.query(TicketLog).filter(TicketLog.ticket_id == 1).all()
             assert len(logs) == 1  # 仅 ASSIGNED 一跳（建单非状态跳转）
             assert logs[0].from_status == "SUBMITTED" and logs[0].to_status == "ASSIGNED"
@@ -201,3 +202,35 @@ class TestSessionSemantics:
         graph = _build(db_session_factory, _full_extract(), _p2_classifier())
         graph.invoke({"user_input": "3号楼502灯管闪烁，联系人李华"}, CFG)
         assert graph.get_state(CFG).next == ()
+
+
+class TestPriorityPropagation:
+    """M5 修复：分类定级结果必须落库（P1 安全单按 4h 升级阈值）。
+
+    断链背景：M3 起 classify 判 P1 只标记 needs_human_confirm，建单恒落 P2，
+    升级扫描的 P1 阈值对报修单永不生效（M5 后该字段才被消费）。
+    """
+
+    def test_p1_classification_persisted(self, db_session_factory):
+        """分类器判 P1（安全规则）→ 工单落库 priority=P1，升级按 4h 阈值。"""
+        graph = _build(
+            db_session_factory,
+            _full_extract(),
+            FakeRepairClassifier(
+                default=ClassificationResult(
+                    category="水电",
+                    priority="P1",
+                    confidence=0.9,
+                    needs_human_confirm=True,  # P1 安全单同时要求人工确认（M3 行为不变）
+                    reason="安全规则命中",
+                )
+            ),
+        )
+        # P1 安全单必须过人工确认轮（M3 语义：needs_human_confirm）→ 学生确认后放行
+        graph.invoke({"user_input": "3号楼502漏水严重，联系人李华"}, CFG)
+        assert graph.get_state(CFG).next != ()  # 停在确认轮
+        graph.invoke(Command(resume="好"), CFG)
+        with db_session_factory() as session, session.begin():
+            t = session.get(Ticket, 1)
+            assert t.priority == "P1"
+            assert t.status == "ASSIGNED"  # 派单不受影响

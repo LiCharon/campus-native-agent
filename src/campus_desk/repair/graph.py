@@ -299,6 +299,9 @@ def _make_create(deps: _NodeDeps):
                 contact=contact,
                 building=building,
                 location=location,
+                priority=classification.get(
+                    "priority", "P2"
+                ),  # M5 修复：分类定级落库（P1 安全单按 4h 升级）
             )
         m = re.search(r"工单 #(\d+)", out)
         if m is None:
