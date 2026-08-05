@@ -14,5 +14,9 @@
   {"id": "complaint-013", "category": "complaint", "student_input": "食堂打饭插队现象太严重了，没人管", "intent": "complaint", "expected_route": "complaint", "note": "秩序问题投诉"},
   {"id": "complaint-014", "category": "complaint", "student_input": "图书馆占座问题越来越严重，一到考试季就抢不到座", "intent": "complaint", "expected_route": "complaint", "note": "公共设施秩序投诉"},
   {"id": "complaint-015", "category": "complaint", "student_input": "我要投诉，食堂的饭越来越难吃还越来越贵", "intent": "complaint", "expected_route": "complaint", "note": "无具体对象的泛投诉（明确说投诉）"},
-  {"id": "complaint-016", "category": "complaint", "student_input": "操场上的灯晚上九点就关了，我们还想打球，太不合理", "intent": "complaint", "expected_route": "complaint", "note": "设施管理投诉"}
+  {"id": "complaint-016", "category": "complaint", "student_input": "操场上的灯晚上九点就关了，我们还想打球，太不合理", "intent": "complaint", "expected_route": "complaint", "note": "设施管理投诉"},
+  {"id": "complaint-017", "category": "complaint", "student_input": "食堂打饭阿姨态度太差，我要投诉", "intent": "complaint", "expected_route": "complaint", "note": "直接投诉建单：明确说投诉，只缺联系人（与 001 同场景，001 测入口分流、本条测建单链路）", "turns": [{"student_reply": "李华", "expect": ["tool:create_ticket", "status:SUBMITTED"]}]},
+  {"id": "complaint-018", "category": "complaint", "student_input": "宿舍楼下半夜施工噪音大，投诉", "intent": "complaint", "expected_route": "complaint", "note": "缺 contact 追问：首轮问联系人，答后建单（确定性追问轮）", "turns": [{"student_reply": "王芳", "expect": ["tool:create_ticket", "status:SUBMITTED"]}]},
+  {"id": "complaint-019", "category": "complaint", "student_input": "我要投诉六号楼门口的保安，态度很凶", "intent": "complaint", "expected_route": "complaint", "note": "含位置对象：location 抽到六号楼门口，仍缺联系人", "turns": [{"student_reply": "王芳", "expect": ["tool:create_ticket", "status:SUBMITTED"]}]},
+  {"id": "complaint-020", "category": "complaint", "student_input": "我投诉", "intent": "complaint", "expected_route": "complaint", "note": "无实质投诉（描述<4字）：首轮仍追问联系人，答后拒绝转人工不建单", "turns": [{"student_reply": "李华", "expect": ["tool:handoff_reject"]}]}
 ]
