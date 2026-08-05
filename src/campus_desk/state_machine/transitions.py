@@ -85,3 +85,34 @@ def apply_transition(
         event=event,
         actor=actor,
     )
+
+
+def apply_escalation(session, ticket_id: int, actor: str, note: str = "") -> None:
+    """超时升级 = 字段不是状态（M5 扫描器用）：escalation_count + 1 + escalated_at + 审计日志。
+
+    与 apply_transition 相同的事务骨架（SAVEPOINT + 行锁，可嵌套进调用方外层事务）；
+    工单留在原状态（不跳转），故 TicketLog 的 from_status == to_status == 当前状态。
+    CLOSED/CANCELLED 终态工单抛 ValueError（不可升级）。
+    """
+    with session.begin_nested():
+        ticket = session.execute(
+            select(Ticket).where(Ticket.id == ticket_id).with_for_update()
+        ).scalar_one_or_none()
+        if ticket is None:
+            raise TicketNotFound(ticket_id)
+        if ticket.status in ("CLOSED", "CANCELLED"):
+            raise ValueError(f"终态工单不可升级: #{ticket_id}（status={ticket.status}）")
+
+        current_status: TicketStatus = ticket.status
+        ticket.escalation_count += 1
+        ticket.escalated_at = datetime.now(UTC)
+
+        session.add(
+            TicketLog(
+                ticket_id=ticket_id,
+                from_status=current_status,
+                to_status=current_status,
+                actor=actor,
+                note=f"超时升级（第 {ticket.escalation_count} 次）: {note}",
+            )
+        )
