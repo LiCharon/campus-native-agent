@@ -1,0 +1,7 @@
+# 前端依赖与构建产物（npm install / npm run build 可随时重建）
+node_modules/
+dist/
+
+# 本地开发缓存
+*.local
+.DS_Store
