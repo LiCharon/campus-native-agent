@@ -89,6 +89,8 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 - **画像上下文只进 LLM prompt 不进规则层**：classify(description, profile_context)，规则计分用原始描述防画像关键词干扰（M4 设计）
 - 回访=字段不是状态（closed_at/rating/review_comment/reviewed_at）：closed_at 在 apply_transition 唯一写入口进 CLOSED 时写；Quality 惰性触发（学生进对话时查，不装 APScheduler——用户拍板）；超时升级扫描=纯函数时钟注入 + APScheduler（M5 实装，apscheduler 必须 <4，v4 异步重构）
 - **worktree 基线错位（多 agent 并行必查）**：worktree baseRef 取 origin/main（可落后本地 main 数十 commit）——子 agent 开工第一件事 `git log --oneline -1` 核基线，不对就 checkout -B 对齐 main；worktree 的 .venv editable 可能指向主仓库 src，worktree 里跑 python 脚本需 `PYTHONPATH=src`（pytest 不受影响）
+- **TaskStop 杀 npm 壳不杀 node 子进程（Windows，M6 实测）**：npm run dev 的后台任务停了端口仍被占，本机堆过 3 个 vite（5173/5174/5175），用户访问 5173 的一直是旧代码——改前端后必须 `netstat -ano | grep 517x` 验证端口归属 + `fetch /src/App.vue` 确认 serve 的是新代码，残留进程 taskkill //F 逐个清
+- **前端 localStorage 非响应式（M6 实测两连击）**：computed 无响应式依赖只求值一次（登录跳转后仍显示旧值，加 `void route.path` 依赖修复）；模块级单例状态（useChat 的 ref + 顶层 load()）只在页面首次加载执行，换账号必须显式 reload——改 useChat 类模块后记得把新函数加进返回对象（漏加 = pageerror "reload is not a function"）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -97,6 +99,6 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m5.md`（--no-repair/--no-consult/--no-complaint 分段落）；Langfuse 冒烟 `.venv/Scripts/python scripts/smoke_langfuse.py`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；**demo 工单重建 `.venv/Scripts/python scripts/seed_demo_data.py`（M6：清空重建 15 张演示单，幂等）**；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m6.md`（--no-repair/--no-consult/--no-complaint 分段落）；Langfuse 冒烟 `.venv/Scripts/python scripts/smoke_langfuse.py`；**API 服务（M6）`.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / staff-001 / it-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码）；docker-compose.yml 备着（供无本机 MySQL 环境，实际开发不用） |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
