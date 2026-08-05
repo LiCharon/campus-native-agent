@@ -17,7 +17,7 @@ class TestSeedContent:
         assert _count(db_session_factory, Dorm) == 5
         assert _count(db_session_factory, Account) == 3
         assert _count(db_session_factory, Announcement) == 4
-        assert _count(db_session_factory, Faq) == 9
+        assert _count(db_session_factory, Faq) == 24
 
     def test_roles_covered(self, db_session_factory):
         with db_session_factory() as session:

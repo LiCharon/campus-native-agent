@@ -10,7 +10,6 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
 from campus_desk.config import settings
 from campus_desk.db import models  # noqa: F401 — 注册 8 张业务表进 Base.metadata
 from campus_desk.db.base import Base
