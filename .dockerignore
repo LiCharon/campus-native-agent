@@ -1,0 +1,16 @@
+# 后端镜像构建排除（Dockerfile COPY . . 白名单式排除）
+.venv/
+.git/
+docs/
+tests/
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+.env
+.claude/
+.pytest_cache/
+.ruff_cache/
+frontend/
+node_modules/

@@ -1,0 +1,26 @@
+# CampusDesk CI（M6）：ruff + pytest 质量门
+# - Python 3.14 写 "3.14" 不写补丁号（setup-python versions-manifest 对最新补丁滞后）
+# - 依赖走 pyproject（pip install -e ".[dev]"），不经 requirements.txt（含 -e git+ 行）
+# - MySQL 冒烟（skipif 无 DATABASE_URL）/ DeepSeek（skip-or-pass）天然不进 CI 判定
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Test (pytest)
+        run: python -m pytest

@@ -1,9 +1,11 @@
-# CampusDesk 容器编排（M3 备着，开发期连本机 MySQL80 服务）
+# CampusDesk 容器编排（M6 一键起：MySQL + 后端 + 前端）
 #
-# ⚠️ 本机开发用 .env 的 DATABASE_URL（mysql+pymysql://...@127.0.0.1:3306），
-#    不使用本文件——本文件供"无本机 MySQL 的环境"（面试演示/他人电脑）一键起。
-#    起法：docker compose up -d mysql（本地无 MySQL 时）
-#    backend/frontend 服务 M6 接入后再补全（当前只有数据库层）。
+# 起法：docker compose up --build
+#   访问：前端 http://localhost:8080（nginx 托管 + /api 反代后端）
+# 本机开发仍用 .env 的 DATABASE_URL 连本机 MySQL80，不用本文件（M3 约定）。
+#
+# ⚠️ 刻意不用 env_file: .env——文件缺失会让 compose 直接报错，破坏"一键起"；
+#    改用显式 environment + ${VAR:-} 插值（DEEPSEEK_API_KEY 不传也能起，对话降级规则兜底）
 
 services:
   mysql:
@@ -25,6 +27,29 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  backend:
+    build: .
+    container_name: campus_desk_backend
+    environment:
+      DATABASE_URL: mysql+pymysql://root:root@mysql:3306/campus_desk?charset=utf8mb4
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    container_name: campus_desk_frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
 
 volumes:
   mysql_data:

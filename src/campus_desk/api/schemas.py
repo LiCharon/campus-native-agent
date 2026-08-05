@@ -30,13 +30,18 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """orchestrator.turn 返回原样透出（字段可选——各路由分支字段集不同）。"""
+    """orchestrator.turn 返回原样透出（字段可选——各路由分支字段集不同）。
+
+    ticket_type 不在 turn 返回里：chat 路由在 ticket_id 非空时查库补上
+    （前端工单卡片"类别"显示用）。
+    """
 
     reply: str
     route: str
     pending_question: str | None = None
     ticket_id: int | None = None
     ticket_status: str | None = None
+    ticket_type: str | None = None
     finished: bool | None = None
     tool_calls: list[str] = []
     status_events: list[str] = []
