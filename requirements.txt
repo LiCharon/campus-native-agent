@@ -5,9 +5,10 @@ annotated-types==0.8.0
 anyio==4.14.2
 APScheduler==3.11.3
 backoff==2.2.1
--e git+https://github.com/LiCharon/campus-desk.git@d4adfd77cb5789556f2ae38c1e6c6cc9e0d51498#egg=campus_desk
+-e git+https://github.com/LiCharon/campus-desk.git@68f3f5241e51a971679d1f5a20344936134af4dc#egg=campus_desk
 certifi==2026.7.22
 charset-normalizer==3.4.9
+click==8.4.2
 colorama==0.4.6
 distro==1.9.0
 fastapi==0.141.1
@@ -50,6 +51,7 @@ pydantic==2.13.4
 pydantic-settings==2.14.2
 pydantic_core==2.46.4
 Pygments==2.20.0
+PyJWT==2.13.0
 PyMySQL==1.2.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
@@ -73,6 +75,7 @@ tzdata==2026.3
 tzlocal==5.4.4
 urllib3==2.7.0
 uuid_utils==0.17.0
+uvicorn==0.52.1
 websockets==15.0.1
 wrapt==2.3.0
 xxhash==3.8.1

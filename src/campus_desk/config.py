@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     escalation_p2_hours: int = 48
     auto_close_hours: int = 72
     scan_interval_seconds: int = 60
+    # M6 登录鉴权：JWT 密钥（演示环境默认值 ≥32 字节，生产必须改）与过期分钟数
+    jwt_secret: str = "dev-secret-change-me-0123456789abcdef"
+    jwt_expire_minutes: int = 1440
+    # M6 业务参数可配化：关键词表/派单映射 JSON 路径（相对仓库根）
+    business_config_path: str = "config/business_rules.json"
 
     @property
     def langfuse_enabled(self) -> bool:
