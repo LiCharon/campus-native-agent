@@ -22,6 +22,7 @@ from typing import Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt  # resume 由编排层传 Command
 
+from campus_desk import telemetry
 from campus_desk.consult.decide import (
     MAX_ASK_ROUNDS,
     MAX_QUESTIONS_PER_ROUND,
@@ -67,13 +68,16 @@ class _NodeDeps:
 
 def _call_tool(deps: _NodeDeps, decision: ConsultDecision) -> str:
     """确定性工具调用：未知工具/参数异常返回错误串（不抛，LLM 可见）。"""
-    tool = deps.tools.get(decision.tool or "")
-    if tool is None:
-        return f"错误: 未知工具 {decision.tool}"
-    try:
-        return str(tool.func(**decision.tool_args))
-    except Exception as exc:  # noqa: BLE001 — 参数 schema 校验失败由 @tool 层抛，兜底转错误串
-        return f"错误: 工具调用失败 {exc!r}"
+    with telemetry.span(
+        "consult.tool_call", metadata={"tool": decision.tool, "args": decision.tool_args}
+    ):
+        tool = deps.tools.get(decision.tool or "")
+        if tool is None:
+            return f"错误: 未知工具 {decision.tool}"
+        try:
+            return str(tool.func(**decision.tool_args))
+        except Exception as exc:  # noqa: BLE001 — 参数 schema 校验失败由 @tool 层抛，兜底转错误串
+            return f"错误: 工具调用失败 {exc!r}"
 
 
 def _handoff_package(history: list[str], tool_results: list[str], judgment: str) -> str:

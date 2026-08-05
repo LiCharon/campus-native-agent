@@ -17,6 +17,7 @@ import argparse
 import time
 from dataclasses import dataclass, field
 
+from campus_desk import telemetry
 from campus_desk.config import settings
 from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.entry.orchestrator import turn
@@ -524,6 +525,7 @@ def main() -> None:
         if not args.no_consult:
             consult_report = run_consult_evaluation(load_all(), None, max_cases=args.max)
     text = format_report(report, repair_report, consult_report)
+    telemetry.flush()  # 冲刷 trace 事件（短生命周期脚本必调；无 key 时 no-op）
     if args.out:
         from pathlib import Path
 

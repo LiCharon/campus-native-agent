@@ -10,6 +10,7 @@ import json
 
 from langchain.tools import BaseTool, tool
 
+from campus_desk import telemetry
 from campus_desk.db.models import Account, Announcement, Faq
 from campus_desk.db.session import SessionFactory
 
@@ -24,12 +25,13 @@ def create_consult_tools(session_factory: SessionFactory) -> list[BaseTool]:
         Args:
             student_no: 学号
         """
-        with session_factory() as session, session.begin():
-            acct = session.query(Account).filter(Account.student_no == student_no).first()
-        if acct is None:
-            return f"错误: 未找到学号 {student_no} 的网络账号"
-        state_cn = {"normal": "正常", "overdue": "欠费停机", "expired": "账号过期"}
-        return f"学号 {student_no} 网络账号状态: {state_cn.get(acct.status, acct.status)}（{acct.note or ''}）"
+        with telemetry.span("tool.query_account_status", metadata={"student_no": student_no}):
+            with session_factory() as session, session.begin():
+                acct = session.query(Account).filter(Account.student_no == student_no).first()
+            if acct is None:
+                return f"错误: 未找到学号 {student_no} 的网络账号"
+            state_cn = {"normal": "正常", "overdue": "欠费停机", "expired": "账号过期"}
+            return f"学号 {student_no} 网络账号状态: {state_cn.get(acct.status, acct.status)}（{acct.note or ''}）"
 
     @tool("query_announcement", parse_docstring=True)
     def query_announcement(region: str) -> str:
@@ -38,12 +40,13 @@ def create_consult_tools(session_factory: SessionFactory) -> list[BaseTool]:
         Args:
             region: 区域（楼栋名或"全校"）
         """
-        with session_factory() as session, session.begin():
-            rows = session.query(Announcement).filter(Announcement.region == region).all()
-        if not rows:
-            return f"未找到 {region} 的公告"
-        items = [{"region": a.region, "content": a.content} for a in rows]
-        return json.dumps(items, ensure_ascii=False)
+        with telemetry.span("tool.query_announcement", metadata={"region": region}):
+            with session_factory() as session, session.begin():
+                rows = session.query(Announcement).filter(Announcement.region == region).all()
+            if not rows:
+                return f"未找到 {region} 的公告"
+            items = [{"region": a.region, "content": a.content} for a in rows]
+            return json.dumps(items, ensure_ascii=False)
 
     @tool("search_faq", parse_docstring=True)
     def search_faq(keyword: str) -> str:
@@ -52,17 +55,18 @@ def create_consult_tools(session_factory: SessionFactory) -> list[BaseTool]:
         Args:
             keyword: 检索关键词（如 密码/网速/选课）
         """
-        with session_factory() as session, session.begin():
-            faqs = session.query(Faq).all()
-        hits = []
-        for faq in faqs:
-            score = sum(1 for kw in faq.keywords.split(",") if kw and kw in keyword)
-            if score > 0:
-                hits.append((score, faq))
-        hits.sort(key=lambda x: x[0], reverse=True)
-        if not hits:
-            return "未找到相关问题，请换个说法，或让我转人工为您服务。"
-        items = [{"question": faq.question, "answer": faq.answer} for _, faq in hits[:3]]
-        return json.dumps(items, ensure_ascii=False)
+        with telemetry.span("tool.search_faq", metadata={"keyword": keyword}):
+            with session_factory() as session, session.begin():
+                faqs = session.query(Faq).all()
+            hits = []
+            for faq in faqs:
+                score = sum(1 for kw in faq.keywords.split(",") if kw and kw in keyword)
+                if score > 0:
+                    hits.append((score, faq))
+            hits.sort(key=lambda x: x[0], reverse=True)
+            if not hits:
+                return "未找到相关问题，请换个说法，或让我转人工为您服务。"
+            items = [{"question": faq.question, "answer": faq.answer} for _, faq in hits[:3]]
+            return json.dumps(items, ensure_ascii=False)
 
     return [query_account_status, query_announcement, search_faq]

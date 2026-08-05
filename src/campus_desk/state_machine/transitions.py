@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 
+from campus_desk import telemetry
 from campus_desk.db.models import Ticket, TicketLog
 from campus_desk.state_machine.machine import (
     EVENT_TRANSITIONS,
@@ -44,7 +45,10 @@ def apply_transition(
 
     assign 事件可带 repairman_id/dept（派单落库）；escalate 触发超时升级字段。
     """
-    with session.begin_nested():
+    with (
+        telemetry.span(f"transition.{event}", metadata={"ticket_id": ticket_id, "actor": actor}),
+        session.begin_nested(),
+    ):
         ticket = session.execute(
             select(Ticket).where(Ticket.id == ticket_id).with_for_update()
         ).scalar_one_or_none()
