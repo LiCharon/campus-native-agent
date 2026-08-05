@@ -14,8 +14,8 @@
    - get_client().flush()：短生命周期脚本冲刷上报
 """
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 from campus_desk.config import settings
 

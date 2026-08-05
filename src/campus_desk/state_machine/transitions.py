@@ -45,42 +45,42 @@ def apply_transition(
 
     assign 事件可带 repairman_id/dept（派单落库）；escalate 触发超时升级字段。
     """
-    with telemetry.span(
-        f"transition.{event}", metadata={"ticket_id": ticket_id, "actor": actor}
+    with (
+        telemetry.span(f"transition.{event}", metadata={"ticket_id": ticket_id, "actor": actor}),
+        session.begin_nested(),
     ):
-        with session.begin_nested():
-            ticket = session.execute(
-                select(Ticket).where(Ticket.id == ticket_id).with_for_update()
-            ).scalar_one_or_none()
-            if ticket is None:
-                raise TicketNotFound(ticket_id)
+        ticket = session.execute(
+            select(Ticket).where(Ticket.id == ticket_id).with_for_update()
+        ).scalar_one_or_none()
+        if ticket is None:
+            raise TicketNotFound(ticket_id)
 
-            _, target = EVENT_TRANSITIONS[event]  # sources 校验由 validate_transition 完成
-            validate_transition(ticket.status, target, event, actor)
+        _, target = EVENT_TRANSITIONS[event]  # sources 校验由 validate_transition 完成
+        validate_transition(ticket.status, target, event, actor)
 
-            from_status: TicketStatus = ticket.status
-            ticket.status = target
-            if target == "CLOSED":
-                # 关闭时间（M4 QualityAgent 回访 24h 判定用；关闭 = 字段不是状态）
-                ticket.closed_at = datetime.now(UTC)
-            if event == "assign":
-                if repairman_id is not None:
-                    ticket.repairman_id = repairman_id
-                if dept is not None:
-                    ticket.dept = dept
-            if escalate:
-                ticket.escalation_count += 1
-                ticket.escalated_at = datetime.now(UTC)
+        from_status: TicketStatus = ticket.status
+        ticket.status = target
+        if target == "CLOSED":
+            # 关闭时间（M4 QualityAgent 回访 24h 判定用；关闭 = 字段不是状态）
+            ticket.closed_at = datetime.now(UTC)
+        if event == "assign":
+            if repairman_id is not None:
+                ticket.repairman_id = repairman_id
+            if dept is not None:
+                ticket.dept = dept
+        if escalate:
+            ticket.escalation_count += 1
+            ticket.escalated_at = datetime.now(UTC)
 
-            session.add(
-                TicketLog(
-                    ticket_id=ticket_id,
-                    from_status=from_status,
-                    to_status=target,
-                    actor=actor,
-                    note=note,
-                )
+        session.add(
+            TicketLog(
+                ticket_id=ticket_id,
+                from_status=from_status,
+                to_status=target,
+                actor=actor,
+                note=note,
             )
+        )
 
     return TransitionRecord(
         ticket_id=ticket_id,

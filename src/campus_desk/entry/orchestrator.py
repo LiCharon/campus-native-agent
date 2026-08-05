@@ -60,21 +60,21 @@ def turn(
     trace 级属性：user_id → Langfuse user、thread_id → session（trace 归并到
     会话维度）；tags 标记 M5 埋点版本。无 key 时 trace_attrs/span 均 no-op。
     """
-    with telemetry.trace_attrs(
-        user_id=user_id, session_id=thread_id, tags=["campusdesk-m5"]
+    with (
+        telemetry.trace_attrs(user_id=user_id, session_id=thread_id, tags=["campusdesk-m5"]),
+        telemetry.span("orchestrator.turn", metadata={"thread_id": thread_id}),
     ):
-        with telemetry.span("orchestrator.turn", metadata={"thread_id": thread_id}):
-            return _turn_impl(
-                entry_graph,
-                repair_graph,
-                consult_graph,
-                thread_id,
-                msg,
-                quality_graph=quality_graph,
-                user_id=user_id,
-                session_factory=session_factory,
-                complaint_graph=complaint_graph,
-            )
+        return _turn_impl(
+            entry_graph,
+            repair_graph,
+            consult_graph,
+            thread_id,
+            msg,
+            quality_graph=quality_graph,
+            user_id=user_id,
+            session_factory=session_factory,
+            complaint_graph=complaint_graph,
+        )
 
 
 def _turn_impl(

@@ -82,18 +82,21 @@ def create_repair_tools(
         Args:
             ticket_id: 工单号
         """
-        with telemetry.span("tool.get_ticket", metadata={"ticket_id": ticket_id}):
-            with session_factory() as session, session.begin():
-                ticket = session.get(Ticket, ticket_id)
-                if ticket is None:
-                    return f"错误: 工单 #{ticket_id} 不存在"
-                logs = session.query(TicketLog).filter(TicketLog.ticket_id == ticket_id).count()
-                repairman = ticket.repairman_id or "未派单"
-                return (
-                    f"工单 #{ticket_id}: {ticket.description} | 状态 {ticket.status} | "
-                    f"类别 {ticket.category} | 等级 {ticket.priority} | "
-                    f"维修工 {repairman} | 联系人 {ticket.contact} | 跳转记录 {logs} 条"
-                )
+        with (
+            telemetry.span("tool.get_ticket", metadata={"ticket_id": ticket_id}),
+            session_factory() as session,
+            session.begin(),
+        ):
+            ticket = session.get(Ticket, ticket_id)
+            if ticket is None:
+                return f"错误: 工单 #{ticket_id} 不存在"
+            logs = session.query(TicketLog).filter(TicketLog.ticket_id == ticket_id).count()
+            repairman = ticket.repairman_id or "未派单"
+            return (
+                f"工单 #{ticket_id}: {ticket.description} | 状态 {ticket.status} | "
+                f"类别 {ticket.category} | 等级 {ticket.priority} | "
+                f"维修工 {repairman} | 联系人 {ticket.contact} | 跳转记录 {logs} 条"
+            )
 
     @tool("update_ticket_status", parse_docstring=True)
     def update_ticket_status(
@@ -131,9 +134,7 @@ def create_repair_tools(
             dept: 部门（信息中心/后勤）
             trade: 工种（网络/账号/水电/家具/门窗）
         """
-        with telemetry.span(
-            "tool.list_repairmen", metadata={"dept": dept, "trade": trade}
-        ):
+        with telemetry.span("tool.list_repairmen", metadata={"dept": dept, "trade": trade}):
             with session_factory() as session, session.begin():
                 query = session.query(Repairman)
                 if dept:

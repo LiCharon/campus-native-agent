@@ -24,16 +24,13 @@ def test_span_noop_without_keys():
     with telemetry.span("orchestrator.turn", metadata={"ticket_id": 1, "actor": "x"}) as s:
         assert s is None
     # 异常穿过 span（埋点不得吞业务异常）
-    with pytest.raises(ValueError):
-        with telemetry.span("agent.repair"):
-            raise ValueError("x")
+    with pytest.raises(ValueError), telemetry.span("agent.repair"):
+        raise ValueError("x")
 
 
 def test_trace_attrs_noop_without_keys():
     """trace_attrs() 无 key 时纯 no-op：不抛错、yield None。"""
-    with telemetry.trace_attrs(
-        user_id="u", session_id="s", tags=["t"], trace_name="n"
-    ) as _:
+    with telemetry.trace_attrs(user_id="u", session_id="s", tags=["t"], trace_name="n") as _:
         pass
 
 
@@ -47,9 +44,8 @@ def test_build_llm_without_callbacks():
 def test_langfuse_package_not_imported():
     """全链路埋点调用后 langfuse 包不得被 import（锁惰性 import 设计）。"""
     telemetry.flush()
-    with telemetry.span("x"):
-        with telemetry.trace_attrs(user_id="u"):
-            pass
+    with telemetry.span("x"), telemetry.trace_attrs(user_id="u"):
+        pass
     assert telemetry.langfuse_handler() is None
     build_llm()
     assert "langfuse" not in sys.modules
