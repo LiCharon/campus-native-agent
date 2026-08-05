@@ -1,0 +1,30 @@
+# CampusDesk 容器编排（M3 备着，开发期连本机 MySQL80 服务）
+#
+# ⚠️ 本机开发用 .env 的 DATABASE_URL（mysql+pymysql://...@127.0.0.1:3306），
+#    不使用本文件——本文件供"无本机 MySQL 的环境"（面试演示/他人电脑）一键起。
+#    起法：docker compose up -d mysql（本地无 MySQL 时）
+#    backend/frontend 服务 M6 接入后再补全（当前只有数据库层）。
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: campus_desk_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: campus_desk
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql_data:

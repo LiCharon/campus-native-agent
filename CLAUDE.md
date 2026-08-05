@@ -21,6 +21,7 @@
 | docs/TECH_DECISIONS.md | 面试备答、选型变更时 |
 | docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
 | docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
+| docs/eval_report_m3.md | M3 评测：意图 95.8% + 报修链路成功率 94.4%（17/18），本地私有管理 |
 | （已归档） | PLANNING_REVIEW 评析报告与 Qwen 需求分析原文已于 2026-08-05 删，历史在 docs 私有仓库 git 可恢复 |
 
 ## 1. 为什么做（面试叙事，防止跑偏）
@@ -36,7 +37,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 
 ## 3. 核心设计（细节 → docs/PROJECT_REQUIREMENTS.md）
 - 入口分流：EntryAgent 意图识别（报修/咨询/投诉/其他）→ 置信度门控 → 低置信兜底转人工；多意图取主意图处理、次要问题提示继续问；**投诉 = 创建 P1 工单 + 通知管理员**（复用 Repair 管道；通知载体 = 管理列表标红/界面可见，不建通知模块，见 §14）
-- 工单状态机 6 态：SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED（仅 SUBMITTED/ASSIGNED 可撤）；**超时升级=字段不是状态**（escalation_count+escalated_at+审计日志，P1 4h/P2 48h/P3 不适用）；**跳转=图的边=白名单**（完整边清单 8 条，测试照单锁定）：验收不通过 PENDING_VERIFY→IN_PROGRESS 返工；挂起 3 天无响应自动 CLOSED（备注"超时自动关闭"，APScheduler 定时，同为事件非状态）
+- 工单状态机 6 态：SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED（仅 SUBMITTED/ASSIGNED 可撤）；**超时升级=字段不是状态**（escalation_count+escalated_at+审计日志，P1 4h/P2 48h/P3 不适用）；**跳转=白名单**（完整边清单 8 条，测试照单锁定；M3 落地：纯函数白名单 machine.py 为权威 + apply_transition SAVEPOINT 原子写库（状态+审计日志，唯一写入口）+ TicketStateGraph 图渲染条件边——"跳转=图的边"叙事保留但 RepairGraph 不嵌套子图，状态变更全走 apply_transition）：验收不通过 PENDING_VERIFY→IN_PROGRESS 返工；挂起 3 天无响应自动 CLOSED（备注"超时自动关闭"，APScheduler 定时 M4 挂，同为事件非状态）
 - 4 Agent：Entry（分流）/ Repair（报修主流程）/ Consult（**诊断式咨询**：追问≤8 轮、每轮≤2 问 → 工具排查 → 三态分支，转人工打包排查记录）/ Quality（关闭 24h 后回访）
 - 9 确定性工具（每工具独立单测，不依赖 LLM）：报修侧 6（create_ticket / get_ticket / update_ticket_status / list_repairmen / query_dorm_info / urgent_followup）+ 咨询侧 3（query_account_status / query_announcement / search_faq 关键词匹配）
 - 5 类上下文隔离：当前任务（LangGraph state）/ 会话（checkpointer SQLite）/ 用户长期画像（MySQL）/ 工具只读数据 / 全局 FAQ
@@ -93,7 +94,7 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - M1：git init + 初始 commit 完成 / 环境验证 3 项跑通 / 骨架 pytest 绿 / 文档日志更新
 - M2-M5：该里程碑核心链路测试绿 + 环境验证跑通 + 文档/日志更新
 
-## 7. 当前状态（2026-08-04）
+## 7. 当前状态（2026-08-05）
 - [x] 选题 / 8:2 / 技术栈 / MVP 策略确认
 - [x] 工程化标准 + 安全检测补充
 - [x] Qwen 对抗性审查吸收（状态机 6 态 / checkpointer SQLite / Langfuse Cloud 起步 / 鉴权 / 剧本评测集 / 待定项 11→7）
@@ -102,7 +103,8 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - [x] CLAUDE.md 审查修复 + git 初始化（指标对齐 9 项 / 通知载体标注 / 别再犯清单 / DoD / §9 环境占位）
 - [x] M1 骨架：环境 5 待定项拍板（§9）+ 包骨架 + 环境验证 3 项全 PASS + pytest 5 绿 + 锁文件
 - [x] M2 入口分流 + 评测集：entry/（三层防线 + 门控条件边 + 多意图）+ eval/（72 条剧本 JSON + 运行器），意图准确率实测 94.4%，pytest 36 绿
-- [ ] M3 报修主链路 + 状态机 + 工具（下一步；前置：MySQL Compose + 数据模型 + alembic + 评测集入库脚本）
+- [x] M3 报修主链路 + 状态机 + 工具：数据层 10 表 + alembic/MySQL 8 + 6 态 8 边状态机 + 9 确定性工具 + 分类定级 + RepairGraph（interrupt 多轮）+ 编排层 + 评测 turns 扩展/入库/真 LLM 评测；**实测链路成功率 94.4%（17/18）**，pytest 147 绿
+- [ ] M4 记忆 + 咨询 + 回访（下一步：用户画像注入/ConsultAgent 诊断式/QualityAgent 回访；FAQ 补全 20-30 条）
 
 ## 8. 别再犯清单（历史教训精简版，细节在 DEV_JOURNAL）
 - 外部评审建议默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关（三问：服务"演示能跑+面试能讲"？文档契约还是代码模块？与 8:2/演进式冲突吗？）
@@ -110,6 +112,13 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 - AI 评审工具的"审查对象"声明不可信（可能用旧快照），无论第几轮审查都对照当前磁盘文档逐条核验
 - 写框架代码前先 context7 查 API（LangGraph/LangChain API 变动快），禁凭记忆写
 - **DeepSeek（v4-flash thinking 模式）不支持 langchain with_structured_output 三种 method**（实测 2026-08-04：json_schema/json_mode/function_calling 全 400）——所有 LLM 结构化输出统一用**自写 prompt（含 "json" 字样）+ response_format=json_object + pydantic 校验**（intent.py 已沉淀模板，M3/M4 复用）
+- **LangGraph interrupt 重入不落盘**：interrupt 节点内"中断前的修改"不持久化，恢复时节点从头重入——问句/计数必须由 return 写入 state（RepairGraph 双节点 ping-pong：collect 纯逻辑 + wait 唯一 interrupt）
+- **终态 thread 再 invoke = 旧 state 残留 + 重复中断**（实测）——新会话必须新 thread_id；评测 runner 必须 InMemorySaver 隔离（文件 SqliteSaver 残留终态 → 重跑全失配）
+- LangGraph 普通边多出边 = 并行分支（同 step 更新同 key 报错）→ 分支必须用条件边
+- SQLAlchemy 2.0：SELECT 隐式开事务，与 begin()/begin_nested() 混用报 "already begun"；**session.rollback() expire 所有实例**，失败路径后访问实例属性会触发惰性加载 + autobegin——测试 helper 一律返回整数 id 不返回 ORM 实例
+- alembic autogenerate 前验证表数（env.py 漏 import 业务 models → 只生成 2 张表的迁移）；alembic.ini 只写英文注释（configparser GBK 读取）；密码含 @ 需 %40 URL 编码
+- 规则抽取与真 LLM 行为差异（规则恒抽不到 contact）：turns 评测口径按真 LLM 设计，规则版只做机制验证
+- 编排层：报修挂起中 other 类输入（补充信息）要 resume 进 RepairGraph，不落到人工占位（真 LLM 评测抓出）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -118,6 +127,6 @@ Redis 缓存（M6+ 加分项）；M1 开工前先跑环境验证：LangGraph qui
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
-| 测试数据库 | **M1 全 SQLite**（临时文件 + checkpointer 文件库）；MySQL 8 + Docker Compose 到 M3 报修链路再搭 |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m3.md`；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码）；docker-compose.yml 备着（供无本机 MySQL 环境，实际开发不用） |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
