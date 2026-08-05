@@ -11,6 +11,8 @@ from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.eval.loader import load_all
 from campus_desk.eval.runner import (
     check_expect,
+    format_report,
+    run_complaint_evaluation,
     run_consult_evaluation,
     run_repair_evaluation,
 )
@@ -270,3 +272,194 @@ class TestConsultEvaluationRuleBased:
         )
         assert report.avg_turns == 1.0
         assert report.passed_cases == 1
+
+
+class TestComplaintEvaluationRuleBased:
+    """投诉链路评测（规则版注入）：建单 / 无实质转人工 / 类别过滤 / 失配判失败。
+
+    评测口径（M5 拍板）：投诉是确定性追问管道（缺 contact 必追问），失配
+    判失败（与报修同口径，防 scripted 答非所问失真）——区别于咨询的
+    "提前解答=自助解决，失配不判失败"。
+    """
+
+    def _setup(self, db_session_factory, extract_sequence):
+        from campus_desk.consult.decide import ConsultDecision
+        from campus_desk.consult.graph import build_consult_graph
+        from campus_desk.entry.intent import IntentResult
+        from tests.conftest import FakeConsultDecider, FakeFieldExtractor, FakeIntentClassifier
+
+        fake = FakeIntentClassifier(IntentResult(intent="complaint", confidence=0.9, reason="测试"))
+        entry = build_entry_graph(classifier=fake)
+        complaint = build_repair_graph(
+            db_session_factory,
+            extractor=FakeFieldExtractor(sequence=extract_sequence),
+            classifier=RepairClassifier(llm=None),
+            checkpointer=InMemorySaver(),
+            ticket_type="complaint",
+        )
+        repair = build_repair_graph(
+            db_session_factory,
+            extractor=FieldExtractor(llm=None),
+            classifier=RepairClassifier(llm=None),
+            checkpointer=InMemorySaver(),
+        )
+        consult = build_consult_graph(
+            db_session_factory,
+            decider=FakeConsultDecider(
+                default=ConsultDecision(action="answer", reply="已为您解答。")
+            ),
+            checkpointer=InMemorySaver(),
+        )
+        return entry, repair, consult, complaint
+
+    @staticmethod
+    def _case(case_id: str, student_input: str, turns: list[dict] | None = None):
+        from campus_desk.eval.models import ScriptedCase
+
+        return ScriptedCase(
+            id=case_id,
+            category="complaint",
+            student_input=student_input,
+            intent="complaint",
+            expected_route="complaint",
+            turns=turns or [],
+            note="测试",
+        )
+
+    def test_direct_complaint_ticket_created(self, db_session_factory):
+        """直接投诉：首轮追问 contact → 答后建单 SUBMITTED（投诉不派单）。"""
+        from campus_desk.repair.drafting import DraftExtract
+
+        entry, repair, consult, complaint = self._setup(
+            db_session_factory,
+            [
+                DraftExtract(description="食堂打饭阿姨态度太差，我要投诉", contact=None),
+                DraftExtract(contact="李华"),
+            ],
+        )
+        case = self._case(
+            "complaint-x",
+            "食堂打饭阿姨态度太差，我要投诉",
+            [{"student_reply": "李华", "expect": ["tool:create_ticket", "status:SUBMITTED"]}],
+        )
+        report = run_complaint_evaluation(
+            [case],
+            db_session_factory,
+            entry_graph=entry,
+            repair_graph=repair,
+            consult_graph=consult,
+            complaint_graph=complaint,
+        )
+        assert report.passed_cases == 1
+        assert report.success_rate == 1.0
+        assert report.failure_details() == []
+
+    def test_no_substance_handoff_rejected(self, db_session_factory):
+        """无实质投诉（描述<4字）：首轮仍追问 contact，答后转人工不建单。
+
+        断言 tool:handoff_reject（collect 标记 rejected → finalize 出转人工文案，
+        不出现 create_ticket）。
+        """
+        from campus_desk.repair.drafting import DraftExtract
+
+        entry, repair, consult, complaint = self._setup(
+            db_session_factory,
+            [
+                DraftExtract(description="我投诉", contact=None),
+                DraftExtract(contact="李华"),
+            ],
+        )
+        case = self._case(
+            "complaint-y", "我投诉", [{"student_reply": "李华", "expect": ["tool:handoff_reject"]}]
+        )
+        report = run_complaint_evaluation(
+            [case],
+            db_session_factory,
+            entry_graph=entry,
+            repair_graph=repair,
+            consult_graph=consult,
+            complaint_graph=complaint,
+        )
+        assert report.passed_cases == 1
+        assert report.success_rate == 1.0
+
+    def test_complaint_only_cases_filtered(self, db_session_factory):
+        """只跑 complaint 类别（76 条中 20 条）。"""
+        from campus_desk.repair.drafting import DraftExtract
+
+        entry, repair, consult, complaint = self._setup(
+            db_session_factory, [DraftExtract(description="测试", contact=None)]
+        )
+        report = run_complaint_evaluation(
+            load_all(),
+            db_session_factory,
+            entry_graph=entry,
+            repair_graph=repair,
+            consult_graph=consult,
+            complaint_graph=complaint,
+        )
+        assert report.total == 20
+
+    def test_script_mismatch_failed(self, db_session_factory):
+        """剧本失配防线（同 repair 口径）：终态后再回复 → 判失败。
+
+        规则版流程：追问 1 轮 + 建单 1 轮 = 1 条 turns 匹配；剧本写 2 条 →
+        第 2 条回复时已终态（无挂起）→ 剧本失配（脚本学生多答了一轮）。
+        """
+        from campus_desk.repair.drafting import DraftExtract
+
+        entry, repair, consult, complaint = self._setup(
+            db_session_factory,
+            [
+                DraftExtract(description="食堂打饭阿姨态度太差，我要投诉", contact=None),
+                DraftExtract(contact="李华"),
+            ],
+        )
+        case = self._case(
+            "complaint-z",
+            "食堂打饭阿姨态度太差，我要投诉",
+            [
+                {"student_reply": "李华", "expect": ["tool:create_ticket", "status:SUBMITTED"]},
+                {"student_reply": "谢谢", "expect": []},  # 已终态 → 失配
+            ],
+        )
+        report = run_complaint_evaluation(
+            [case],
+            db_session_factory,
+            entry_graph=entry,
+            repair_graph=repair,
+            consult_graph=consult,
+            complaint_graph=complaint,
+        )
+        assert report.passed_cases == 0
+        assert any("剧本失配" in f for f in report.failure_details())
+
+    def test_format_report_includes_complaint_section(self):
+        """format_report 挂投诉段：标题与链路成功率出现。"""
+        from campus_desk.eval.models import ScriptedCase
+        from campus_desk.eval.runner import ComplaintEvalReport, EvalReport
+
+        case = ScriptedCase(
+            id="complaint-x",
+            category="complaint",
+            student_input="食堂打饭阿姨态度太差，我要投诉",
+            intent="complaint",
+            expected_route="complaint",
+            turns=[{"student_reply": "李华", "expect": ["tool:create_ticket", "status:SUBMITTED"]}],
+            note="测试",
+        )
+        from campus_desk.eval.runner import ComplaintCaseResult
+
+        complaint_report = ComplaintEvalReport(
+            results=[
+                ComplaintCaseResult(case=case, turn_count=1, failures=[], seconds=0.5),
+                ComplaintCaseResult(
+                    case=case, turn_count=1, failures=["第1轮: 剧本失配"], seconds=0.4
+                ),
+            ]
+        )
+        text = format_report(EvalReport(), complaint_report=complaint_report)
+        assert "## 投诉链路评测（M5）" in text
+        assert "链路成功率" in text
+        assert "50.0%" in text
+        assert "第1轮: 剧本失配" in text

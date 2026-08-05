@@ -8,12 +8,12 @@ from campus_desk.eval.models import ScriptedCase
 
 class TestIngest:
     def test_ingest_all_cases(self, db_session_factory):
-        """72 条全部入库 + turns 落库。"""
+        """76 条全部入库 + turns 落库（M5 新增 4 条投诉剧本后总量 76）。"""
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 72
+        assert cases == 76
         assert turns > 0  # repair/repeat_repair 剧本有 turns
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 72
+            assert session.query(EvalCase).count() == 76
             repair = session.query(EvalCase).filter(EvalCase.id == "repair-001").first()
             assert repair.student_input.startswith("宿舍的灯坏了")
             turn_rows = (
@@ -29,9 +29,9 @@ class TestIngest:
         """重入库不累积（EvalCase upsert + EvalTurn 先删后插）。"""
         ingest_cases(db_session_factory)
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 72
+        assert cases == 76
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 72
+            assert session.query(EvalCase).count() == 76
             total_turns = session.query(EvalTurn).count()
         assert total_turns == turns  # 重跑后 turn 数与本次写入一致（无累积）
 
