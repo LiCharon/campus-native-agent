@@ -94,6 +94,28 @@ class AssignRequest(BaseModel):
     dept: str | None = None
 
 
+class FaqSummary(BaseModel):
+    id: int
+    category: str
+    keywords: str  # 逗号分隔，search_faq 匹配用
+    question: str
+    answer: str
+
+
+class FaqCreate(BaseModel):
+    """新建/全量更新 FAQ（与 FaqSummary 同字段，去掉 id）。"""
+
+    category: str
+    keywords: str
+    question: str
+    answer: str
+
+
+class FaqListResponse(BaseModel):
+    items: list[FaqSummary]
+    total: int
+
+
 class StaffInfo(BaseModel):
     """派单下拉候选 = repairmen 表（tickets.repairman_id 的外键目标）。
 

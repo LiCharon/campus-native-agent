@@ -206,3 +206,17 @@ def _disable_langfuse(monkeypatch):
     monkeypatch.setattr(settings, "langfuse_secret_key", "")
     monkeypatch.setattr(telemetry, "_client", None)
     monkeypatch.setattr(telemetry, "_handler", None)
+
+
+@pytest.fixture(autouse=True)
+def _disable_faq_cache(monkeypatch):
+    """M7 双保险：清 REDIS_URL + 重置 faq_cache 模块状态。
+
+    保证测试不连真 Redis（即使开发机 .env 配了 REDIS_URL 也被清空）——
+    默认走直查 DB；需要验证缓存逻辑的测试自行 monkeypatch 启用。
+    """
+    from campus_desk import faq_cache
+
+    monkeypatch.setattr(settings, "redis_url", "")
+    monkeypatch.setattr(faq_cache, "_client", None)
+    monkeypatch.setattr(faq_cache, "_unavailable_until", 0.0)

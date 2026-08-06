@@ -10,8 +10,8 @@ import json
 
 from langchain.tools import BaseTool, tool
 
-from campus_desk import telemetry
-from campus_desk.db.models import Account, Announcement, Faq
+from campus_desk import faq_cache, telemetry
+from campus_desk.db.models import Account, Announcement
 from campus_desk.db.session import SessionFactory
 
 
@@ -56,8 +56,8 @@ def create_consult_tools(session_factory: SessionFactory) -> list[BaseTool]:
             keyword: 检索关键词（如 密码/网速/选课）
         """
         with telemetry.span("tool.search_faq", metadata={"keyword": keyword}):
-            with session_factory() as session, session.begin():
-                faqs = session.query(Faq).all()
+            # M7：cache-aside 读全量 FAQ（Redis 未启用/连不上自动直查 DB）
+            faqs = faq_cache.get_all_faqs(session_factory)
             hits = []
             for faq in faqs:
                 score = sum(1 for kw in faq.keywords.split(",") if kw and kw in keyword)

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 1440
     # M6 业务参数可配化：关键词表/派单映射 JSON 路径（相对仓库根）
     business_config_path: str = "config/business_rules.json"
+    # M7 FAQ 热点缓存：redis://localhost:6379/0；空串 = 不启用（直查 DB，
+    # 连不上自动降级不崩，见 faq_cache.py）
+    redis_url: str = ""
 
     @property
     def langfuse_enabled(self) -> bool:
