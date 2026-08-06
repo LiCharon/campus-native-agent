@@ -51,7 +51,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
 - CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
 - 安全：.env gitignore + 密钥不入库；alembic 迁移脚本，禁手改表
-- Docker Compose 一键起：MySQL + 后端 + 前端（Langfuse 开发期用 Cloud，自托管 M6 再试）
+- Docker Compose 一键起：MySQL + Redis + 后端 + 前端 4 服务（M7 实测全绿；Langfuse 开发期用 Cloud，自托管 M6 再试）
 
 ## 5. AI Coding 顺序规范（项目特有；通用纪律 → 全局 CLAUDE.md）
 - 开工：读本文件 + 记忆索引（MEMORY.md，教训 2026-08-05：只读 CLAUDE.md 漏读记忆）+ 相关 docs；TodoWrite 先列清单
