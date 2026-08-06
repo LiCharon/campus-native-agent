@@ -209,6 +209,18 @@ def _disable_langfuse(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _openai_key_fallback(monkeypatch):
+    """CI/无 .env 环境兜底：注入假 OPENAI_API_KEY 保证 ChatOpenAI 可构造。
+
+    llm.py 已改为"settings 有 key 才显式传"（M7-CI 修复），无 key 时 SDK 读
+    OPENAI_API_KEY 环境变量。测试均走 Fake LLM 图/规则模式（api_client 全假
+    图），构造后不真调；真调路径（env_check/eval 真 LLM 段）按
+    settings.deepseek_api_key 判空 skip——settings 未被污染，skip 语义不变。
+    """
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
+
+
+@pytest.fixture(autouse=True)
 def _disable_faq_cache(monkeypatch):
     """M7 双保险：清 REDIS_URL + 重置 faq_cache 模块状态。
 

@@ -20,12 +20,16 @@ def build_llm() -> ChatOpenAI:
     """构造 DeepSeek ChatOpenAI 实例（enabled 时挂 langfuse handler）。"""
     kwargs = {
         "model": settings.deepseek_model,
-        "api_key": settings.deepseek_api_key,
         "base_url": "https://api.deepseek.com",
         "temperature": 0,
         "timeout": 30,
         "model_kwargs": {"response_format": {"type": "json_object"}},
     }
+    # api_key 有值才显式传（openai 2.53 起 api_key="" 构造即抛 Missing credentials）：
+    # 无 key 时交 SDK 读 OPENAI_API_KEY 环境变量——CI/无 .env 环境可"构造不调用"，
+    # 真 key 在 .env 时行为不变；env_check/eval 的 skip 判断读 settings，不受影响
+    if settings.deepseek_api_key:
+        kwargs["api_key"] = settings.deepseek_api_key
     handler = telemetry.langfuse_handler()
     if handler is not None:
         kwargs["callbacks"] = [handler]
