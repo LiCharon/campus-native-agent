@@ -1,4 +1,6 @@
 <template>
+  <!-- M7：Element Plus 按需后无全局 app.use(ElementPlus)，locale 改由 el-config-provider 注入 -->
+  <el-config-provider :locale="zhCn">
   <!-- 登录页：无骨架布局 -->
   <router-view v-if="isLoginPage" />
 
@@ -44,11 +46,13 @@
       </el-main>
     </el-container>
   </el-container>
+  </el-config-provider>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {
   Service,
   ChatDotRound,

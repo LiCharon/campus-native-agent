@@ -38,8 +38,19 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import * as echarts from 'echarts'
 import { getDashboard } from '../api/tickets'
+// M7：ECharts 按需——仅引入用到的图表（饼图/柱状图）、组件与 Canvas 渲染器，
+// 替代全量 import 'echarts'（树摇后仅打包用到的模块）
+import * as echarts from 'echarts/core'
+import { PieChart, BarChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([PieChart, BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 import {
   STATUS_META,
   PRIORITY_META,
