@@ -73,7 +73,7 @@
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
             <el-button
-              v-if="['SUBMITTED', 'ASSIGNED'].includes(row.status)"
+              v-if="row.status === 'SUBMITTED'"
               size="small"
               type="primary"
               plain
@@ -322,8 +322,9 @@ async function handleAssign() {
     ElMessage.success(`已派单给 ${staff ? staff.name : ''}`)
     assignVisible.value = false
     fetchList()
-  } catch {
-    ElMessage.error('派单失败，请重试')
+  } catch (err) {
+    // M6 验收坑：原错误被吞 → "一直派单失败"；带上后端 detail 便于排查
+    ElMessage.error(err.response?.data?.detail || '派单失败，请重试')
   } finally {
     assigning.value = false
   }

@@ -126,6 +126,15 @@ class TestActions:
         )
         assert r.status_code == 404
 
+    def test_staff_cannot_verify_student_ticket_403(self, api_client, db_session_factory):
+        """M6 验收坑：staff 能看见本部门学生单，但不得代替验收/撤回（owner 校验）。"""
+        _seed_tickets(db_session_factory, [("student-001", "后勤", "PENDING_VERIFY", "水电")])
+        h = _auth(api_client, "staff-001")  # dept=后勤，可见该单
+        r1 = api_client.post("/api/tickets/1/verify", headers=h)
+        assert r1.status_code == 403
+        r2 = api_client.post("/api/tickets/1/cancel", headers=h)
+        assert r2.status_code == 403
+
     def test_admin_assign(self, api_client, db_session_factory):
         _seed_tickets(db_session_factory, [("student-001", None, "SUBMITTED", "水电")])
         r = api_client.post(
@@ -149,10 +158,29 @@ class TestActions:
 
 
 class TestStaffList:
-    def test_staff_list_contains_repairmen(self, api_client):
+    def test_staff_list_returns_repairmen(self, api_client):
+        """派单候选 = repairmen 表（tickets.repairman_id 外键目标），非 users 账号表。
+
+        M6 验收坑：原实现返回 users.id（staff-001），派单写库违反外键 → 500。
+        """
         body = api_client.get(
             "/api/admin/staff", headers=_auth(api_client, "admin-001")
         ).json()
+        ids = {s["id"] for s in body}
         names = {s["name"] for s in body}
-        assert "陈师傅" in names and "赵工" in names  # staff/it_staff 都在
+        assert "rm-001" in ids  # 陈师傅·后勤·水电
+        assert "rm-005" in ids  # 赵工·信息中心·网络
+        assert "陈师傅" in names and "赵工" in names
+        assert "staff-001" not in ids  # users 账号不进派单候选
         assert all(s["dept"] in ("后勤", "信息中心") for s in body)
+        assert all(s["on_duty"] for s in body)  # 不在岗（rm-008）不参与派单
+
+    def test_assign_rejects_unknown_repairman(self, api_client, db_session_factory):
+        """防御：repairman_id 不存在 → 400 明确报错（而非外键 500）。"""
+        _seed_tickets(db_session_factory, [("student-001", None, "SUBMITTED", "水电")])
+        r = api_client.post(
+            "/api/admin/tickets/1/assign",
+            json={"repairman_id": "staff-001", "dept": "后勤"},  # users 账号 id ≠ repairmen id
+            headers=_auth(api_client, "admin-001"),
+        )
+        assert r.status_code == 400

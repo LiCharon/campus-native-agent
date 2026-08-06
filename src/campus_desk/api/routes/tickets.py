@@ -18,7 +18,7 @@ from campus_desk.api.schemas import (
     TicketListResponse,
     TicketSummary,
 )
-from campus_desk.db.models import Ticket, TicketLog, User
+from campus_desk.db.models import Repairman, Ticket, TicketLog, User
 from campus_desk.db.session import SessionFactory
 from campus_desk.state_machine.machine import TransitionError
 from campus_desk.state_machine.transitions import TicketNotFound, apply_transition
@@ -66,6 +66,7 @@ def _summary(ticket: Ticket) -> TicketSummary:
         description=ticket.description,
         created_at=ticket.created_at,
         dept=ticket.dept,
+        user_id=ticket.user_id,
     )
 
 
@@ -119,7 +120,6 @@ def get_ticket(
         ).scalar_one()
     return TicketDetail(
         **_summary(ticket).model_dump(),
-        user_id=ticket.user_id,
         contact=ticket.contact,
         location=ticket.location,
         repairman_id=ticket.repairman_id,
@@ -139,8 +139,15 @@ def _owner_action(
     event: str,
     user: AuthUser,
 ):
-    """工单 owner 操作（验收/撤回）：先按 RBAC 取单（404 防枚举），再执行状态跳转。"""
-    _get_ticket_or_404(session_factory, ticket_id, user)
+    """工单 owner 操作（验收/撤回）：RBAC 可见（404 防枚举）+ 归属校验（403）。
+
+    M6 验收坑：原实现只做了可见性检查——staff 能看见本部门学生单，
+    未校验归属导致 staff 可直接验收/撤回学生工单（越权）。现要求
+    ticket.user_id == 操作者本人。
+    """
+    ticket = _get_ticket_or_404(session_factory, ticket_id, user)
+    if ticket.user_id != user.id:
+        raise HTTPException(status_code=403, detail="只能操作自己的工单")
     try:
         with session_factory() as session, session.begin():
             apply_transition(session, ticket_id, event, actor=user.id)
@@ -180,6 +187,15 @@ def assign_ticket(
     """派单（assign，SUBMITTED → ASSIGNED）：可带维修人/部门，其余交给自动派单。"""
     if not payload.repairman_id and not payload.dept:
         raise HTTPException(status_code=400, detail="需要维修人或部门")
+    # 防御：repairman_id 必须存在于 repairmen 表（外键约束的报错 500 不如 400 明确；
+    # M6 验收坑——下拉曾返回 users 表 id 导致违反 fk_tickets_repairman_id_repairmen）
+    if payload.repairman_id:
+        with session_factory() as session:
+            exists = session.execute(
+                select(Repairman.id).where(Repairman.id == payload.repairman_id)
+            ).scalar_one_or_none()
+        if exists is None:
+            raise HTTPException(status_code=400, detail=f"维修人不存在: {payload.repairman_id}")
     try:
         with session_factory() as session, session.begin():
             apply_transition(
@@ -228,14 +244,22 @@ def list_staff(
     _user: AuthUser = Depends(require_roles(*_MANAGE_ROLES)),
     session_factory: SessionFactory = Depends(get_session_factory),
 ):
-    """维修人下拉列表（派单弹窗用）：users 中 staff/it_staff 角色。"""
+    """维修人下拉列表（派单弹窗用）：repairmen 表（tickets.repairman_id 的外键目标）。
+
+    M6 验收坑：原实现查 users 表（staff-001 等账号），派单写 repairman_id
+    违反 fk_tickets_repairman_id_repairmen → 500。维修工实体 = repairmen；
+    只返回在岗（on_duty），与 RepairGraph 自动派单"在岗优先"口径一致。
+    """
     with session_factory() as session:
         rows = (
             session.execute(
-                select(User.id, User.name, User.dept)
-                .where(User.role.in_(("staff", "it_staff")))
-                .order_by(User.id)
+                select(Repairman.id, Repairman.name, Repairman.dept, Repairman.trade)
+                .where(Repairman.on_duty.is_(True))
+                .order_by(Repairman.id)
             )
             .all()
         )
-    return [StaffInfo(id=r.id, name=r.name, dept=r.dept) for r in rows]
+    return [
+        StaffInfo(id=r.id, name=r.name, dept=r.dept, trade=r.trade, on_duty=True)
+        for r in rows
+    ]

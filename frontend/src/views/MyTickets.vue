@@ -42,7 +42,7 @@
         <el-table-column label="创建时间" prop="created_at" width="160" />
         <el-table-column label="操作" width="170" align="center">
           <template #default="{ row }">
-            <template v-if="canOperate(row)">
+            <template v-if="canVerify(row)">
               <el-button
                 size="small"
                 type="success"
@@ -51,16 +51,20 @@
               >
                 验收
               </el-button>
-              <el-button
-                size="small"
-                type="danger"
-                plain
-                @click.stop="handleCancel(row)"
-              >
-                撤回
-              </el-button>
             </template>
-            <span v-else class="no-op">—</span>
+            <el-button
+              v-if="canCancel(row)"
+              size="small"
+              type="danger"
+              plain
+              @click.stop="handleCancel(row)"
+            >
+              撤回
+            </el-button>
+            <span
+              v-if="!canVerify(row) && !canCancel(row)"
+              class="no-op"
+            >—</span>
           </template>
         </el-table-column>
       </el-table>
@@ -160,7 +164,16 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { getTickets, getTicket, verifyTicket, cancelTicket } from '../api/tickets'
-import { statusMeta, priorityMeta, typeMeta, TERMINAL_STATUS } from '../constants/status'
+import { statusMeta, priorityMeta, typeMeta } from '../constants/status'
+
+// 当前登录用户（操作按钮归属判断用）
+const currentUser = computed(() => {
+  try {
+    return JSON.parse(localStorage.getItem('cd_user') || '{}')
+  } catch {
+    return {}
+  }
+})
 
 const loading = ref(false)
 const tickets = ref([])
@@ -177,9 +190,18 @@ const detailTitle = computed(() =>
   detailId.value != null ? `工单详情 #${detailId.value}` : '工单详情'
 )
 
-// 终态（CLOSED/CANCELLED）不可操作
-function canOperate(row) {
-  return !TERMINAL_STATUS.includes(row.status)
+// 操作按钮按「状态机合法源 + 归属」显隐（M6 验收坑：原实现非终态全显示，
+// 点 ASSIGNED 单验收 → 后端 400 且无错误提示 → 用户看到"没反应"）
+function isMine(row) {
+  return row.user_id === currentUser.value.id
+}
+
+function canVerify(row) {
+  return row.status === 'PENDING_VERIFY' && isMine(row)
+}
+
+function canCancel(row) {
+  return ['SUBMITTED', 'ASSIGNED'].includes(row.status) && isMine(row)
 }
 
 async function fetchList() {
@@ -225,9 +247,14 @@ async function handleVerify(row) {
   } catch {
     return
   }
-  await verifyTicket(row.id)
-  ElMessage.success('验收成功，工单已关闭')
-  fetchList()
+  try {
+    await verifyTicket(row.id)
+    ElMessage.success('验收成功，工单已关闭')
+    fetchList()
+  } catch (err) {
+    // M6 验收坑：原无 try/catch，后端 400 静默吞掉 = 用户看到"点按钮没反应"
+    ElMessage.error(err.response?.data?.detail || '验收失败，请重试')
+  }
 }
 
 async function handleCancel(row) {
@@ -240,9 +267,13 @@ async function handleCancel(row) {
   } catch {
     return
   }
-  await cancelTicket(row.id)
-  ElMessage.success('工单已撤回')
-  fetchList()
+  try {
+    await cancelTicket(row.id)
+    ElMessage.success('工单已撤回')
+    fetchList()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.detail || '撤回失败，请重试')
+  }
 }
 
 onMounted(fetchList)
