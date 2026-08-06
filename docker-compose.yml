@@ -15,8 +15,8 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: campus_desk
       TZ: Asia/Shanghai
-    ports:
-      - "3306:3306"
+    # 不发布端口：容器内网互访即可；本机要连容器 MySQL 用
+    # docker-compose.override.yml（3307 避开本机 MySQL80 服务）
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -31,8 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: campus_desk_redis
-    ports:
-      - "6379:6379"
+    # 不发布端口：同上，本机连容器 Redis 用 override 的 6380
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
