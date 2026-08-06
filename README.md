@@ -91,7 +91,7 @@ campus-desk/
 │  └─ config.py                pydantic-settings 配置加载
 ├─ frontend/src/views/         Vue3 5 页（Login / Chat / MyTickets / Management / Dashboard）
 ├─ scripts/                    seed_db / seed_demo_data / ingest_eval_data / verify_env / smoke_langfuse
-├─ tests/                      29 个测试文件（284 用例）
+├─ tests/                      30 个测试文件（298 用例）
 └─ docs/                       项目文档（本地私有仓库管理，不进主 git）
 ```
 
@@ -105,7 +105,7 @@ campus-desk/
 | 报修链路成功率 | **100.0%**（18/18，平均轮次 1.3）|
 | 投诉链路成功率 | **100.0%**（20/20，平均轮次 0.2）|
 | 咨询自助解决率 | 68.8%（11/16；断言通过率 100%，介入率 25%）|
-| 单测 | pytest 284 绿 + ruff 零告警 |
+| 单测 | pytest 286 绿 + ruff 零告警 |
 
 评测口径：行为断言（tool:/status:）而非对话字面；报修/投诉失配判失败、咨询失配不判失败（提前解答 = 合理自助解决）；评测与生产同代码、不同 checkpointer（InMemorySaver 隔离，可无限重跑）。
 
