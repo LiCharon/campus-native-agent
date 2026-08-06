@@ -5,6 +5,7 @@ import Chat from '../views/Chat.vue'
 import MyTickets from '../views/MyTickets.vue'
 import Management from '../views/Management.vue'
 import Dashboard from '../views/Dashboard.vue'
+import FaqAdmin from '../views/FaqAdmin.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -22,6 +23,11 @@ const router = createRouter({
       path: '/dashboard',
       component: Dashboard,
       meta: { title: '数据看板', roles: ['staff', 'it_staff', 'admin'] }
+    },
+    {
+      path: '/faq-admin',
+      component: FaqAdmin,
+      meta: { title: 'FAQ 管理', roles: ['admin'] }
     },
     { path: '/:pathMatch(.*)*', redirect: '/chat' }
   ]

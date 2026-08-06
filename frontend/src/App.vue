@@ -36,6 +36,12 @@
               <span>数据看板</span>
             </el-menu-item>
           </template>
+          <template v-if="isAdmin">
+            <el-menu-item index="/faq-admin">
+              <el-icon><Notebook /></el-icon>
+              <span>FAQ 管理</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-aside>
 
@@ -54,7 +60,8 @@ import {
   ChatDotRound,
   Tickets,
   List,
-  DataAnalysis
+  DataAnalysis,
+  Notebook
 } from '@element-plus/icons-vue'
 import { ROLE_CN } from './constants/status'
 import { logout } from './api/auth'
@@ -81,6 +88,7 @@ const displayName = computed(() => user.value.name || user.value.username || '�
 const isStaffOrAbove = computed(() =>
   ['staff', 'it_staff', 'admin'].includes(user.value.role)
 )
+const isAdmin = computed(() => user.value.role === 'admin')
 
 const roleTagType = computed(() => {
   const map = { student: 'info', staff: 'warning', it_staff: 'warning', admin: 'danger' }
