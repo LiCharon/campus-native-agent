@@ -35,7 +35,7 @@
 
 ## 2. 技术栈（已拍板）
 Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DEV_JOURNAL M1）· LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度，M6 再试自托管）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + sse-starlette + httpx · MCP（扩展期演示加分）
-**MVP 不引入**：Redis（M6+ 加：热点缓存 FAQ/公告/排班——会话历史由 checkpointer 管，Redis 不背会话）、Celery（不引入，APScheduler 够用）
+**Redis（M7 已引入，仅 FAQ 读路径）**：cache-aside 热点缓存 `faq:list`（TTL 300s + 30s 冷却重探），未配 REDIS_URL/连不上自动降级直查 DB（惰性 import 仿 telemetry.py）；**不背会话**（会话历史由 checkpointer 管）、不做公告/排班。Celery（不引入，APScheduler 够用）
 
 ## 3. 核心设计（拍板结论；边清单/工具表/细节 → docs/PROJECT_REQUIREMENTS.md）
 - 入口分流：EntryAgent 意图识别 + 置信度门控 + 多意图取主意图；**投诉 = 复用 Repair 管道建 P1 工单**（不建独立流程/通知模块）
@@ -63,7 +63,7 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 ## 6. 里程碑（生存线/加分线）
 **生存线（做不完加分线，项目不成立）**：M1 骨架 → M2 入口分流+评测集 → M3 报修主链路+状态机+工具 → M4 记忆+咨询+回访 → M5 评测闭环+Langfuse
 **加分线（演示层，可精简不影响项目成立）**：M6 前端+Compose+CI → M7 打磨+README+自托管尝试（弹性缓冲）
-Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
+进度/下一步/基线 → docs/STATUS.md
 **DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 文档/DEV_JOURNAL 更新）**：
 - M1：git init + 初始 commit 完成 / 环境验证 3 项跑通 / 骨架 pytest 绿 / 文档日志更新
 - M2-M5：该里程碑核心链路测试绿 + 环境验证跑通 + 文档/日志更新
@@ -98,7 +98,7 @@ Redis 缓存（M6+ 加分项）；进度/下一步/基线 → docs/STATUS.md
 | Python | **3.14.6**（本机 py launcher，M1 用 pip dry-run 实测核心库 requires-python 全兼容后拍板） |
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
-| .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（惯例命名；config.py 用 pydantic-settings 加载） |
+| .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` / `REDIS_URL`（M7 加，默认空串=缓存关闭，配了才启用；惯例命名；config.py 用 pydantic-settings 加载） |
 | 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；**demo 工单重建 `.venv/Scripts/python scripts/seed_demo_data.py`（M6：清空重建 15 张演示单，幂等）**；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m6.md`（--no-repair/--no-consult/--no-complaint 分段落）；Langfuse 冒烟 `.venv/Scripts/python scripts/smoke_langfuse.py`；**API 服务（M6）`.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / staff-001 / it-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码）；docker-compose.yml 备着（供无本机 MySQL 环境，实际开发不用） |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |

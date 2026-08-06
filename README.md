@@ -10,8 +10,9 @@
 - **用户长期记忆**：三层上下文（会话/画像/全局），报修画像随对话更新、回访记录沉淀
 - **评测闭环**：76 条对话剧本全量评测，意图/报修/投诉 100% 达标
 - **Langfuse 全链路可观测**：agent 步骤 / 工具调用 / 状态跳转 / LLM call 四类埋点
-- **前端 5 页 + JWT/RBAC**：登录 / 对话提交 / 我的工单 / 管理列表 / 数据看板，四角色数据过滤 + 越权拦截
-- **Docker Compose 一键起**：MySQL + 后端 + 前端（nginx 反代 8080），未配 LLM key 也能启动
+- **前端 6 页 + JWT/RBAC**：登录 / 对话提交 / 我的工单 / 管理列表 / 数据看板 / FAQ 管理（admin 增删改查，M7），四角色数据过滤 + 越权拦截；Element Plus/ECharts 按需引入（gzip 718KB → 392KB）
+- **Redis 热点缓存**（M7）：FAQ 读路径 cache-aside（TTL 300s + 30s 冷却重探），未配 REDIS_URL/连不上自动降级直查 DB，管理页写后失效
+- **Docker Compose 一键起**：MySQL + Redis + 后端 + 前端（nginx 反代 8080），未配 LLM key 也能启动
 
 ## 技术栈
 
@@ -89,7 +90,7 @@ campus-desk/
 │  ├─ telemetry.py             Langfuse 惰性埋点（无 key 零开销）
 │  ├─ security.py              JWT（HS256）+ pbkdf2 密码哈希
 │  └─ config.py                pydantic-settings 配置加载
-├─ frontend/src/views/         Vue3 5 页（Login / Chat / MyTickets / Management / Dashboard）
+├─ frontend/src/views/         Vue3 6 页（Login / Chat / MyTickets / Management / Dashboard / FaqAdmin）
 ├─ scripts/                    seed_db / seed_demo_data / ingest_eval_data / verify_env / smoke_langfuse
 ├─ tests/                      30 个测试文件（298 用例）
 └─ docs/                       项目文档（本地私有仓库管理，不进主 git）
