@@ -31,7 +31,7 @@ class ScriptedTurn(BaseModel):
 class ScriptedCase(BaseModel):
     """一条对话剧本用例。"""
 
-    id: str = Field(description="唯一标识，如 repair-001")
+    id: str = Field(description="唯一标识，如 zjut-intent-001")
     category: Category = Field(description="剧本类别（决定数量校验区间）")
     student_input: str = Field(min_length=1, description="学生本轮的输入（M2 首轮即全量输入）")
     intent: IntentLabel = Field(description="人工标注的主意图（ground truth）")

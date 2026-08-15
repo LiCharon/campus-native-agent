@@ -7,6 +7,7 @@
 import sqlite3
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 
 from langgraph.checkpoint.sqlite import SqliteSaver
 
@@ -15,7 +16,9 @@ from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.entry.orchestrator import turn as orchestrator_turn
 from campus_desk.knowledge.graph import build_knowledge_graph
 
-CHECKPOINTER_DB = "checkpointer.db"
+# 相对仓库根的稳定路径（T8 Minor：原 "checkpointer.db" 相对 CWD，换启动目录就漂移）。
+# api → campus_desk → src → 仓库根（parents[3]）；与 .gitignore 的 *.db 规则对齐。
+CHECKPOINTER_DB = str(Path(__file__).resolve().parents[3] / "checkpointer.db")
 
 
 @dataclass

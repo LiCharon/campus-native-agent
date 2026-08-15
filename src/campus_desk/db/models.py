@@ -69,7 +69,9 @@ class KnowledgeEntry(Base):
     __tablename__ = "knowledge_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    domain: Mapped[str] = mapped_column(String(16), default="", index=True)  # 教务/后勤/图书馆/IT/证件/生活
+    # domain 六领域：教务/后勤/图书馆/IT/证件/生活
+    # （IT 域用英文缩写是刻意——T9 Minor 决策：种子/评测/检索同源一致，改中文需同步迁移数据，成本高收益低）
+    domain: Mapped[str] = mapped_column(String(16), default="", index=True)
     keywords: Mapped[str] = mapped_column(String(128))  # 逗号分隔，检索计分用
     question: Mapped[str] = mapped_column(String(256))
     type: Mapped[str] = mapped_column(String(8), default="info")  # info/process/index
