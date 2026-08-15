@@ -1,4 +1,8 @@
-"""对话路由（M6）：POST /api/chat——user_id 取自 JWT，绝不信请求体。"""
+"""对话路由（M6）：POST /api/chat——user_id 取自 JWT，绝不信请求体。
+
+M1-T8：删 ticket_id/ticket_status 休眠字段（M1 无工单概念），run_turn 新返回
+仅透传 orchestrator 实际产出字段。
+"""
 
 from fastapi import APIRouter, Depends
 
@@ -15,7 +19,7 @@ def chat(
     user: AuthUser = Depends(get_current_user),
     registry: GraphRegistry = Depends(get_registry),
 ):
-    """一轮对话：turn 返回 dict 原样透出。
+    """一轮对话：run_turn（锁内 entry 分流 + knowledge 图）→ ChatResponse。
 
     同步 def（线程池执行）：turn 内部是同步 LangGraph 调用 + LLM 网络 IO，
     async def 会阻塞事件循环（FastAPI 文档明确同步阻塞代码走 def）。
@@ -25,10 +29,8 @@ def chat(
         reply=result["reply"],
         route=result["route"],
         pending_question=result.get("pending_question"),
-        ticket_id=result.get("ticket_id"),
-        ticket_status=result.get("ticket_status"),
         finished=result.get("finished"),
+        outcome=result.get("outcome"),
         tool_calls=result.get("tool_calls", []),
         status_events=result.get("status_events", []),
-        outcome=result.get("outcome"),
     )

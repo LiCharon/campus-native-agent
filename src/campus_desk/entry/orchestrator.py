@@ -1,17 +1,16 @@
 """每轮编排（M1-ZJUT）：Entry 分流 → KnowledgeGraph（或占位回复）。
 
 thread_id 由调用方管理（前端会话 id；评测用 case id）。
+
+T7 Minor：多意图次要提示 labels 转中文（复用 entry_graph._INTENT_LABELS）；
+占位文案单一来源（复用 entry_graph._ROUTE_REPLIES，删本地重复定义）。
 """
 
 from langgraph.types import Command
 
 from campus_desk import telemetry
-from campus_desk.entry.routes import HUMAN_HANDOFF, KNOWLEDGE, MULTI_INTENT, TOOL_QUERY
-
-_NON_AGENT_REPLIES = {
-    TOOL_QUERY: "该查询功能正在建设中，您可以先问我其他校园问题。",
-    HUMAN_HANDOFF: "已为您转人工处理，稍后会有工作人员与您联系，请保持在线。",
-}
+from campus_desk.entry.entry_graph import _INTENT_LABELS, _ROUTE_REPLIES
+from campus_desk.entry.routes import HUMAN_HANDOFF, KNOWLEDGE, MULTI_INTENT
 
 
 def turn(entry_graph, knowledge_graph, thread_id: str, msg: str, *, user_id: str | None = None) -> dict:
@@ -44,7 +43,7 @@ def turn(entry_graph, knowledge_graph, thread_id: str, msg: str, *, user_id: str
                     else knowledge_graph.invoke({"user_input": msg}, cfg)
             reply = state.get("reply", "")
             if secondary:
-                labels = "、".join(secondary)
+                labels = "、".join(_INTENT_LABELS.get(s, s) for s in secondary)
                 reply += f" 另外，您提到的其他问题（{labels}）可以继续问我。"
             return {
                 "reply": reply,
@@ -65,7 +64,7 @@ def turn(entry_graph, knowledge_graph, thread_id: str, msg: str, *, user_id: str
                 "outcome": state.get("outcome"),
             }
         return {
-            "reply": _NON_AGENT_REPLIES.get(route, entry_out.get("reply", "")),
+            "reply": _ROUTE_REPLIES.get(route, entry_out.get("reply", "")),
             "route": route,
             "secondary_intents": entry_out.get("intent", None)
             and entry_out["intent"].secondary_intents or [],
