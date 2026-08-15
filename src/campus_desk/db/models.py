@@ -1,8 +1,8 @@
 """业务数据模型（M1-ZJUT：4 业务表 + 2 评测表，T2 删 7 张退役表）。
 
 表职责（ZJUT 设计 §4.5 知识库 + 转人工兜底）：
-- users             角色与账号（student/staff/it_staff/admin），M6 登录用
-- user_profiles     用户长期记忆画像（M4：楼栋/常报类别/上次工单摘要，1:1 users）
+- users             角色与账号（student/cs_staff/admin 三角色），登录用
+- user_profiles     用户长期记忆画像（预留：M3 画像时启用，1:1 users）
 - knowledge_entries 知识库条目（FAQ 式，type 驱动组装：info/process/index）
 - bad_cases         未解决反馈（转人工兜底沉淀；M3 进化闭环接工作台）
 
@@ -31,11 +31,11 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(
         String(32), primary_key=True
-    )  # student-001 / staff-001 / it-001 / admin-001
+    )  # student-001 / cs-001 / admin-001
     name: Mapped[str] = mapped_column(String(64))
-    role: Mapped[str] = mapped_column(String(16))  # student / staff / it_staff / admin
+    role: Mapped[str] = mapped_column(String(16))  # student / cs_staff / admin
     student_no: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    dept: Mapped[str | None] = mapped_column(String(64), nullable=True)  # staff 所在部门
+    dept: Mapped[str | None] = mapped_column(String(64), nullable=True)  # admin 所在部门
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # M6 登录鉴权：pbkdf2 哈希串（格式 pbkdf2_sha256$迭代次数$salt$hash，见 security.py）；
     # nullable 兼容存量行，种子负责回填

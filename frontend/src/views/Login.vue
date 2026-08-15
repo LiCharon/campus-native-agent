@@ -44,7 +44,7 @@
         </el-form-item>
       </el-form>
 
-      <p class="login-hint">演示账号：student-001 / staff-001 / it-001 / admin-001（密码 123456）</p>
+      <p class="login-hint">演示账号：student-001 / cs-001 / admin-001（密码 123456）</p>
     </div>
   </div>
 </template>

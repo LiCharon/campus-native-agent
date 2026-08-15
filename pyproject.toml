@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "campus-desk"
 version = "0.1.0"
-description = "CampusDesk（校园服务台）— 校园智能服务台 Agent"
+description = "Campus Native Agent — 校园智能服务助手"
 requires-python = ">=3.14"
 dependencies = [
     "langgraph>=1.2.10",

@@ -28,11 +28,6 @@ _USERS = [
     ("student-001", "李华", "student", "2024001", None, "13800000001", _DEMO_PASSWORD),
     ("student-002", "王芳", "student", "2024002", None, "13800000002", _DEMO_PASSWORD),
     ("student-003", "张伟", "student", "2024003", None, "13800000003", _DEMO_PASSWORD),
-    ("staff-001", "陈师傅", "staff", None, "后勤", "13800000011", _DEMO_PASSWORD),
-    ("staff-002", "刘师傅", "staff", None, "后勤", "13800000012", _DEMO_PASSWORD),
-    ("staff-003", "周工", "staff", None, "信息中心", "13800000013", _DEMO_PASSWORD),
-    ("it-001", "赵工", "it_staff", None, "信息中心", "13800000021", _DEMO_PASSWORD),
-    ("it-002", "孙工", "it_staff", None, "信息中心", "13800000022", _DEMO_PASSWORD),
     ("admin-001", "系统管理员", "admin", None, "信息中心", "13800000031", _DEMO_PASSWORD),
     # T9：cs_staff 客服角色（工作台人工接待，M1 起只做种子占位）
     ("cs-001", "客服小杨", "cs_staff", None, None, "13800000041", _DEMO_PASSWORD),

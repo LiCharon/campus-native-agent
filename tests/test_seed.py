@@ -16,12 +16,12 @@ def _count(factory, model) -> int:
 class TestSeedContent:
     def test_seed_loaded(self, db_session_factory):
         """fixture 种子已加载（conftest 里 create_all + seed_all）。"""
-        assert _count(db_session_factory, User) == 10
+        assert _count(db_session_factory, User) == 5
 
     def test_roles_covered(self, db_session_factory):
         with db_session_factory() as session:
             roles = {r[0] for r in session.query(User.role).distinct()}
-            assert {"student", "staff", "it_staff", "admin", "cs_staff"} == roles
+            assert {"student", "admin", "cs_staff"} == roles
 
     def test_seed_creates_36_knowledge_entries(self, db_session_factory):
         """T9：通用知识库恰 36 条（6 领域 × 6 条）。"""
@@ -59,7 +59,7 @@ class TestSeedPassword:
 
         with db_session_factory() as session:
             users = session.query(User).all()
-        assert len(users) == 10
+        assert len(users) == 5
         for u in users:
             assert u.password_hash, f"{u.id} 缺 password_hash"
             assert verify_password("123456", u.password_hash), f"{u.id} 密码校验失败"
