@@ -21,6 +21,8 @@
 | docs/TECH_DECISIONS.md | 面试备答、选型变更时 |
 | docs/STATUS.md | 当前进度/下一步/基线（随里程碑更新；规范文件不含状态） |
 | docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
+| docs/AI_CODING_SPEC.md | AI 编程协作规范（Vibe Coding 整合版）：立项→上线 10 步流程/质量闸门/Git 纪律/翻车点，做项目时按此执行 |
+| docs/AI_CODING_WORKFLOW.md | AI Coding 教程版（小白入门：概念/每步为什么/可抄模板），学流程时读 |
 | docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
 | docs/eval_report_m3.md | M3 评测：意图 95.8% + 报修链路成功率 94.4%（17/18），本地私有管理 |
 | docs/eval_report_m4.md | M4 评测：咨询自助解决率/介入率/轮次基线 + 报修维持，本地私有管理 |
@@ -53,8 +55,8 @@ Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DE
 - 安全：.env gitignore + 密钥不入库；alembic 迁移脚本，禁手改表
 - Docker Compose 一键起：MySQL + Redis + 后端 + 前端 4 服务（M7 实测全绿；Langfuse 开发期用 Cloud，自托管 M6 再试）
 
-## 5. AI Coding 顺序规范（项目特有；通用纪律 → 全局 CLAUDE.md）
-- 开工：读本文件 + 记忆索引（MEMORY.md，教训 2026-08-05：只读 CLAUDE.md 漏读记忆）+ 相关 docs；TodoWrite 先列清单
+## 5. AI Coding 顺序规范（项目特有；通用纪律 → AGENTS.md）
+- 开工：读本文件 + AGENTS.md（通用纪律）+ 记忆索引（MEMORY.md，教训 2026-08-05：只读 CLAUDE.md 漏读记忆）+ 相关 docs；todo 工具先列清单
 - 想清楚再动：方案先给用户确认才写码；3+ 文件或动 DB/权限 → Plan 模式；大改动多 agent 协同
 - 小步循环：一次一个功能点，改完立即 pytest 验证
 - 收尾：更新 DEV_JOURNAL.md（做了什么/为什么/坑/量化/面试点）；里程碑跑完先 /neat 再存档、提议新会话
