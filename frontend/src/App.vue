@@ -8,7 +8,7 @@
     <el-header class="header">
       <div class="brand">
         <el-icon :size="22" color="#409eff"><Service /></el-icon>
-        <span class="brand-title">CampusDesk 校园服务台</span>
+        <span class="brand-title">Campus Native Agent</span>
       </div>
       <div class="user-area">
         <el-tag size="small" :type="roleTagType">{{ roleName }}</el-tag>

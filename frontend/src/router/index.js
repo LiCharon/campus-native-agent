@@ -27,7 +27,7 @@ router.beforeEach((to) => {
 })
 
 router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title} · CampusDesk 校园服务台` : 'CampusDesk 校园服务台'
+  document.title = to.meta.title ? `${to.meta.title} · Campus Native Agent` : 'Campus Native Agent'
 })
 
 export default router
