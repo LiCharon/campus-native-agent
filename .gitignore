@@ -24,3 +24,6 @@ docs/
 *.db-shm
 *.db-wal
 docker-compose.override.yml
+
+# 本地真实信息注入数据（T9：不进公开 repo，scripts/seed_zjut_local.py 读取）
+config/zjut_local_data.json

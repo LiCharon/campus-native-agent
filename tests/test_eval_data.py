@@ -10,7 +10,7 @@ from campus_desk.eval.loader import COUNT_RANGES, load_all, validate_dataset
 
 def test_dataset_counts_within_ranges():
     cases = load_all()
-    assert len(cases) >= 60, f"总剧本数不足: {len(cases)}"
+    assert len(cases) >= 24, f"总剧本数不足: {len(cases)}"
     by_category: dict[str, int] = {}
     for case in cases:
         by_category[case.category] = by_category.get(case.category, 0) + 1
@@ -28,9 +28,9 @@ def test_ids_unique_and_well_formed():
     cases = load_all()
     ids = [c.id for c in cases]
     assert len(ids) == len(set(ids))
-    # 编号规范：类别-序号（如 repair-001）
+    # 编号规范：zjut-intent-序号（如 zjut-intent-001）
     for case in cases:
-        assert re.fullmatch(rf"{case.category}-\d{{3}}", case.id), f"{case.id} 编号不规范"
+        assert re.fullmatch(r"zjut-intent-\d{3}", case.id), f"{case.id} 编号不规范"
 
 
 def test_inputs_are_distinct_not_paraphrase_clones():

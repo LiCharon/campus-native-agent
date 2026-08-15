@@ -18,14 +18,11 @@ dependencies = [
     "sqlalchemy>=2.0.51",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
-    "sse-starlette>=3.4.6",
     "httpx>=0.28.1",
     "langfuse>=3",
     "python-dotenv>=1.2.2",
     "pymysql>=1.2.0",
     "alembic>=1.19.0",
-    "apscheduler>=3.11,<4",  # 后台调度（M5 超时扫描；<4：v4 异步重构，BackgroundScheduler 不存在）
-    "redis>=5",  # FAQ 热点缓存（M7；未配 REDIS_URL 惰性不加载，见 faq_cache.py）
 ]
 
 [project.optional-dependencies]

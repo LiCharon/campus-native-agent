@@ -8,7 +8,7 @@
     <el-header class="header">
       <div class="brand">
         <el-icon :size="22" color="#409eff"><Service /></el-icon>
-        <span class="brand-title">CampusDesk 校园服务台</span>
+        <span class="brand-title">Campus Native Agent</span>
       </div>
       <div class="user-area">
         <el-tag size="small" :type="roleTagType">{{ roleName }}</el-tag>
@@ -24,26 +24,6 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>对话提交</span>
           </el-menu-item>
-          <el-menu-item index="/tickets">
-            <el-icon><Tickets /></el-icon>
-            <span>我的工单</span>
-          </el-menu-item>
-          <template v-if="isStaffOrAbove">
-            <el-menu-item index="/management">
-              <el-icon><List /></el-icon>
-              <span>管理列表</span>
-            </el-menu-item>
-            <el-menu-item index="/dashboard">
-              <el-icon><DataAnalysis /></el-icon>
-              <span>数据看板</span>
-            </el-menu-item>
-          </template>
-          <template v-if="isAdmin">
-            <el-menu-item index="/faq-admin">
-              <el-icon><Notebook /></el-icon>
-              <span>FAQ 管理</span>
-            </el-menu-item>
-          </template>
         </el-menu>
       </el-aside>
 
@@ -61,11 +41,7 @@ import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {
   Service,
-  ChatDotRound,
-  Tickets,
-  List,
-  DataAnalysis,
-  Notebook
+  ChatDotRound
 } from '@element-plus/icons-vue'
 import { ROLE_CN } from './constants/status'
 import { logout } from './api/auth'
@@ -89,10 +65,6 @@ const user = computed(() => {
 
 const roleName = computed(() => ROLE_CN[user.value.role] || user.value.role || '未知')
 const displayName = computed(() => user.value.name || user.value.username || '用户')
-const isStaffOrAbove = computed(() =>
-  ['staff', 'it_staff', 'admin'].includes(user.value.role)
-)
-const isAdmin = computed(() => user.value.role === 'admin')
 
 const roleTagType = computed(() => {
   const map = { student: 'info', staff: 'warning', it_staff: 'warning', admin: 'danger' }

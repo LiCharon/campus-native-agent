@@ -1,14 +1,15 @@
-"""EntryGraph 分流测试：识别 → 门控 → 路由 三段行为锁定。
+"""EntryGraph 分流测试（M1-T7 新枚举）：识别 → 门控 → 路由 三段行为锁定。
 
 用 FakeIntentClassifier 注入固定识别结果，图内不依赖 LLM。
-覆盖：4 意图路由 / 低置信转人工 / 其他意图转人工 / 多意图取主+次要提示。
+覆盖：4 类新意图路由 / 低置信转人工 / other 恒转人工 / 多意图取主+次要提示 /
+0.7 边界放行（>=0.7 且非 other）。
 """
 
 from conftest import FakeIntentClassifier
 
 from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.entry.intent import IntentResult
-from campus_desk.entry.routes import COMPLAINT, CONSULT, HUMAN_HANDOFF, REPAIR
+from campus_desk.entry.routes import HUMAN_HANDOFF, KNOWLEDGE, MULTI_INTENT, TOOL_QUERY
 
 
 def run(intent: str, confidence: float = 0.9, secondary: list[str] | None = None) -> dict:
@@ -19,61 +20,66 @@ def run(intent: str, confidence: float = 0.9, secondary: list[str] | None = None
     return graph.invoke({"user_input": "测试输入"})
 
 
-# ---------- 4 意图路由 ----------
+# ---------- 4 类新意图路由 ----------
 
 
-def test_high_confidence_repair_routes_to_repair():
-    out = run("repair", 0.95)
-    assert out["route"] == REPAIR
-    assert "报修" in out["reply"]
+def test_route_knowledge():
+    out = run("knowledge", 0.9)
+    assert out["route"] == KNOWLEDGE
+    assert "查询" in out["reply"]
 
 
-def test_high_confidence_consult_routes_to_consult():
-    out = run("consult", 0.9)
-    assert out["route"] == CONSULT
-    assert "咨询" in out["reply"]
+def test_route_tool_query():
+    out = run("tool_query", 0.9)
+    assert out["route"] == TOOL_QUERY
+    assert "建设中" in out["reply"]
 
 
-def test_high_confidence_complaint_routes_to_complaint():
-    out = run("complaint", 0.9)
-    assert out["route"] == COMPLAINT
-    assert "投诉" in out["reply"]
+def test_route_multi_intent_with_secondary_prompt():
+    # 多意图：取主意图 multi_intent，次要意图给"可继续提问"提示
+    out = run("multi_intent", 0.9, secondary=["knowledge"])
+    assert out["route"] == MULTI_INTENT
+    assert "可以继续问我" in out["reply"]
 
 
-# ---------- 门控：低置信 / 其他 → 人工 ----------
+# ---------- 门控：低置信 / other → 人工 ----------
 
 
-def test_low_confidence_routes_to_human_handoff():
-    out = run("repair", 0.5)
+def test_gate_low_confidence_handoff():
+    out = run("knowledge", 0.4)
     assert out["route"] == HUMAN_HANDOFF
     assert "人工" in out["reply"]
 
 
-def test_threshold_boundary_below_070():
-    out = run("consult", 0.69)
-    assert out["route"] == HUMAN_HANDOFF
-
-
-def test_threshold_boundary_at_070():
-    out = run("consult", 0.7)
-    assert out["route"] == CONSULT
-
-
 def test_other_intent_routes_to_human_handoff():
-    # 其他/闲聊：人机协同不硬答 → 转人工
+    # 其他/闲聊：高置信也转人工（人机协同不硬答）
     out = run("other", 0.95)
     assert out["route"] == HUMAN_HANDOFF
+    assert "人工" in out["reply"]
 
 
-# ---------- 多意图 ----------
+def test_other_low_confidence_handoff():
+    out = run("other", 0.4)
+    assert out["route"] == HUMAN_HANDOFF
 
 
-def test_multi_intent_takes_main_and_prompts_secondary():
-    out = run("repair", 0.9, secondary=["consult"])
-    assert out["route"] == REPAIR  # 取主意图
-    assert "继续" in out["reply"] and "咨询" in out["reply"]  # 次要问题提示可继续提问
+# ---------- 0.7 置信度边界 ----------
+
+
+def test_threshold_boundary_at_070_passes():
+    # >=0.7 且非 other → 放行到对应路由
+    out = run("knowledge", 0.7)
+    assert out["route"] == KNOWLEDGE
+
+
+def test_threshold_boundary_below_070_handoff():
+    out = run("knowledge", 0.69)
+    assert out["route"] == HUMAN_HANDOFF
+
+
+# ---------- 多意图提示 ----------
 
 
 def test_no_secondary_no_extra_prompt():
-    out = run("repair", 0.9)
-    assert "继续" not in out["reply"]
+    out = run("knowledge", 0.9)
+    assert "可以继续问我" not in out["reply"]

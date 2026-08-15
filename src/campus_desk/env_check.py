@@ -1,24 +1,24 @@
-"""M1 环境验证：3 项地基能力检查，可被 pytest 直接测试。
+"""M1-ZJUT 环境验证：3 项地基能力检查，可被 pytest 直接测试。
 
 - check_langgraph_quickstart：最小 StateGraph 编译+运行（纯确定性节点，不调 LLM）
-- check_deepseek_call：真实调用一次 DeepSeek（无 key 标 SKIP，需外部环境的项不进 CI）
-- check_sqlite_resume：SqliteSaver 中断 + 模拟进程重启后恢复（M4 会话记忆地基）
+- check_deepseek_structured：build_llm + 自写 prompt 结构化输出一次真实调用
+  （无 key 标 SKIP，需外部环境的项不进 CI）
+- check_fc_support：真 FC 可用性探测——bind_tools 一次真实调用，成功且返回
+  tool_calls → FC_SUPPORTED=True；400/异常 → FC_SUPPORTED=False（设计 §4.4：
+  探测结果出来前不写死 FC 实现，不可用则 M2 工具管道走伪 FC 兜底）
 
 设计：逻辑放包内模块（单一实现），scripts/verify_env.py 只是 CLI 薄入口。
 """
 
-import sqlite3
-import tempfile
+import json
+import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TypedDict
 
-from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
-from langgraph.types import Command, interrupt
 
 from campus_desk.config import settings
+from campus_desk.llm import build_llm
 
 
 @dataclass
@@ -68,101 +68,110 @@ def check_langgraph_quickstart() -> CheckResult:
     )
 
 
-# ---------- 2. DeepSeek 一次调用 ----------
+# ---------- 2. DeepSeek 结构化输出一次调用 ----------
+
+# 自写 prompt（含 "json" 字样，DeepSeek json_object 模式硬性要求，见 intent.py 注释）
+_STRUCTURED_CHECK_PROMPT = """你是校园助手。请输出一个 JSON 对象回答下面的问题。
+
+JSON 格式（严格只输出 JSON，不要任何其他文字）：
+{"answer": "一句话回答"}
+
+问题：校历在哪里查？"""
 
 
-def check_deepseek_call() -> CheckResult:
+def check_deepseek_structured() -> CheckResult:
+    """build_llm + json_object 结构化输出一次真实调用，校验返回合法 JSON。"""
     if not settings.deepseek_api_key:
         return CheckResult(
-            "DeepSeek 一次调用",
+            "DeepSeek 结构化输出",
             "SKIP",
             "未配置 DEEPSEEK_API_KEY（.env 填写后重跑）",
         )
-    llm = ChatOpenAI(
-        model=settings.deepseek_model,
-        api_key=settings.deepseek_api_key,
-        base_url="https://api.deepseek.com",
-        timeout=30,
-    )
+    llm = build_llm()  # 统一构造：response_format=json_object 构造期声明 + langfuse 挂载
     try:
-        reply = llm.invoke("请用一句话介绍你自己")
+        reply = llm.invoke([("system", _STRUCTURED_CHECK_PROMPT)])
     except Exception as exc:  # noqa: BLE001 — 外部调用需兜底所有错误转为检查结果，不让脚本崩溃
-        return CheckResult("DeepSeek 一次调用", "FAIL", f"调用异常: {exc!r}")
-    content = reply.content
+        return CheckResult("DeepSeek 结构化输出", "FAIL", f"调用异常: {exc!r}")
+    content = str(reply.content or "").strip()
     if not content:
-        return CheckResult("DeepSeek 一次调用", "FAIL", "模型返回空内容")
+        return CheckResult("DeepSeek 结构化输出", "FAIL", "模型返回空内容")
+    try:
+        text = content
+        if "```" in text:  # 容忍 ```json ... ``` 代码块（与 intent.py 同款容错）
+            text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.DOTALL)
+        start, end = text.find("{"), text.rfind("}")
+        if start == -1 or end == -1:
+            raise json.JSONDecodeError("未找到 JSON 对象", content, 0)
+        json.loads(text[start : end + 1])
+    except (json.JSONDecodeError, ValueError) as exc:
+        return CheckResult("DeepSeek 结构化输出", "FAIL", f"输出非合法 JSON: {exc}")
     return CheckResult(
-        "DeepSeek 一次调用",
+        "DeepSeek 结构化输出",
         "PASS",
-        f"回复 {len(content)} 字符：{str(content)[:40]}…",
+        f"json_object 模式返回合法 JSON：{content[:40]}…",
     )
 
 
-# ---------- 3. SqliteSaver 中断恢复 ----------
+# ---------- 3. 真 FC 可用性探测 ----------
+
+_FC_PROBE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "query_canteen",
+        "description": "查询食堂营业时间",
+        # langchain-openai 1.4.1 起非 strict 工具无法自动解析（bind_tools 即抛），
+        # 必须 strict + additionalProperties=False 才能发出真实请求
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {"canteen": {"type": "string", "description": "食堂名称"}},
+            "required": ["canteen"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 
-class CheckpointState(TypedDict):
-    question: str
-    answer: str
-    final: str
+def check_fc_support() -> CheckResult:
+    """真 FC 探测：build_llm().bind_tools() 一次调用，返回 tool_calls → FC_SUPPORTED=True。
 
-
-def ask_question(state: CheckpointState) -> dict:
-    """中断点：模拟等待用户输入（如转人工确认）。"""
-    answer = interrupt("需要用户输入")
-    return {"answer": answer}
-
-
-def finish(state: CheckpointState) -> dict:
-    return {"final": f"完成：{state['answer']}"}
-
-
-def build_checkpoint_graph(db_path: Path):
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    graph = (
-        StateGraph(CheckpointState)
-        .add_node(ask_question)
-        .add_node(finish)
-        .add_edge(START, "ask_question")
-        .add_edge("ask_question", "finish")
-        .add_edge("finish", END)
-        .compile(checkpointer=SqliteSaver(conn))
-    )
-    return conn, graph
-
-
-def check_sqlite_resume() -> CheckResult:
-    db_dir = Path(tempfile.mkdtemp(prefix="campusdesk_env_"))
-    db_path = db_dir / "checkpoint.db"
-
-    # 第一次运行：跑到 interrupt 暂停，检查点落库
-    conn1, graph1 = build_checkpoint_graph(db_path)
-    config = {"configurable": {"thread_id": "env-verify-1"}}
-    graph1.invoke({"question": "测试"}, config)
-    paused = graph1.get_state(config)
-    # langgraph 1.x 语义：interrupt 是节点内暂停点，中断时 next 指向当前节点，
-    # 恢复时该节点重入（从 interrupt 处继续）。
-    if paused.next != ("ask_question",):
+    实测结论（2026-08-15，deepseek-v4-flash）：**FC 可用**——bind_tools 返回
+    真实 tool_calls；但 build_llm 构造期写死 response_format=json_object，
+    要求 prompt 含 "json" 字样，否则 400 "Prompt must contain the word 'json'"
+    （探测 prompt 因此必须带 json；M2 工具管道同样受此约束：要么 prompt 带
+    json 字样，要么工具场景单独构造不带 response_format 的实例）。
+    结果打印并写 docs/STATUS.md，供 M2 工具管道定真 FC / 伪 FC（ZJUT_DESIGN §4.4）。
+    """
+    if not settings.deepseek_api_key:
         return CheckResult(
-            "SqliteSaver 中断恢复",
-            "FAIL",
-            f"中断后应停在 ask_question 节点，实际 next={paused.next}",
+            "FC 可用性探测",
+            "SKIP",
+            "未配置 DEEPSEEK_API_KEY，无法探测（无 key 调用会误报 FC_SUPPORTED=False）",
         )
-    conn1.close()  # 模拟进程退出
-
-    # 第二次运行：新连接（模拟进程重启），从落库的检查点恢复
-    conn2, graph2 = build_checkpoint_graph(db_path)
-    graph2.invoke(Command(resume="已恢复"), config)
-    final_state = graph2.get_state(config)
-    conn2.close()
-    if final_state.values.get("final") != "完成：已恢复":
+    llm = build_llm()
+    try:
+        reply = llm.bind_tools([_FC_PROBE_TOOL]).invoke(
+            "请输出 JSON 调用工具回答：食堂几点开门？"
+        )
+    except Exception as exc:  # noqa: BLE001 — 探测要兜底一切异常（含 400/网络）
         return CheckResult(
-            "SqliteSaver 中断恢复",
+            "FC 可用性探测",
             "FAIL",
-            f"恢复后状态不完整: {final_state.values}",
+            f"bind_tools 调用异常（FC 不支持或网络问题）: {exc!r}",
         )
+    tool_calls = getattr(reply, "tool_calls", None) or []
+    if not tool_calls:
+        return CheckResult(
+            "FC 可用性探测",
+            "FAIL",
+            "调用成功但未返回 tool_calls（FC 未生效）",
+        )
+    names = [
+        tc.get("name", "?") if isinstance(tc, dict) else getattr(tc, "name", "?")
+        for tc in tool_calls
+    ]
     return CheckResult(
-        "SqliteSaver 中断恢复",
+        "FC 可用性探测",
         "PASS",
-        "中断暂停 → 落库 → 新连接恢复，状态完整（会话记忆地基可用）",
+        f"bind_tools 返回 {len(tool_calls)} 个 tool_calls: {names}（FC_SUPPORTED=True）",
     )

@@ -1,4 +1,4 @@
-"""测试共享设施：可控 fake LLM stub + SQLite 内存库会话工厂。
+"""测试共享设施：可控 fake LLM stub + SQLite 内存库会话工厂 + api_client。
 
 IntentClassifier 对 LLM 的依赖面只有一处：`llm.invoke(messages)` 返回带
 `.content` 的对象（真 LLM 为 AIMessage）。fake 只对齐这个面：
@@ -9,6 +9,11 @@ IntentClassifier 对 LLM 的依赖面只有一处：`llm.invoke(messages)` 返�
 db_session_factory：SQLite 内存库（业务+eval 全表 create_all + 幂等种子）。
 ⚠️ 内存库必须 StaticPool（所有连接共享同一 DBAPI 连接）+ check_same_thread=False；
 单连接不支持并发 → 测试必须串行（不装 pytest-xdist，默认即可）。
+
+api_client（M1-T8 重建）：TestClient + Fake 图 bundle——FakeClassifier 恒返
+knowledge 意图（门控放行）+ InMemorySaver 真 KnowledgeGraph（走真检索），
+覆盖 /api/auth/login 与 /api/chat 全链路；bundle_factory 注入避免碰
+checkpointer.db 与真 LLM。
 """
 
 import pytest
@@ -45,133 +50,6 @@ class FakeIntentClassifier:
 
     def classify(self, user_input):
         return self.result
-
-
-class FakeFieldExtractor:
-    """字段抽取器 stub：序列消费（每轮抽取弹出一个），用尽返回 default。
-
-    extract(text) 与真实抽取器同签名；description 取输入原文（merge 语义对齐）。
-    """
-
-    def __init__(self, sequence=None, default=None):
-        self.sequence = list(sequence or [])
-        self.default = default
-
-    def extract(self, text):
-        if self.sequence:
-            item = self.sequence.pop(0)
-            if not item.description:  # 序列项可只给抽取字段，description 用输入
-                item = item.model_copy(update={"description": text})
-            return item
-        if self.default is not None:
-            return self.default.model_copy(update={"description": text})
-        from campus_desk.repair.drafting import rule_extract
-
-        return rule_extract(text)
-
-
-class FakeRepairClassifier:
-    """分类定级 stub：序列消费（每轮 classify 弹出一个），用尽返回 default。
-
-    calls 记录每次 (description, profile_context)——M4 画像注入断言用。
-    """
-
-    def __init__(self, sequence=None, default=None):
-        self.sequence = list(sequence or [])
-        self.default = default
-        self.calls: list[tuple[str, str | None]] = []
-
-    def classify(self, description, profile_context=None):
-        self.calls.append((description, profile_context))
-        if self.sequence:
-            return self.sequence.pop(0)
-        return self.default
-
-
-class FakeConsultDecider:
-    """咨询决策 stub（M4）：序列消费（每轮 decide 弹出一个），用尽返回 default。
-
-    calls 记录每次 (history, user_text, tool_results)——工具调用/追问断言用。
-    """
-
-    def __init__(self, sequence=None, default=None):
-        self.sequence = list(sequence or [])
-        self.default = default
-        self.calls: list[tuple[list, str, list | None]] = []
-
-    def decide(self, history, user_text, tool_results=None, student_no=None):
-        self.calls.append((list(history), user_text, tool_results))
-        if self.sequence:
-            return self.sequence.pop(0)
-        return self.default
-
-
-@pytest.fixture
-def api_client(db_session_factory):
-    """M6 API 测试客户端：全 Fake LLM 图 + SQLite 内存库 + TestClient。
-
-    绝不无参 create_app()（会建真 LLM + 写 checkpointer.db）；测试只走注入版。
-    """
-    from fastapi.testclient import TestClient
-    from langgraph.checkpoint.memory import InMemorySaver
-
-    from campus_desk.api.app import create_app
-    from campus_desk.api.graphs import GraphBundle, GraphRegistry
-    from campus_desk.consult.decide import ConsultDecision
-    from campus_desk.consult.graph import build_consult_graph
-    from campus_desk.entry.entry_graph import build_entry_graph
-    from campus_desk.entry.intent import IntentResult
-    from campus_desk.quality.graph import build_quality_graph
-    from campus_desk.repair.classify import ClassificationResult
-    from campus_desk.repair.drafting import DraftExtract
-    from campus_desk.repair.graph import build_repair_graph
-
-    def _bundle(user_id: str) -> GraphBundle:
-        entry = build_entry_graph(
-            classifier=FakeIntentClassifier(
-                IntentResult(intent="repair", confidence=0.9, secondary_intents=[], reason="测试")
-            )
-        )
-        repair = build_repair_graph(
-            db_session_factory,
-            extractor=FakeFieldExtractor(
-                default=DraftExtract(description="", building="3号楼", room="502", contact="李华")
-            ),
-            classifier=FakeRepairClassifier(
-                default=ClassificationResult(category="水电", priority="P2", confidence=0.9)
-            ),
-            checkpointer=InMemorySaver(),
-            user_id=user_id,
-            actor=user_id,
-        )
-        complaint = build_repair_graph(
-            db_session_factory,
-            extractor=FakeFieldExtractor(
-                default=DraftExtract(description="", building=None, room=None, contact="李华")
-            ),
-            checkpointer=InMemorySaver(),
-            user_id=user_id,
-            actor=user_id,
-            ticket_type="complaint",
-        )
-        consult = build_consult_graph(
-            db_session_factory,
-            decider=FakeConsultDecider(
-                default=ConsultDecision(
-                    action="answer", reply="教务密码可在教务系统点忘记密码重置。"
-                )
-            ),
-            checkpointer=InMemorySaver(),
-            student_no="2024001",
-        )
-        quality = build_quality_graph(db_session_factory, checkpointer=InMemorySaver())
-        return GraphBundle(
-            entry=entry, repair=repair, consult=consult, quality=quality, complaint=complaint
-        )
-
-    registry = GraphRegistry(db_session_factory, bundle_factory=_bundle)
-    app = create_app(session_factory=db_session_factory, registry=registry)
-    return TestClient(app)
 
 
 @pytest.fixture
@@ -213,22 +91,41 @@ def _openai_key_fallback(monkeypatch):
     """CI/无 .env 环境兜底：注入假 OPENAI_API_KEY 保证 ChatOpenAI 可构造。
 
     llm.py 已改为"settings 有 key 才显式传"（M7-CI 修复），无 key 时 SDK 读
-    OPENAI_API_KEY 环境变量。测试均走 Fake LLM 图/规则模式（api_client 全假
-    图），构造后不真调；真调路径（env_check/eval 真 LLM 段）按
-    settings.deepseek_api_key 判空 skip——settings 未被污染，skip 语义不变。
+    OPENAI_API_KEY 环境变量。测试均走 Fake LLM 图/规则模式，构造后不真调；
+    真调路径（env_check/eval 真 LLM 段）按 settings.deepseek_api_key 判空 skip——
+    settings 未被污染，skip 语义不变。
     """
     monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
 
 
-@pytest.fixture(autouse=True)
-def _disable_faq_cache(monkeypatch):
-    """M7 双保险：清 REDIS_URL + 重置 faq_cache 模块状态。
+@pytest.fixture
+def api_client(db_session_factory):
+    """FastAPI TestClient：Fake 意图（恒 knowledge）+ 真检索 KnowledgeGraph。
 
-    保证测试不连真 Redis（即使开发机 .env 配了 REDIS_URL 也被清空）——
-    默认走直查 DB；需要验证缓存逻辑的测试自行 monkeypatch 启用。
+    - FakeClassifier 恒返 knowledge（confidence 0.9 过门控）→ chat 测试走真检索
+    - KnowledgeGraph 用 InMemorySaver（不落 checkpointer.db）
+    - bundle_factory 注入：GraphRegistry 默认生产分支（SqliteSaver）不触发
+    - auth 测试与 FakeClassifier 无关（登录只查 users 种子，seed_all 已种
+      student-001 / 123456）
     """
-    from campus_desk import faq_cache
+    from fastapi.testclient import TestClient
+    from langgraph.checkpoint.memory import InMemorySaver
 
-    monkeypatch.setattr(settings, "redis_url", "")
-    monkeypatch.setattr(faq_cache, "_client", None)
-    monkeypatch.setattr(faq_cache, "_unavailable_until", 0.0)
+    from campus_desk.api.app import create_app
+    from campus_desk.api.graphs import GraphBundle, GraphRegistry
+    from campus_desk.entry.entry_graph import build_entry_graph
+    from campus_desk.entry.intent import IntentResult
+    from campus_desk.knowledge.graph import build_knowledge_graph
+
+    class FakeClassifier:
+        def classify(self, user_input):
+            return IntentResult(intent="knowledge", confidence=0.9, secondary_intents=[], reason="t")
+
+    def _bundle(user_id: str) -> GraphBundle:
+        entry = build_entry_graph(classifier=FakeClassifier())
+        knowledge = build_knowledge_graph(db_session_factory, checkpointer=InMemorySaver(), user_id=user_id)
+        return GraphBundle(entry=entry, knowledge=knowledge)
+
+    registry = GraphRegistry(db_session_factory, bundle_factory=_bundle)
+    app = create_app(session_factory=db_session_factory, registry=registry)
+    return TestClient(app)

@@ -1,4 +1,4 @@
-# CampusDesk 前端镜像（M6）：node 构建 → nginx 托管静态文件 + /api 反代后端
+# Campus Native Agent 前端镜像（M6）：node 构建 → nginx 托管静态文件 + /api 反代后端
 # 国内 npm 慢：npmmirror registry（npm ci 锁 package-lock.json）
 
 FROM node:22-alpine AS build

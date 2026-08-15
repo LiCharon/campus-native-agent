@@ -45,10 +45,10 @@
       <div ref="msgListRef" class="msg-list">
         <div v-if="!current || current.messages.length === 0" class="msg-welcome">
           <el-icon :size="40" color="#c0c4cc"><ChatDotRound /></el-icon>
-          <p>你好，我是 CampusDesk 校园服务助理</p>
+          <p>你好，我是 Campus Native Agent 校园服务助理</p>
           <p class="welcome-sub">
             可以直接描述遇到的问题，例如：<br />
-            “宿舍 3 号楼 502 的灯不亮了” / “一卡通怎么补办”
+            “图书馆几点开门？” / “一卡通怎么补办？” / “什么时候放寒假？”
           </p>
         </div>
 
@@ -64,24 +64,6 @@
           <div class="msg-body">
             <div class="msg-bubble" :class="[msg.role, { error: msg.error }]">
               {{ msg.content }}
-            </div>
-
-            <!-- 工单小卡片 -->
-            <div v-if="msg.ticket && msg.ticket.ticket_id" class="ticket-card">
-              <div class="ticket-card-head">
-                <el-icon color="#409eff"><Tickets /></el-icon>
-                <span class="ticket-no">工单 #{{ msg.ticket.ticket_id }}</span>
-                <el-tag
-                  v-if="msg.ticket.status"
-                  size="small"
-                  :type="statusMeta(msg.ticket.status).type"
-                >
-                  {{ statusMeta(msg.ticket.status).label }}
-                </el-tag>
-              </div>
-              <div v-if="msg.ticket.typeLabel" class="ticket-card-sub">
-                类别：{{ msg.ticket.typeLabel }}
-              </div>
             </div>
 
             <!-- 等待补充提示 -->
@@ -128,16 +110,11 @@ import {
   User,
   Cpu,
   ChatDotRound,
-  Tickets,
   QuestionFilled,
   Loading
 } from '@element-plus/icons-vue'
 import { sendChat } from '../api/chat'
-import {
-  statusMeta,
-  typeMeta,
-  routeLabel
-} from '../constants/status'
+import { routeLabel } from '../constants/status'
 import { useChat } from '../composables/useChat'
 
 const {
@@ -221,19 +198,10 @@ async function handleSend() {
     const resp = await sendChat(current.value.thread_id, msg)
     const data = resp.data
 
-    const ticket = data.ticket_id
-      ? {
-          ticket_id: data.ticket_id,
-          status: data.ticket_status || '',
-          typeLabel: data.ticket_type ? typeMeta(data.ticket_type).label : ''
-        }
-      : null
-
     replaceLastIn(convId, {
       role: 'assistant',
       content: data.reply || '（无回复）',
       route: routeLabel(data.route),
-      ticket,
       pendingQuestion: data.pending_question || '',
       finished: data.finished
     })
@@ -434,34 +402,6 @@ if (!current.value) {
 
 .msg-bubble.error {
   color: #f56c6c;
-}
-
-.ticket-card {
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-left: 3px solid #409eff;
-  border-radius: 6px;
-  padding: 8px 12px;
-  min-width: 220px;
-}
-
-.ticket-card-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ticket-no {
-  font-weight: 600;
-  font-size: 13px;
-  color: #303133;
-  margin-right: auto;
-}
-
-.ticket-card-sub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #909399;
 }
 
 .pending-tip {

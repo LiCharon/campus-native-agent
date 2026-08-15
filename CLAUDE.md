@@ -1,106 +1,98 @@
-# CLAUDE.md — 校园智能服务台（CampusDesk）
+# CLAUDE.md — Campus Native Agent（校园智能服务助手）
 
 > 项目唯一权威规范。开工必读，改动必更新。
-> 完整需求规格 → docs/PROJECT_REQUIREMENTS.md｜选型原因+面试话术 → docs/TECH_DECISIONS.md｜迭代日志 → docs/DEV_JOURNAL.md
+> 完整设计契约 → docs/ZJUT_DESIGN.md（演进方向，权威）｜实现计划 → docs/ZJUT_M1_PLAN.md｜迭代日志 → docs/DEV_JOURNAL.md
 
 ## 0. 定位
-校园报修/咨询/投诉的智能服务 Agent 平台：学生一句话提交问题 → 自动意图识别、分类定级、派单、跟踪、回访，服务闭环。
+**Campus Native Agent（ZJUT Native Agent 演进）——校园信息聚合 + 问答 + 引导 + 索引**：学生一句话问任何校园问题 → 意图分流 → 能答的直接答（知识库检索），缺信息的追问澄清（≤3 轮），仍答不上转人工（bad_cases 沉淀）；不代办任何事务（报修走后勤系统、资金操作不在范围）。
 
 ### 0.1 项目事实（仅索引，不重复维护；权威源：pyproject.toml 管包名、README.md 管标题）
 | 项 | 值 |
 |----|----|
-| 项目名 | CampusDesk（校园服务台） |
-| 仓库名 | campus-desk |
-| 包名 | `campus_desk`（M1 建 pyproject.toml 时确定） |
-| README 标题 | `CampusDesk（校园服务台）— 校园智能服务台 Agent`（M7 写 README 时用） |
+| 项目名 | Campus Native Agent（公开展示名，用户拍板，非 ZJUT）|
+| 仓库名 | campus-desk（GitHub 公开仓库已改名 LiCharon/campus-native-agent）|
+| 包名 | `campus_desk`（演进迁移成本低，保留不改）|
+| README 标题 | `Campus Native Agent — 校园智能服务助手`（M1-T12 重写）|
 
 ### 0.2 docs 地图（开工按需读，不必全读）
 | 文档 | 什么时候读 |
 |------|-----------|
-| docs/PROJECT_REQUIREMENTS.md | 写需求细节/状态机/工具/评测前 |
-| docs/TECH_DECISIONS.md | 面试备答、选型变更时 |
-| docs/STATUS.md | 当前进度/下一步/基线（随里程碑更新；规范文件不含状态） |
-| docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点） |
-| docs/AI_CODING_SPEC.md | AI 编程协作规范（Vibe Coding 整合版）：立项→上线 10 步流程/质量闸门/Git 纪律/翻车点，做项目时按此执行 |
-| docs/AI_CODING_WORKFLOW.md | AI Coding 教程版（小白入门：概念/每步为什么/可抄模板），学流程时读 |
-| docs/eval_report_m2.md | M5 评测校准、面试展示基线数据（意图准确率 94.4%，本地私有管理） |
-| docs/eval_report_m3.md | M3 评测：意图 95.8% + 报修链路成功率 94.4%（17/18），本地私有管理 |
-| docs/eval_report_m4.md | M4 评测：咨询自助解决率/介入率/轮次基线 + 报修维持，本地私有管理 |
-| docs/eval_report_m5.md | M5 评测：意图 100% + 投诉链路 100% + §10 目标值已按实测校准，本地私有管理 |
-| （已归档） | PLANNING_REVIEW 评析报告与 Qwen 需求分析原文已于 2026-08-05 删，历史在 docs 私有仓库 git 可恢复 |
+| docs/ZJUT_DESIGN.md | **设计契约（权威）**：定位/4 类入口/type 分型/追问/进化闭环/待定项 |
+| docs/ZJUT_M1_PLAN.md | M1 实现计划（Task 拆解/退役总表/已知局限登记）|
+| docs/STATUS.md | 当前进度/下一步/基线（随里程碑更新；规范文件不含状态）|
+| docs/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点）|
+| docs/PROJECT_REQUIREMENTS.md | CampusDesk 历史需求（M1-ZJUT 前基线，报修/状态机章节已退役，仅参考演进脉络）|
+| docs/TECH_DECISIONS.md | 选型原因 + 面试话术（DeepSeek 结构化输出铁律/FC 探测结论）|
+| docs/eval_report_zjut_m1.md | M1-ZJUT 意图评测基线报告（95.8%，本地私有管理）|
+| （历史） | eval_report_m2~m6.md = CampusDesk 旧里程碑评测，本地私有仓库可恢复 |
 
 ## 1. 为什么做（面试叙事，防止跑偏）
 - InterviewAI 教训：AI 占比有限，多 Agent 像多次 LLM 调用，无记忆/skill/FC/规划
-- 本项目补齐：LangGraph 编排 + 工具调用 + 用户记忆 + Langfuse 可观测 + 量化评测
-- **8:2 原则**：80% 预算在 Agent 构建，20% 场景壳；工程化贯穿不占预算、不可省略
-- 目标岗位：Agent / LLM 应用开发（求职备考并行，约 5-6 周）
+- 本项目补齐：LangGraph 编排 + 工具调用（M2 起）+ 用户记忆 + Langfuse 可观测 + 量化评测
+- **8:2 原则**：80% 预算在 Agent 构建（分流→检索→组装→追问→索引引导），20% 场景壳
+- 目标岗位：Agent / LLM 应用开发；本地化场景做差异化特色（信息聚合 + 办事引导 + 索引）
 
 ## 2. 技术栈（已拍板）
-Python 3.14（M1 实测核心依赖全兼容，推翻 3.11 保守假设，见 DEV_JOURNAL M1）· LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度，M6 再试自托管）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + sse-starlette + httpx · MCP（扩展期演示加分）
-**Redis（M7 已引入，仅 FAQ 读路径）**：cache-aside 热点缓存 `faq:list`（TTL 300s + 30s 冷却重探），未配 REDIS_URL/连不上自动降级直查 DB（惰性 import 仿 telemetry.py）；**不背会话**（会话历史由 checkpointer 管）、不做公告/排班。Celery（不引入，APScheduler 够用）
+Python 3.14（M1 实测核心依赖全兼容）· LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（开发期 Cloud 免费额度）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + httpx · MCP（扩展期演示加分）
+**真 FC 已探测可用（M1-T12）**：deepseek-v4-flash bind_tools 返回真实 tool_calls（FC_SUPPORTED=True）；但 build_llm 写死 response_format=json_object，工具调用 prompt 必须含 "json" 字样否则 400——M2 工具管道按此设计（详见 env_check.py 注释 + DEV_JOURNAL）
+**以后再说**：Redis 缓存（当前 36 条知识遍历 <0.1ms 不是瓶颈，规模上去再评估 cache-aside）；向量检索 RAG（检索层已做成可替换模块）；MCP 暴露；自托管 Langfuse
 
-## 3. 核心设计（拍板结论；边清单/工具表/细节 → docs/PROJECT_REQUIREMENTS.md）
-- 入口分流：EntryAgent 意图识别 + 置信度门控 + 多意图取主意图；**投诉 = 复用 Repair 管道建 P1 工单**（不建独立流程/通知模块）
-- 工单状态机 6 态 8 边（SUBMITTED→ASSIGNED→IN_PROGRESS→PENDING_VERIFY→CLOSED + CANCELLED）；**跳转=白名单**：纯函数 machine.py 为权威 + apply_transition SAVEPOINT 原子写库（状态+审计日志，唯一写入口）+ 图渲染双保险；**超时升级=字段不是状态**（escalation_count/escalated_at）；验收不通过返工；挂起 3 天自动关闭
-- 4 Agent 全实装（M2 Entry / M3 Repair / M4 Consult+Quality）：Entry（分流）/ Repair（报修）/ Consult（诊断式：≤8 轮追问 → 3 工具排查 → 三态分支）/ Quality（关闭 24h 后回访，惰性触发）
-- 9 确定性工具（报修侧 6 + 咨询侧 3，每工具独立单测不依赖 LLM）+ 5 类上下文隔离（任务/会话/画像/工具只读/FAQ）
-- **已拍板**：采集=固定信息一次性收集+Agent 只问缺项 ≤2 轮；派单=规则优先（类别→部门/工种 + 在岗优先）；边界=业务办理仅工单类，外部接入/通知/多端演示不实装
+## 3. 核心设计（拍板结论；细节 → docs/ZJUT_DESIGN.md）
+- **入口分流 4 类意图**：knowledge / tool_query（M2 实装）/ multi_intent / other；三层防线（结构化输出 → 重试 1 次 → 关键词规则兜底）+ 置信度门控（<0.7 转人工）；index/ambiguous 不设入口意图（"能否命中"只有检索层知道）
+- **知识库 type 分型**：条目 type ∈ {info 直接答 / process 流程清单 / index 索引引导"去哪查"}，一个检索管道按 type 组装；关键词计分起步，向量检索演进预留（Agent 侧零改动）
+- **追问澄清 ≤3 轮**：检索未命中 → ClarifyDecider（LLM ask/handoff）→ 补充后合并全部 history 重检索 → 仍未命中转人工；轮次上限图结构硬约束（rounds 计数 + 条件边），不靠 LLM 自觉
+- **转人工兜底 + 进化闭环**：knowledge 管道 handoff 写 bad_cases（status=PENDING）；M3 进化闭环（管理员审查 → 补入知识库，"越用越聪明"）；数据分层：个人数据只给索引引导不直连
+- **工具查询（M2）**：真 FC 可用（M1 探测）→ 字段抽取 + 确定性工具 + mock 表；每工具独立单测不依赖 LLM（沿用铁律）
 
 ## 4. 工程化标准（贯穿，不做就白做）
-- Langfuse 全链路埋点（agent 步骤/工具调用/状态跳转/LLM call）
-- 评测数据集（M2 落地 72 条 + M3 扩展 turns + M5 校准至 76 条）：**对话剧本格式（scripted，预写学生每轮回复）**，报修 16 + 咨询 16 + 投诉 20（M5 补 4 条带 turns）+ 闲聊 16 + 多意图 6 + 重复报修 2，**JSON 文件入 git + M3 已做入库脚本同步 MySQL**（scripts/ingest_eval_data.py）；报修 18 条剧本 turns 按真 LLM 口径设计（断言=tool:/status: 行为）；M5 加投诉链路评测段（run_complaint_evaluation，失配判失败同报修）+ 咨询失配不判失败 + outcome=ask 无回应不计失败（口径见 §10 文档）
-- 量化指标 9 项 + 目标值 → requirements §10（目标均为示例基线，M5 后按实测校准）
+- Langfuse 全链路埋点（agent 步骤 / LLM call；orchestrator.turn + build_llm 挂载）
+- 评测数据集（M1 意图 24 条剧本 zjut_intent.json 入 git）：断言 expected_route + 门控行为，不查对话字面；真 LLM 跑分（无 key 自动 SKIP 不进 CI）；InMemorySaver 隔离可无限重跑；M2 起加链路剧本（行为断言 route:/outcome:）与答案正确性口径（期望命中条目 id + 答案关键词）
+- 量化指标：意图准确率（M1 基线 95.8%）/ 检索命中率 / 自助解决率 / 平均轮次
 - 评测脚本独立于业务代码；需外部环境的标 skip，不进 CI（InterviewAI CI 教训）
-- CI（GitHub Actions）：**起步 ruff + pytest**；覆盖率门槛/gitleaks/pip-audit M6 后加（单人排期有限，先保核心质量门）
-- 安全：.env gitignore + 密钥不入库；alembic 迁移脚本，禁手改表
-- Docker Compose 一键起：MySQL + Redis + 后端 + 前端 4 服务（M7 实测全绿；Langfuse 开发期用 Cloud，自托管 M6 再试）
+- 安全：.env gitignore + 密钥不入库；alembic 迁移脚本，禁手改表；JWT claims 鉴权不查库
+- 前端：Vue3 + Element Plus 最小闭环（Login + Chat），Campus Native Agent 品牌（不出现本地化地名/学校名）
 
 ## 5. AI Coding 顺序规范（项目特有；通用纪律 → AGENTS.md）
-- 开工：读本文件 + AGENTS.md（通用纪律）+ 记忆索引（MEMORY.md，教训 2026-08-05：只读 CLAUDE.md 漏读记忆）+ 相关 docs；todo 工具先列清单
+- 开工：读本文件 + AGENTS.md（通用纪律）+ 记忆索引 + docs/ZJUT_DESIGN.md（设计契约）+ 相关 docs；todo 工具先列清单
 - 想清楚再动：方案先给用户确认才写码；3+ 文件或动 DB/权限 → Plan 模式；大改动多 agent 协同
 - 小步循环：一次一个功能点，改完立即 pytest 验证
 - 收尾：更新 DEV_JOURNAL.md（做了什么/为什么/坑/量化/面试点）；里程碑跑完先 /neat 再存档、提议新会话
-- 防忘清单（项目特有）：工具有独立单测 ・ DB 变更走迁移 ・ 状态机跳转有测试锁定 ・ Langfuse 有 trace ・ 分支 feature/* from main
+- 防忘清单（项目特有）：工具有独立单测 ・ DB 变更走迁移 ・ 追问轮次有测试锁定 ・ Langfuse 有 trace ・ 分支 feature/* from main
 
-## 6. 里程碑（生存线/加分线）
-**生存线（做不完加分线，项目不成立）**：M1 骨架 → M2 入口分流+评测集 → M3 报修主链路+状态机+工具 → M4 记忆+咨询+回访 → M5 评测闭环+Langfuse
-**加分线（演示层，可精简不影响项目成立）**：M6 前端+Compose+CI → M7 打磨+README+自托管尝试（弹性缓冲）
+## 6. 里程碑（MVP 三分法，见 ZJUT_DESIGN §10）
+**M1（已完成，2026-08-15）**：入口分流 4 类 + 知识库检索组装（type 分型）+ 追问澄清 + 转人工兜底 + 36 条种子知识 + 前端收敛 Login/Chat + 环境验证（含真 FC 探测）+ 意图评测 24 条基线 95.8%
+**M2（应该有）**：工具查询管道（真 FC + 确定性工具 + mock 表）+ multi_intent 实装 + 链路评测剧本 + 答案正确性口径落地
+**M3（应该有）**：进化闭环（bad_cases/建议 + 管理页审查）+ 真实数据收集 + 画像可选
+**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展
 进度/下一步/基线 → docs/STATUS.md
-**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 文档/DEV_JOURNAL 更新）**：
-- M1：git init + 初始 commit 完成 / 环境验证 3 项跑通 / 骨架 pytest 绿 / 文档日志更新
-- M2-M5：该里程碑核心链路测试绿 + 环境验证跑通 + 文档/日志更新
+**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 文档/DEV_JOURNAL 更新）**：M1 已按此收尾（96 passed + verify_env 3 项 PASS + 验收 5 路径 + 文档同步）
 
 ## 7. 当前状态
 进度/下一步/基线数据 → docs/STATUS.md（随里程碑更新；本规范文件不含状态）
 
 ## 8. 别再犯清单（历史教训精简版，细节在 DEV_JOURNAL）
-- 外部评审建议默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关（三问：服务"演示能跑+面试能讲"？文档契约还是代码模块？与 8:2/演进式冲突吗？）
-- 同一评审倾向会反复出现（如通知模块），裁决保持一致，不为"通知"加实体
-- AI 评审工具的"审查对象"声明不可信（可能用旧快照），无论第几轮审查都对照当前磁盘文档逐条核验
-- 写框架代码前先 context7 查 API（LangGraph/LangChain API 变动快），禁凭记忆写
-- **DeepSeek（v4-flash thinking 模式）不支持 langchain with_structured_output 三种 method**（实测 2026-08-04：json_schema/json_mode/function_calling 全 400）——所有 LLM 结构化输出统一用**自写 prompt（含 "json" 字样）+ response_format=json_object + pydantic 校验**（intent.py 已沉淀模板，M3/M4 复用）
-- **LangGraph interrupt 重入不落盘**：interrupt 节点内"中断前的修改"不持久化，恢复时节点从头重入——问句/计数必须由 return 写入 state（RepairGraph 双节点 ping-pong：collect 纯逻辑 + wait 唯一 interrupt）
-- **终态 thread 再 invoke = 旧 state 残留 + 重复中断**（实测）——新会话必须新 thread_id；评测 runner 必须 InMemorySaver 隔离（文件 SqliteSaver 残留终态 → 重跑全失配）
+- 外部评审建议默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关
+- 同一评审倾向会反复出现，裁决保持一致；AI 评审工具的"审查对象"声明不可信，对照磁盘逐条核验
+- 写框架代码前先查 API（LangGraph/LangChain API 变动快），禁凭记忆写
+- **DeepSeek 不支持 langchain with_structured_output 三种 method**（实测 2026-08-04 全 400）——结构化输出统一**自写 prompt（含 "json" 字样）+ response_format=json_object + pydantic 校验**（intent.py 已沉淀模板）
+- **LangGraph interrupt 重入不落盘**：interrupt 节点内"中断前的修改"不持久化——问句/计数必须由 return 写入 state（KnowledgeGraph 双节点 ping-pong：collect 纯逻辑 + wait 唯一 interrupt）
+- **终态 thread 再 invoke = 旧 state 残留 + 重复中断**——新会话必须新 thread_id；评测 runner 必须 InMemorySaver 隔离
 - LangGraph 普通边多出边 = 并行分支（同 step 更新同 key 报错）→ 分支必须用条件边
-- SQLAlchemy 2.0：SELECT 隐式开事务，与 begin()/begin_nested() 混用报 "already begun"；**session.rollback() expire 所有实例**，失败路径后访问实例属性会触发惰性加载 + autobegin——测试 helper 一律返回整数 id 不返回 ORM 实例
-- alembic autogenerate 前验证表数（env.py 漏 import 业务 models → 只生成 2 张表的迁移）；alembic.ini 只写英文注释（configparser GBK 读取）；密码含 @ 需 %40 URL 编码
-- 规则抽取与真 LLM 行为差异（规则恒抽不到 contact）：turns 评测口径按真 LLM 设计，规则版只做机制验证
-- 编排层：报修挂起中 other 类输入（补充信息）要 resume 进 RepairGraph，不落到人工占位（真 LLM 评测抓出）
-- **Consult 工具轮 act→act 自环**：同一 invoke 内连续决策到 ask/终态（不暂停）——测试/评测不要假设"工具轮后需再次 invoke"
-- **咨询剧本失配不判失败**：LLM 自由对话下"学生补充信息被提前解答"= 合理自助解决，非答非所问失真；失真防线仅保留给报修确定性追问轮
-- **画像上下文只进 LLM prompt 不进规则层**：classify(description, profile_context)，规则计分用原始描述防画像关键词干扰（M4 设计）
-- 回访=字段不是状态（closed_at/rating/review_comment/reviewed_at）：closed_at 在 apply_transition 唯一写入口进 CLOSED 时写；Quality 惰性触发（学生进对话时查，不装 APScheduler——用户拍板）；超时升级扫描=纯函数时钟注入 + APScheduler（M5 实装，apscheduler 必须 <4，v4 异步重构）
-- **worktree 基线错位（多 agent 并行必查）**：worktree baseRef 取 origin/main（可落后本地 main 数十 commit）——子 agent 开工第一件事 `git log --oneline -1` 核基线，不对就 checkout -B 对齐 main；worktree 的 .venv editable 可能指向主仓库 src，worktree 里跑 python 脚本需 `PYTHONPATH=src`（pytest 不受影响）
-- **TaskStop 杀 npm 壳不杀 node 子进程（Windows，M6 实测）**：npm run dev 的后台任务停了端口仍被占，本机堆过 3 个 vite（5173/5174/5175），用户访问 5173 的一直是旧代码——改前端后必须 `netstat -ano | grep 517x` 验证端口归属 + `fetch /src/App.vue` 确认 serve 的是新代码，残留进程 taskkill //F 逐个清
-- **前端 localStorage 非响应式（M6 实测两连击）**：computed 无响应式依赖只求值一次（登录跳转后仍显示旧值，加 `void route.path` 依赖修复）；模块级单例状态（useChat 的 ref + 顶层 load()）只在页面首次加载执行，换账号必须显式 reload——改 useChat 类模块后记得把新函数加进返回对象（漏加 = pageerror "reload is not a function"）
+- SQLAlchemy 2.0：SELECT 隐式开事务，与 begin() 混用报 "already begun"；rollback() expire 所有实例——测试 helper 返回整数 id 不返回 ORM 实例
+- alembic autogenerate 前验证表数（env.py 漏 import 业务 models 只生成部分表）；alembic.ini 只写英文注释；密码含 @ 需 %40 URL 编码
+- 规则抽取与真 LLM 行为差异：turns 评测口径按真 LLM 设计，规则版只做机制验证
+- **36 条种子会破坏测试检索假设（M1-ZJUT 新坑）**：种子含"图书馆几点开门/食堂几点开门"等常见问句，测试若断言"某问题无命中"会误命中——检索类测试必须显式清空知识库或断言具体命中条目（T4 quality review 登记）
+- **LangGraph checkpointer 版 invoke 必须带 thread_id（M1-ZJUT 新坑）**：带 checkpointer 的图每次 invoke 都要 `config={"configurable": {"thread_id": ...}}`，挂起中 resume 用 `Command(resume=...)` 同款 cfg——orchestrator 是唯一正确范式，别绕过
+- **工作台/前端残留进程（Windows）**：npm run dev 后台任务停了端口仍被占——改前端后验证端口归属 + fetch /src/App.vue 确认 serve 的是新代码
+- **前端 localStorage 非响应式**：computed 无响应式依赖只求值一次（加 `void route.path` 依赖）；模块级单例只在页面首次加载执行，换账号必须显式 reload
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
 |----|---------|
-| Python | **3.14.6**（本机 py launcher，M1 用 pip dry-run 实测核心库 requires-python 全兼容后拍板） |
-| venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照（57 行） |
+| Python | **3.14.6**（本机 py launcher，M1 实测核心库 requires-python 全兼容） |
+| venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照 |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
-| .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` / `REDIS_URL`（M7 加，默认空串=缓存关闭，配了才启用；惯例命名；config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `.venv/Scripts/python scripts/verify_env.py`；种子入库 `.venv/Scripts/python scripts/seed_db.py`；**demo 工单重建 `.venv/Scripts/python scripts/seed_demo_data.py`（M6：清空重建 15 张演示单，幂等）**；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；评测 `.venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_m6.md`（--no-repair/--no-consult/--no-complaint 分段落）；Langfuse 冒烟 `.venv/Scripts/python scripts/smoke_langfuse.py`；**API 服务（M6）`.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / staff-001 / it-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
-| 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码）；docker-compose.yml 备着（供无本机 MySQL 环境，实际开发不用） |
-| 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 调用 / SqliteSaver 中断恢复），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；DeepSeek 项无 key 自动 SKIP（需外部环境项不进 CI） |
+| .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` / `DATABASE_URL` / `JWT_SECRET` / `JWT_EXPIRE_MINUTES`（config.py 用 pydantic-settings 加载） |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/verify_env.py`（3 项 + FC_SUPPORTED 打印）；种子入库 `.venv/Scripts/python scripts/seed_db.py`；本地化校园真实信息注入 `.venv/Scripts/python scripts/seed_zjut_local.py`（config/zjut_local_data.json 私有文件）；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；意图评测 `PYTHONIOENCODING=utf-8 .venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_zjut_m1.md`；**API 服务 `.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / cs-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码） |
+| 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 结构化输出 / 真 FC 探测），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；无 key 项自动 SKIP（需外部环境项不进 CI）；FC 探测实测 **FC_SUPPORTED=True**（2026-08-15） |

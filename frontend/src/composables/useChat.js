@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 // 会话管理：会话列表与消息全部存 localStorage，刷新页面可恢复。
 // 后端硬约束：thread_id 决定对话上下文，新对话必须生成新 thread_id。
-// 会话结构：{ id, thread_id, title, createdAt, messages: [{role, content, ticket?, route?, pendingQuestion?, pending?, error?}] }
+// 会话结构：{ id, thread_id, title, createdAt, messages: [{role, content, route?, pendingQuestion?, pending?, error?}] }
 
 // key 按登录用户隔离（同一浏览器多账号互不串）；未登录 guest 兜底
 function storageKeys() {

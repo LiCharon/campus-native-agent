@@ -1,12 +1,14 @@
-"""数据层测试：10 张表（8 业务 + 2 评测）的列/主键/外键/唯一约束/默认值锁定。
+"""数据层测试：6 张表（4 业务 + 2 评测）的列/主键/外键/默认值锁定。
 
+M1-T2 退役 tickets/ticket_logs/repairmen/dorms/accounts/announcements/faq，
+新增 knowledge_entries/bad_cases（用例随之更新；test_seed 由 M1-T9 重写）。
 M3 起"DB 变更走迁移"（alembic）——此处锁定的是 ORM 定义本身，
 迁移文件与 ORM 的一致性由 alembic autogenerate 对比（见 test_mysql_smoke）。
 """
 
 from sqlalchemy import inspect
 
-from campus_desk.db.models import Ticket
+from campus_desk.db.models import BadCase, KnowledgeEntry, User, UserProfile
 
 
 def _columns(factory, table: str) -> set[str]:
@@ -24,6 +26,15 @@ class TestTables:
             tables = set(insp.get_table_names())
             expected = {
                 "users",
+                "user_profiles",
+                "knowledge_entries",
+                "bad_cases",
+                "eval_case",
+                "eval_turn",
+            }
+            assert expected <= tables, f"缺表: {expected - tables}"
+            # 退役表必须不在（M1-T2 已删）
+            retired = {
                 "tickets",
                 "ticket_logs",
                 "repairmen",
@@ -31,42 +42,26 @@ class TestTables:
                 "accounts",
                 "announcements",
                 "faq",
-                "eval_case",
-                "eval_turn",
             }
-            assert expected <= tables, f"缺表: {expected - tables}"
+            assert not (retired & tables), f"退役表残留: {retired & tables}"
 
-    def test_tickets_columns(self, db_session_factory):
-        cols = _columns(db_session_factory, "tickets")
+    def test_knowledge_entries_columns(self, db_session_factory):
+        cols = _columns(db_session_factory, "knowledge_entries")
         for name in [
             "id",
-            "user_id",
-            "ticket_type",
-            "description",
-            "contact",
-            "category",
-            "priority",
-            "status",
-            "building",
-            "location",
-            "dept",
-            "repairman_id",
-            "escalation_count",
-            "escalated_at",
+            "domain",
+            "keywords",
+            "question",
+            "type",
+            "answer",
             "created_at",
-            "updated_at",
         ]:
-            assert name in cols, f"tickets 缺列 {name}"
+            assert name in cols, f"knowledge_entries 缺列 {name}"
 
-    def test_ticket_logs_audit_columns(self, db_session_factory):
-        cols = _columns(db_session_factory, "ticket_logs")
-        for name in ["ticket_id", "from_status", "to_status", "actor", "note", "created_at"]:
-            assert name in cols, f"ticket_logs 缺列 {name}"
-
-    def test_repairmen_columns(self, db_session_factory):
-        cols = _columns(db_session_factory, "repairmen")
-        for name in ["id", "name", "dept", "trade", "phone", "on_duty"]:
-            assert name in cols, f"repairmen 缺列 {name}"
+    def test_bad_cases_columns(self, db_session_factory):
+        cols = _columns(db_session_factory, "bad_cases")
+        for name in ["id", "user_id", "question", "reply", "status", "created_at"]:
+            assert name in cols, f"bad_cases 缺列 {name}"
 
     def test_eval_tables_columns(self, db_session_factory):
         case_cols = _columns(db_session_factory, "eval_case")
@@ -86,40 +81,35 @@ class TestTables:
 
 
 class TestConstraints:
-    """主键/外键/唯一约束锁定（跨库）。"""
+    """主键/外键约束锁定（跨库）。"""
 
     def test_foreign_keys(self, db_session_factory):
         with db_session_factory() as session:
             insp = inspect(session.connection())
-            ticket_fks = {fk["referred_table"] for fk in insp.get_foreign_keys("tickets")}
-            assert {"users", "repairmen"} <= ticket_fks
-            log_fks = {fk["referred_table"] for fk in insp.get_foreign_keys("ticket_logs")}
-            assert log_fks == {"tickets"}
+            profile_fks = {fk["referred_table"] for fk in insp.get_foreign_keys("user_profiles")}
+            assert profile_fks == {"users"}
             turn_fks = {fk["referred_table"] for fk in insp.get_foreign_keys("eval_turn")}
             assert turn_fks == {"eval_case"}
+            # 新增表无外键（知识库/反馈均独立）
+            assert insp.get_foreign_keys("knowledge_entries") == []
+            assert insp.get_foreign_keys("bad_cases") == []
 
-    def test_uniques(self, db_session_factory):
-        with db_session_factory() as session:
-            insp = inspect(session.connection())
-            dorm_uniq = {c["column_names"][0] for c in insp.get_unique_constraints("dorms")}
-            assert "building" in dorm_uniq
-            acct_uniq = {c["column_names"][0] for c in insp.get_unique_constraints("accounts")}
-            assert "student_no" in acct_uniq
-
-    def test_escalation_fields_defaults(self, db_session_factory):
-        """升级=字段不是状态：默认值锁定（escalation_count=0, escalated_at=None）。"""
+    def test_new_tables_defaults(self, db_session_factory):
+        """默认值锁定：type=info / domain='' / bad_cases.status='待处理'。"""
 
         with db_session_factory() as session:
             with session.begin():
-                ticket = Ticket(user_id="student-001", description="灯坏了", contact="李华")
-                session.add(ticket)
+                e = KnowledgeEntry(keywords="测试", question="测试问题", answer="测试答案")
+                session.add(e)
+                b = BadCase(user_id="student-001", question="测试问题")
+                session.add(b)
             session.expire_all()
-            got = session.get(Ticket, ticket.id)
-            assert got.escalation_count == 0
-            assert got.escalated_at is None
-            assert got.status == "SUBMITTED"
-            assert got.priority == "P2"
-            assert got.ticket_type == "repair"
+            got_e = session.get(KnowledgeEntry, e.id)
+            assert got_e.type == "info"
+            assert got_e.domain == ""
+            got_b = session.get(BadCase, b.id)
+            assert got_b.status == "PENDING"
+            assert got_b.reply == ""
 
 
 class TestQueries:
@@ -128,7 +118,39 @@ class TestQueries:
     def test_status_index_exists(self, db_session_factory):
         with db_session_factory() as session:
             insp = inspect(session.connection())
-            indexes = {i["name"] for i in insp.get_indexes("tickets")}
-            assert any("status" in ix for ix in indexes), (
-                "tickets.status 应建索引（管理列表按状态过滤）"
+            bc_indexes = {i["name"] for i in insp.get_indexes("bad_cases")}
+            assert any("status" in ix for ix in bc_indexes), (
+                "bad_cases.status 应建索引（工作台按状态过滤）"
             )
+            ke_indexes = {i["name"] for i in insp.get_indexes("knowledge_entries")}
+            assert any("domain" in ix for ix in ke_indexes), (
+                "knowledge_entries.domain 应建索引（按领域筛选）"
+            )
+
+
+class TestRetainedModels:
+    """M1-T2 保留模型（User/UserProfile）写入路径锁定。"""
+
+    def test_user_profile_roundtrip(self, db_session_factory):
+        with db_session_factory() as session, session.begin():
+            u = session.get(User, "student-001")
+            assert u is not None and u.role == "student"
+            p = UserProfile(user_id=u.id, building="3号楼", frequent_categories="水电")
+            session.add(p)
+            session.flush()
+            assert p.user_id == u.id
+
+
+def test_knowledge_entry_type_and_bad_case(db_session_factory):
+    from campus_desk.db.models import BadCase, KnowledgeEntry
+
+    with db_session_factory() as s, s.begin():
+        e = KnowledgeEntry(domain="教务", keywords="校历,放假", question="什么时候放寒假？",
+                           type="info", answer="以学校通知为准。")
+        s.add(e)
+        s.flush()
+        b = BadCase(user_id="student-001", question="怎么交学费？", reply="", status="PENDING")
+        s.add(b)
+        s.flush()
+        assert e.id and e.type == "info"
+        assert b.status == "PENDING"

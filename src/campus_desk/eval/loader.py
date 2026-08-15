@@ -11,21 +11,19 @@ from campus_desk.eval.models import ScriptedCase
 
 DATASET_DIR = Path(__file__).parent / "dataset"
 
-# 各类别数量区间（需求 §10：各 15-20 / 多意图 5-10 / 重复报修 2-3）
+# 各类别数量区间（M1-T11 ZJUT 4 类：知识问答 15-20，其余各 2-5）
 COUNT_RANGES: dict[str, tuple[int, int]] = {
-    "repair": (15, 20),
-    "consult": (15, 20),
-    "complaint": (15, 20),
-    "chitchat": (15, 20),
-    "multi_intent": (5, 10),
-    "repeat_repair": (2, 3),
+    "knowledge": (15, 20),
+    "tool_query": (2, 5),
+    "multi_intent": (2, 5),
+    "other": (2, 5),
 }
 
 # 意图标注 → 期望路由 的一致性规则（other 意图汇聚到人工，其余同意图）
 _ROUTE_OF_INTENT = {
-    "repair": "repair",
-    "consult": "consult",
-    "complaint": "complaint",
+    "knowledge": "knowledge",
+    "tool_query": "tool_query",
+    "multi_intent": "multi_intent",
     "other": "human_handoff",
 }
 

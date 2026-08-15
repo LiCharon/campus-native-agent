@@ -4,8 +4,8 @@
       <div class="login-logo">
         <el-icon :size="34" color="#409eff"><Service /></el-icon>
       </div>
-      <h1 class="login-title">CampusDesk 校园服务台</h1>
-      <p class="login-subtitle">智能对话式校园报修与咨询平台</p>
+      <h1 class="login-title">Campus Native Agent</h1>
+      <p class="login-subtitle">校园智能服务助手 · 登录</p>
 
       <el-form
         ref="formRef"

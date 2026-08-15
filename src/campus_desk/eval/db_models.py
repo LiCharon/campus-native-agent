@@ -16,7 +16,7 @@ from campus_desk.db.base import Base
 class EvalCase(Base):
     __tablename__ = "eval_case"
 
-    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # repair-001
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # zjut-intent-001
     category: Mapped[str] = mapped_column(String(16), index=True)
     student_input: Mapped[str] = mapped_column(Text)
     intent: Mapped[str] = mapped_column(String(16))
