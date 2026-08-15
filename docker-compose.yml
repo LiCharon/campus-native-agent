@@ -1,4 +1,4 @@
-# CampusDesk 容器编排（M6 一键起：MySQL + 后端 + 前端）
+# Campus Native Agent 容器编排（MySQL + 后端 + 前端）
 #
 # 起法：docker compose up --build
 #   访问：前端 http://localhost:8080（nginx 托管 + /api 反代后端）
@@ -28,22 +28,11 @@ services:
       timeout: 3s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    container_name: campus_desk_redis
-    # 不发布端口：同上，本机连容器 Redis 用 override 的 6380
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   backend:
     build: .
     container_name: campus_desk_backend
     environment:
       DATABASE_URL: mysql+pymysql://root:root@mysql:3306/campus_desk?charset=utf8mb4
-      REDIS_URL: redis://redis:6379/0
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
@@ -55,10 +44,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      redis:
-        # 只保启动顺序不设 healthy 条件——Redis 是缓存非必需依赖，
-        # 连不上时 backend 自动降级直查 DB（faq_cache 30s 冷却后重探自愈）
-        condition: service_started
     ports:
       - "8000:8000"
 

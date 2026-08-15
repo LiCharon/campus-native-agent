@@ -8,7 +8,7 @@
 - knowledge_entries（36 条通用校园知识，6 领域 × 6 条，type: info/process/index）
 ⚠️ T2 补丁语义：tickets/repairmen/dorms/accounts/announcements/faq 种子已随
 退役表删除；T9 起知识库种子（36 条）+ cs-001 在本文件落地。
-浙工大真实信息 → scripts/seed_zjut_local.py 本地注入（config/ 私有文件，不进 git）。
+本地真实信息 → scripts/seed_zjut_local.py 本地注入（config/ 私有文件，不进 git）。
 
 业务函数通过 factory 注入会话（工具层同款依赖注入模式）。
 """
@@ -38,7 +38,7 @@ _USERS = [
     ("cs-001", "客服小杨", "cs_staff", None, None, "13800000041", _DEMO_PASSWORD),
 ]
 
-# T9 通用知识库 36 条（6 领域 × 6 条）：通用校园数据，无浙工大特定地名
+# T9 通用知识库 36 条（6 领域 × 6 条）：通用校园数据，无特定地名
 # （本地真实信息走 scripts/seed_zjut_local.py）。每项 = (domain, keywords, question, type, answer)
 _KNOWLEDGE = [
     # 教务 6

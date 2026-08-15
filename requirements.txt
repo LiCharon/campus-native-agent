@@ -4,7 +4,7 @@ annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.14.2
 backoff==2.2.1
--e git+https://github.com/LiCharon/campus-desk.git@68f3f5241e51a971679d1f5a20344936134af4dc#egg=campus_desk
+-e .
 certifi==2026.7.22
 charset-normalizer==3.4.9
 click==8.4.2

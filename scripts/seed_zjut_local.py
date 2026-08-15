@@ -1,4 +1,4 @@
-"""浙工大（ZJUT）真实信息本地注入脚本（M1-T9）。
+"""本地校园真实信息注入脚本（M1-T9）。
 
 读取 config/zjut_local_data.json 逐条 upsert 到 knowledge_entries——
 本地私有文件，已 gitignore（不进公开 repo），换机/克隆后需自行放置。
