@@ -2,18 +2,20 @@
 
 格式要点（需求 §10 已拍死）：
 - 每条用例预写学生的输入，确定性可复现
-- 断言点 = 行为不是文本（expected_route 检查分流结果，turns 里 M3/M4 补
+- 断言点 = 行为不是文本（expected_route 检查分流结果，turns 里补
   工具调用/状态跳转断言，不检查对话字面）
-- turns（后续轮次）：M2 只有入口分流，留空；M3/M4 补 Repair/Consult 剧本
+- turns（后续轮次）：M1 只有入口分流，留空；后续里程碑补工具调用轮
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Category = Literal["repair", "consult", "complaint", "chitchat", "multi_intent", "repeat_repair"]
-IntentLabel = Literal["repair", "consult", "complaint", "other"]
-RouteLabel = Literal["repair", "consult", "complaint", "human_handoff"]
+# ZJUT 4 类意图（与 entry.intent.IntentName / entry.routes 保持一致）
+IntentName = Literal["knowledge", "tool_query", "multi_intent", "other"]
+Category = IntentName  # 剧本类别 = 意图类别（决定数量校验区间）
+IntentLabel = IntentName
+RouteLabel = Literal["knowledge", "tool_query", "multi_intent", "human_handoff"]
 
 
 class ScriptedTurn(BaseModel):

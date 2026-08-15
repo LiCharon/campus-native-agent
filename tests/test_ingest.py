@@ -8,30 +8,24 @@ from campus_desk.eval.models import ScriptedCase
 
 class TestIngest:
     def test_ingest_all_cases(self, db_session_factory):
-        """76 条全部入库 + turns 落库（M5 新增 4 条投诉剧本后总量 76）。"""
+        """24 条全部入库（M1-T11 ZJUT 意图集，M1 只有入口分流故 turns 为空）。"""
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 76
-        assert turns > 0  # repair/repeat_repair 剧本有 turns
+        assert cases == 24
+        assert turns == 0  # M1 剧本 turns 留空（入口分流评测）
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 76
-            repair = session.query(EvalCase).filter(EvalCase.id == "repair-001").first()
-            assert repair.student_input.startswith("宿舍的灯坏了")
-            turn_rows = (
-                session.query(EvalTurn)
-                .filter(EvalTurn.case_id == "repair-001")
-                .order_by(EvalTurn.seq)
-                .all()
-            )
-            assert len(turn_rows) == 1  # 真 LLM 口径：1 轮补全即建单
-            assert turn_rows[0].expect == '["tool:create_ticket", "status:ASSIGNED"]'
+            assert session.query(EvalCase).count() == 24
+            first = session.query(EvalCase).filter(EvalCase.id == "zjut-intent-001").first()
+            assert first.student_input == "什么时候放寒假？"
+            assert first.expected_route == "knowledge"
+            assert session.query(EvalTurn).count() == 0
 
     def test_ingest_idempotent(self, db_session_factory):
         """重入库不累积（EvalCase upsert + EvalTurn 先删后插）。"""
         ingest_cases(db_session_factory)
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 76
+        assert cases == 24
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 76
+            assert session.query(EvalCase).count() == 24
             total_turns = session.query(EvalTurn).count()
         assert total_turns == turns  # 重跑后 turn 数与本次写入一致（无累积）
 
@@ -39,12 +33,12 @@ class TestIngest:
         """校验不过拒绝入库：非法断言前缀被 loader 拦截（ingest 前置校验）。"""
         bad = ScriptedCase(
             id="bad-001",
-            category="repair",
-            student_input="灯坏了",
-            intent="repair",
-            expected_route="repair",
+            category="knowledge",
+            student_input="怎么补办学生证？",
+            intent="knowledge",
+            expected_route="knowledge",
             turns=[
-                {"student_reply": "3号楼502", "expect": ["magic:create_ticket"]}  # 非法前缀
+                {"student_reply": "好的", "expect": ["magic:create_ticket"]}  # 非法前缀
             ],
         )
         problems = validate_dataset([bad])

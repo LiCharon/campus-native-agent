@@ -1,10 +1,10 @@
-"""评测运行器（M1 临时版）：仅保留入口分流评测（M2）。
+"""评测运行器：入口分流评测（ZJUT 4 类意图）。
 
-M2 指标（需求 §10）：
+指标（需求 §10）：
 - 意图分类准确率 / 混淆矩阵 / 路由准确率 / 低置信转人工明细
 
-M1-T1 已退役报修/咨询/投诉链路评测（run_repair/consult/complaint_evaluation
-及其报告 dataclass/format_* 函数）——对应 Agent 图已删除，后续任务按需重建。
+M1-T11 重建：数据集换为 ZJUT 24 条剧本（zjut_intent.json），
+4 类意图 knowledge/tool_query/multi_intent/other。
 
 设计（需求 §10）：评测脚本独立于业务代码；无 DEEPSEEK_API_KEY 时跳过
 （需外部环境的项不进 CI）。
@@ -23,7 +23,7 @@ from campus_desk.entry.routes import HUMAN_HANDOFF
 from campus_desk.eval.loader import load_all
 from campus_desk.eval.models import IntentLabel, ScriptedCase
 
-INTENT_LABELS: list[IntentLabel] = ["repair", "consult", "complaint", "other"]
+INTENT_LABELS: list[IntentLabel] = ["knowledge", "tool_query", "multi_intent", "other"]
 
 
 @dataclass
@@ -106,7 +106,7 @@ def format_report(report: EvalReport) -> str:
     lines = [
         "# CampusDesk 评测报告",
         "",
-        "## M2 入口分流",
+        "## M1 入口分流（ZJUT 4 类意图）",
         "",
         f"- 用例数: {report.total}",
         f"- 意图分类准确率: **{report.intent_accuracy:.1%}**（{report.intent_correct}/{report.total}）",
@@ -117,8 +117,8 @@ def format_report(report: EvalReport) -> str:
         "",
         "### 混淆矩阵（标注 \\ 预测）",
         "",
-        "| 标注 \\ 预测 | repair | consult | complaint | other |",
-        "|---|---|---|---|---|",
+        "| 标注 \\ 预测 | " + " | ".join(INTENT_LABELS) + " |",
+        "|" + "---|" * (len(INTENT_LABELS) + 1),
     ]
     matrix = report.confusion_matrix()
     for label in INTENT_LABELS:

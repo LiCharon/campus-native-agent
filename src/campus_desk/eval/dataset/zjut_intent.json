@@ -1,0 +1,242 @@
+[
+  {
+    "id": "zjut-intent-001",
+    "category": "knowledge",
+    "student_input": "什么时候放寒假？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "校历类知识问答：寒假时间咨询（知识库可答）"
+  },
+  {
+    "id": "zjut-intent-002",
+    "category": "knowledge",
+    "student_input": "成绩怎么查？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "教务办事流程咨询：成绩查询入口"
+  },
+  {
+    "id": "zjut-intent-003",
+    "category": "knowledge",
+    "student_input": "考试冲突怎么申请缓考？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "教务办事流程咨询：缓考申请流程（考试冲突场景）"
+  },
+  {
+    "id": "zjut-intent-004",
+    "category": "knowledge",
+    "student_input": "宿舍灯坏了找谁修？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "后勤咨询：宿舍设施报修渠道指引"
+  },
+  {
+    "id": "zjut-intent-005",
+    "category": "knowledge",
+    "student_input": "食堂几点开门？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "后勤咨询：食堂营业时间"
+  },
+  {
+    "id": "zjut-intent-006",
+    "category": "knowledge",
+    "student_input": "快递在哪里取？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "后勤咨询：快递点位置指引"
+  },
+  {
+    "id": "zjut-intent-007",
+    "category": "knowledge",
+    "student_input": "图书馆几点开门？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "图书馆咨询：开放时间"
+  },
+  {
+    "id": "zjut-intent-008",
+    "category": "knowledge",
+    "student_input": "座位怎么预约？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "图书馆咨询：座位预约流程"
+  },
+  {
+    "id": "zjut-intent-009",
+    "category": "knowledge",
+    "student_input": "怎么下载论文？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "图书馆咨询：论文下载指引"
+  },
+  {
+    "id": "zjut-intent-010",
+    "category": "knowledge",
+    "student_input": "校园网怎么连？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "IT 咨询：校园网接入指引"
+  },
+  {
+    "id": "zjut-intent-011",
+    "category": "knowledge",
+    "student_input": "统一认证密码忘了",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "IT 咨询：统一认证密码找回"
+  },
+  {
+    "id": "zjut-intent-012",
+    "category": "knowledge",
+    "student_input": "宿舍断网怎么办？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "IT 咨询：宿舍断网故障排查指引"
+  },
+  {
+    "id": "zjut-intent-013",
+    "category": "knowledge",
+    "student_input": "一卡通丢了怎么补办？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "证件咨询：一卡通补办流程"
+  },
+  {
+    "id": "zjut-intent-014",
+    "category": "knowledge",
+    "student_input": "学生证怎么补办？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "证件咨询：学生证补办流程"
+  },
+  {
+    "id": "zjut-intent-015",
+    "category": "knowledge",
+    "student_input": "在读证明怎么开？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "证件咨询：在读证明开具流程"
+  },
+  {
+    "id": "zjut-intent-016",
+    "category": "knowledge",
+    "student_input": "校医院在哪？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "生活咨询：校医院位置"
+  },
+  {
+    "id": "zjut-intent-017",
+    "category": "knowledge",
+    "student_input": "东西丢了去哪找？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "生活咨询：失物招领指引"
+  },
+  {
+    "id": "zjut-intent-018",
+    "category": "knowledge",
+    "student_input": "社团怎么加入？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "生活咨询：社团加入方式"
+  },
+  {
+    "id": "zjut-intent-019",
+    "category": "tool_query",
+    "student_input": "3 号楼下午有空教室吗？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "动态数据查询：空教室（需查询工具，当前版本未开放）"
+  },
+  {
+    "id": "zjut-intent-020",
+    "category": "tool_query",
+    "student_input": "图书馆现在有座位吗？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "动态数据查询：图书馆座位余量（需查询工具，当前版本未开放）"
+  },
+  {
+    "id": "zjut-intent-021",
+    "category": "multi_intent",
+    "student_input": "成绩单怎么打？宿舍什么时候清退？",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge", "knowledge"],
+    "turns": [],
+    "note": "一句话两个独立问题：成绩单打印 + 宿舍清退时间"
+  },
+  {
+    "id": "zjut-intent-022",
+    "category": "multi_intent",
+    "student_input": "一卡通怎么补办？顺便问下校历",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge"],
+    "turns": [],
+    "note": "多意图：一卡通补办为主，顺便问校历"
+  },
+  {
+    "id": "zjut-intent-023",
+    "category": "other",
+    "student_input": "你好呀",
+    "intent": "other",
+    "expected_route": "human_handoff",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "闲聊问候：超出业务范围转人工"
+  },
+  {
+    "id": "zjut-intent-024",
+    "category": "other",
+    "student_input": "量子力学怎么学",
+    "intent": "other",
+    "expected_route": "human_handoff",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "课程学习方法提问：超出校园服务范围转人工"
+  }
+]
