@@ -1,6 +1,8 @@
-"""API 契约模型（M6）：请求/响应 pydantic 模型，与前端契约一一对应。"""
+"""API 契约模型（M6）：请求/响应 pydantic 模型，与前端契约一一对应。
 
-from datetime import datetime
+M1-T1：退役报修/投诉/工单/FAQ 模块后，仅保留 auth / chat 契约。
+ChatResponse 的 ticket_id/ticket_status/ticket_type 字段由后续任务改造。
+"""
 
 from pydantic import BaseModel
 
@@ -46,85 +48,3 @@ class ChatResponse(BaseModel):
     tool_calls: list[str] = []
     status_events: list[str] = []
     outcome: str | None = None
-
-
-class TicketSummary(BaseModel):
-    id: int
-    ticket_type: str
-    category: str
-    priority: str
-    status: str
-    building: str | None = None
-    description: str
-    created_at: datetime
-    dept: str | None = None
-    # 归属方（M6 验收补：前端操作按钮按 owner 显隐——staff/admin 列表
-    # 里非自己的单不显示验收/撤回；staff 本就可见本部门单的 user_id）
-    user_id: str
-
-
-class TicketDetail(TicketSummary):
-    user_id: str
-    contact: str
-    location: str | None = None
-    repairman_id: str | None = None
-    repairman_name: str | None = None
-    escalation_count: int = 0
-    escalated_at: datetime | None = None
-    closed_at: datetime | None = None
-    rating: int | None = None
-    review_comment: str | None = None
-    logs_count: int = 0
-
-
-class TicketListResponse(BaseModel):
-    items: list[TicketSummary]
-    total: int
-
-
-class StatsResponse(BaseModel):
-    total: int
-    by_status: dict[str, int]
-    by_priority: dict[str, int]
-    by_category: dict[str, int]
-
-
-class AssignRequest(BaseModel):
-    repairman_id: str | None = None
-    dept: str | None = None
-
-
-class FaqSummary(BaseModel):
-    id: int
-    category: str
-    keywords: str  # 逗号分隔，search_faq 匹配用
-    question: str
-    answer: str
-
-
-class FaqCreate(BaseModel):
-    """新建/全量更新 FAQ（与 FaqSummary 同字段，去掉 id）。"""
-
-    category: str
-    keywords: str
-    question: str
-    answer: str
-
-
-class FaqListResponse(BaseModel):
-    items: list[FaqSummary]
-    total: int
-
-
-class StaffInfo(BaseModel):
-    """派单下拉候选 = repairmen 表（tickets.repairman_id 的外键目标）。
-
-    M6 验收坑：原实现查 users 表（staff-001 等账号 id），写库违反
-    fk_tickets_repairman_id_repairmen → 500。维修工实体在 repairmen 表。
-    """
-
-    id: str
-    name: str
-    dept: str | None = None
-    trade: str | None = None
-    on_duty: bool = True
