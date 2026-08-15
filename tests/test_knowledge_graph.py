@@ -14,6 +14,14 @@ from langgraph.checkpoint.memory import InMemorySaver
 from campus_desk.knowledge.graph import build_knowledge_graph
 
 
+def _clear_knowledge(session_factory):
+    """测试隔离（T9）：清空全局 36 条种子，保证图流程只看到测试自己的条目。"""
+    from campus_desk.db.models import KnowledgeEntry
+
+    with session_factory() as s, s.begin():
+        s.query(KnowledgeEntry).delete()
+
+
 class FakeDecider:
     def __init__(self, sequence):
         self.sequence = list(sequence)
@@ -25,6 +33,7 @@ class FakeDecider:
 def test_hit_answers_directly(db_session_factory):
     from campus_desk.db.models import KnowledgeEntry
 
+    _clear_knowledge(db_session_factory)  # 否则 36 条种子里同 question 条目抢先命中
     with db_session_factory() as s, s.begin():
         s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放假？", type="info", answer="寒假以通知为准。"))
     graph = build_knowledge_graph(db_session_factory, decider=FakeDecider([]), checkpointer=InMemorySaver())
@@ -41,6 +50,7 @@ def test_miss_asks_then_answers_after_clarify(db_session_factory):
     from campus_desk.db.models import KnowledgeEntry
     from campus_desk.knowledge.decide import ClarifyDecision
 
+    _clear_knowledge(db_session_factory)  # 否则 36 条种子"图书馆几点开门？"首轮直答，miss 流程走不到
     with db_session_factory() as s, s.begin():
         s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,校图书馆", question="图书馆几点开门？", type="info", answer="8:00-22:00。"))
     decider = FakeDecider([
@@ -117,6 +127,7 @@ def test_clarify_merge_joins_all_history(db_session_factory):
 
     graph = build_knowledge_graph(db_session_factory, decider=RecordingDecider(), checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "t-join"}}
+    _clear_knowledge(db_session_factory)  # 否则 36 条种子"图书馆几点开门？"直答，decider 永不触发
     graph.invoke({"user_input": "图书馆几点开门"}, cfg)
     graph.invoke(Command(resume="南门那个"), cfg)
     graph.invoke(Command(resume="大一点的"), cfg)

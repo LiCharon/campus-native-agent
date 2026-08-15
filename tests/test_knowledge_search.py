@@ -6,9 +6,18 @@
 from campus_desk.knowledge.search import assemble_answer, search_knowledge
 
 
+def _clear_knowledge(session_factory):
+    """测试隔离（T9）：清空全局 36 条种子，保证检索只看到测试自己的条目。"""
+    from campus_desk.db.models import KnowledgeEntry
+
+    with session_factory() as s, s.begin():
+        s.query(KnowledgeEntry).delete()
+
+
 def _seed(session_factory):
     from campus_desk.db.models import KnowledgeEntry
 
+    _clear_knowledge(session_factory)
     rows = [
         ("教务", "校历,放假", "什么时候放寒假？", "info", "寒假时间以学校通知为准。"),
         (
@@ -40,6 +49,7 @@ def _seed_scores(session_factory) -> int:
     """
     from campus_desk.db.models import KnowledgeEntry
 
+    _clear_knowledge(session_factory)
     rows = [
         ("教务", "成绩,查询", "成绩怎么查？", "index", "请登录教务系统查看。"),
         ("教务", "成绩", "成绩什么时候出？", "info", "考后两周。"),
