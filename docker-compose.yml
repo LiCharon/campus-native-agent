@@ -48,6 +48,10 @@ services:
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      # 容器内访问宿主机 Langfuse 用 host.docker.internal（localhost 指向容器自身会 Connection refused）
+      LANGFUSE_HOST: http://host.docker.internal:3001
     depends_on:
       mysql:
         condition: service_healthy

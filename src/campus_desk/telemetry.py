@@ -29,6 +29,25 @@ def enabled() -> bool:
     return settings.langfuse_enabled
 
 
+def _build_span_exporter():
+    """自定义 OTLP HTTP exporter：Langfuse v4 服务器要求 x-langfuse-ingestion-version=4 头，
+    SDK 4.14.x 默认不带该头（会 500）；同时显式带 Basic auth 与完整端点。"""
+    from base64 import b64encode
+
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+    auth = b64encode(
+        f"{settings.langfuse_public_key}:{settings.langfuse_secret_key}".encode()
+    ).decode()
+    return OTLPSpanExporter(
+        endpoint=f"{settings.langfuse_host}/api/public/otel/v1/traces",
+        headers={
+            "Authorization": f"Basic {auth}",
+            "x-langfuse-ingestion-version": "4",
+        },
+    )
+
+
 def _ensure_client():
     """惰性初始化 Langfuse 客户端（仅 enabled() 为 True 时调用）。"""
     global _client
@@ -39,6 +58,7 @@ def _ensure_client():
             public_key=settings.langfuse_public_key,
             secret_key=settings.langfuse_secret_key,
             base_url=settings.langfuse_host,
+            span_exporter=_build_span_exporter(),
         )
     return _client
 
