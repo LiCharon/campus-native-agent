@@ -37,7 +37,11 @@ def search_knowledge(session_factory, text: str) -> list[dict]:
 
 
 def assemble_answer(hits: list[dict]) -> str:
-    """按 type 组装回答（info 直接答 / process 拼清单 / index 拼引导）。"""
+    """按命中数组装（单条直接返回 answer / 多条按编号拼接列表）。
+
+    type 分型（info/process/index）由条目的 answer 内嵌结构承载
+    （M1 简化，见设计 §4.5）。
+    """
     if not hits:
         return ""
     if len(hits) == 1:

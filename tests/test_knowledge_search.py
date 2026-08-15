@@ -29,7 +29,32 @@ def _seed(session_factory):
     with session_factory() as s, s.begin():
         for d, kw, q, t, a in rows:
             s.add(KnowledgeEntry(domain=d, keywords=kw, question=q, type=t, answer=a))
-    return [q for _, _, q, _, _ in rows]
+
+
+def _seed_scores(session_factory) -> int:
+    """分数梯度种子（供 test_multi_hit_sorted_and_limited 验证降序 + 截断）。
+
+    搜索文本"成绩查询"时的计分：A=4 分（"成绩"+"查询"双命中），
+    B/C/D/E=2 分（单个关键词命中），F=0 分（无关）。
+    返回 4 分条目（A）的 id 供降序断言。
+    """
+    from campus_desk.db.models import KnowledgeEntry
+
+    rows = [
+        ("教务", "成绩,查询", "成绩怎么查？", "index", "请登录教务系统查看。"),
+        ("教务", "成绩", "成绩什么时候出？", "info", "考后两周。"),
+        ("教务", "成绩", "成绩复查流程？", "process", "向教务处申请。"),
+        ("教务", "查询", "课表在哪查？", "info", "教务系统→我的课表。"),
+        ("教务", "成绩查询", "成绩查询入口？", "index", "jw 门户。"),
+        ("后勤", "报修", "水管坏了？", "process", "报修平台提交。"),
+    ]
+    objs = []
+    with session_factory() as s, s.begin():
+        for d, kw, q, t, a in rows:
+            objs.append(KnowledgeEntry(domain=d, keywords=kw, question=q, type=t, answer=a))
+        s.add_all(objs)
+        s.flush()  # 分配自增 id
+        return objs[0].id
 
 
 def test_hit_returns_entry(db_session_factory):
@@ -45,9 +70,11 @@ def test_miss_returns_empty(db_session_factory):
 
 
 def test_multi_hit_sorted_and_limited(db_session_factory):
-    _seed(db_session_factory)
-    hits = search_knowledge(db_session_factory, "教务")
-    assert len(hits) <= 3  # 最多返回 3 条
+    top_id = _seed_scores(db_session_factory)
+    hits = search_knowledge(db_session_factory, "成绩查询")
+    assert len(hits) == 3  # _MAX_RESULTS 截断：5 条命中只返回 3 条
+    assert hits[0]["id"] == top_id  # 4 分条目（成绩+查询双命中）降序居首
+    assert "报修平台提交。" not in [h["answer"] for h in hits]  # 0 分条目不进结果
 
 
 def test_assemble_single_returns_answer():
