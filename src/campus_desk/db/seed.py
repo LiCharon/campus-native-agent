@@ -7,7 +7,6 @@
 ⚠️ T2 补丁语义：tickets/repairmen/dorms/accounts/announcements/faq 种子已随
 退役表删除；知识库种子（36 条）+ cs-001 由 M1-T9 重写本文件时落地。
 
-tickets/ticket_logs 为业务表，不预置种子。
 业务函数通过 factory 注入会话（工具层同款依赖注入模式）。
 """
 
@@ -35,7 +34,7 @@ _USERS = [
 ]
 
 # (模型, 幂等键列列表, 种子列, 行数据)——种子列顺序与行元组一一对应；
-# 幂等键：字符串 id 表用 id，自增表用业务唯一列/复合键
+# 幂等键：字符串 id 表用 id
 _SEED_SPECS = [
     (User, ["id"], ["id", "name", "role", "student_no", "dept", "phone", "password"], _USERS),
 ]

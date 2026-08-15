@@ -9,7 +9,7 @@
 约束要点：
 - knowledge_entries.domain 六领域（教务/后勤/图书馆/IT/证件/生活）；
   keywords 逗号分隔，检索计分用（campus_desk.knowledge.search）
-- bad_cases.status：待处理/已处理（M1 转人工写入，M3 工作台处理闭环）
+- bad_cases.status：PENDING/RESOLVED（M1 转人工写入 PENDING，M3 工作台处理闭环）
 - 外键关系不配置 relationship() 对象——ORM 查询用显式 join/id 字段，
   避免 lazy-load 隐式 SQL（工具层短会话，防 N+1/DetachedInstanceError）
 """
@@ -86,5 +86,5 @@ class BadCase(Base):
     user_id: Mapped[str] = mapped_column(String(32), index=True)
     question: Mapped[str] = mapped_column(Text)
     reply: Mapped[str] = mapped_column(Text, default="")
-    status: Mapped[str] = mapped_column(String(8), default="待处理", index=True)  # 待处理/已处理
+    status: Mapped[str] = mapped_column(String(8), default="PENDING", index=True)  # PENDING/RESOLVED
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

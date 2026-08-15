@@ -108,7 +108,7 @@ class TestConstraints:
             assert got_e.type == "info"
             assert got_e.domain == ""
             got_b = session.get(BadCase, b.id)
-            assert got_b.status == "待处理"
+            assert got_b.status == "PENDING"
             assert got_b.reply == ""
 
 
@@ -149,8 +149,8 @@ def test_knowledge_entry_type_and_bad_case(db_session_factory):
                            type="info", answer="以学校通知为准。")
         s.add(e)
         s.flush()
-        b = BadCase(user_id="student-001", question="怎么交学费？", reply="", status="待处理")
+        b = BadCase(user_id="student-001", question="怎么交学费？", reply="", status="PENDING")
         s.add(b)
         s.flush()
         assert e.id and e.type == "info"
-        assert b.status == "待处理"
+        assert b.status == "PENDING"
