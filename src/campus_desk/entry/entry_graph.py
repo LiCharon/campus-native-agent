@@ -1,4 +1,4 @@
-"""入口分流图：学生输入 → 意图识别 → 置信度门控 → 路由（M2）。
+"""入口分流图：学生输入 → 意图识别 → 置信度门控 → 路由。
 
 三段节点（可单测、可面试讲"分流=识别/门控/路由"）：
 - recognize：IntentClassifier.classify（三层防线，不抛异常）
@@ -6,8 +6,7 @@
 - route：intent → 主流程路由 + 多意图次要提示
 
 门控分流 = 图的条件边（LangGraph 语义）：gate 后判定 route，
-HUMAN_HANDOFF 直接到 END，其余进 route 节点。下游 Agent（Repair/Consult）
-M3/M4 在 route 处挂边；M2 路由即终点。
+HUMAN_HANDOFF 直接到 END，其余进 route 节点。
 """
 
 from typing import Literal, TypedDict
@@ -15,20 +14,30 @@ from typing import Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from campus_desk.entry.intent import IntentClassifier, IntentResult
-from campus_desk.entry.routes import COMPLAINT, CONSULT, HUMAN_HANDOFF, REPAIR
+from campus_desk.entry.routes import (
+    HUMAN_HANDOFF,
+    KNOWLEDGE,
+    MULTI_INTENT,
+    TOOL_QUERY,
+)
 
 # 门控阈值：低于则转人工（需求 §2 置信度门控）
 CONFIDENCE_THRESHOLD = 0.7
 
 # 意图 → 中文名（给学生看的提示用，不用英文枚举）
-_INTENT_LABELS = {"repair": "报修", "consult": "咨询", "complaint": "投诉", "other": "其他"}
+_INTENT_LABELS = {
+    "knowledge": "校园知识问答",
+    "tool_query": "动态查询",
+    "multi_intent": "多问题",
+    "other": "其他",
+}
 
-# 各路由回复文案（M2 演示壳；M3/M4 接入下游 Agent 后替换为流程引导）
+# 各路由回复文案（占位壳；M3 接入 KnowledgeGraph 后由下游回复覆盖）
 _ROUTE_REPLIES = {
-    REPAIR: "好的，我来帮您处理报修问题，请稍等。",
-    CONSULT: "好的，我来帮您处理咨询问题，请稍等。",
-    COMPLAINT: "收到您的投诉，已为您升级处理，稍后有专人跟进。",
-    HUMAN_HANDOFF: "已为您转人工处理，稍后会有工作人员与您联系，请保持在线。",
+    KNOWLEDGE: "好的，我来为您查询，请稍等。",
+    TOOL_QUERY: "该查询功能正在建设中，您可以先问我其他校园问题。",
+    MULTI_INTENT: "好的，我逐一来回答您的问题。",
+    HUMAN_HANDOFF: "已为您转人工处理，请稍候。",
 }
 
 
@@ -65,7 +74,7 @@ def _route(state: EntryState) -> dict:
     reply = _ROUTE_REPLIES[intent.intent]
     if intent.secondary_intents:
         labels = "、".join(_INTENT_LABELS.get(s, s) for s in intent.secondary_intents)
-        reply += f" 另外，您提到的其他问题（{labels}），可以继续向我提问。"
+        reply += f" 另外，您提到的其他问题（{labels}），可以继续问我。"
     return {"route": intent.intent, "reply": reply}
 
 

@@ -96,3 +96,32 @@ def test_max_clarify_rounds_forced_handoff(db_session_factory):
     assert out["outcome"] == "handoff"
     with db_session_factory() as s:
         assert s.query(BadCase).one().status == "PENDING"
+
+
+def test_clarify_merge_joins_all_history(db_session_factory):
+    """T6 Minor：合并检索 join 全部 history（而非仅上一轮），早轮关键词不丢。
+
+    三轮追问下，第 3 轮传给 decider 的合并文本必须仍含第 1 轮原话。
+    旧实现 f"{history[-1]} {text}" 到第 3 轮会丢轮 1 的检索词。
+    """
+    from langgraph.types import Command
+
+    from campus_desk.knowledge.decide import ClarifyDecision
+
+    seen = []
+
+    class RecordingDecider:
+        def decide(self, history, user_text, missed):
+            seen.append((list(history), user_text))
+            return ClarifyDecision(action="ask", questions=["请补充。"], reply="请补充。", summary="追问")
+
+    graph = build_knowledge_graph(db_session_factory, decider=RecordingDecider(), checkpointer=InMemorySaver())
+    cfg = {"configurable": {"thread_id": "t-join"}}
+    graph.invoke({"user_input": "图书馆几点开门"}, cfg)
+    graph.invoke(Command(resume="南门那个"), cfg)
+    graph.invoke(Command(resume="大一点的"), cfg)
+    assert len(seen) == 3
+    # 第 3 轮合并文本 = 轮1 + 轮2 + 轮3 全部历史
+    assert "图书馆几点开门" in seen[2][1]
+    assert "南门那个" in seen[2][1]
+    assert "大一点的" in seen[2][1]

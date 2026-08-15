@@ -57,8 +57,10 @@ def _make_collect(deps: _Deps):
             raw = state.get("student_answer") or ""
             consumed = True
 
-        # 追问轮：上一轮学生原话 + 本轮补充合并检索（"原问题+补充"能命中知识库）
-        text = f"{history[-1]} {raw}" if (consumed and history) else raw
+        # 追问轮：全部历史（学生每轮原话）+ 本轮补充合并检索。
+        # join 全 history 而非只取 history[-1]：多轮追问时早轮关键词不丢
+        # （旧实现 f"{history[-1]} {raw}" 在 3+ 轮时丢前几轮检索词）。
+        text = " ".join(history + [raw]) if (consumed and history) else raw
 
         hits = search_knowledge(deps.session_factory, text)
         if hits:
