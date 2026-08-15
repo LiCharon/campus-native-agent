@@ -5,6 +5,7 @@
 
 import json
 import re
+from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field, ValidationError
@@ -12,6 +13,8 @@ from pydantic import BaseModel, Field, ValidationError
 from campus_desk.llm import build_llm
 
 _USE_DEFAULT_LLM = object()
+
+_FALLBACK_REPLY = "抱歉，暂时无法处理，已为您转人工。"
 
 _DECIDE_PROMPT = """你是校园服务台的追问决策器。学生的问题在知识库中没有找到答案，请决定下一步，输出 JSON。
 
@@ -29,8 +32,8 @@ JSON 格式（严格只输出 JSON）：
 
 
 class ClarifyDecision(BaseModel):
-    action: str = Field(description="ask 追问 / handoff 转人工")
-    questions: list[str] = Field(default_factory=list, description="ask 时的追问，最多 2 个")
+    action: Literal["ask", "handoff"] = Field(description="ask 追问 / handoff 转人工")
+    questions: list[str] = Field(default_factory=list, description="ask 时的追问，最多 2 个", max_length=2)
     reply: str = Field(default="", description="给学生的话")
     summary: str = Field(default="", description="一句话摘要")
 
@@ -48,11 +51,18 @@ class ClarifyDecider:
         return build_llm()
 
     def decide(self, history: list[str], user_text: str, missed: bool) -> ClarifyDecision:
+        """决定 ask 追问 / handoff 转人工。
+
+        missed 为预留参数：当前实现不参与决策（决策只看 LLM 输出），
+        供编排层明确表达"检索未命中才调用本决策器"的语义，避免误用为
+        通用问答器；后续如需按命中状态调整策略（如 missed=False 直接答）
+        可在此扩展。
+        """
         context = (
             f"对话历史:\n{chr(10).join(history[-4:]) or '（无）'}\n学生本轮: {user_text}"
         )
         if self.llm is None:
-            return ClarifyDecision(action="handoff", reply="抱歉，暂时无法处理，已为您转人工。")
+            return ClarifyDecision(action="handoff", reply=_FALLBACK_REPLY)
         for _ in range(self.max_attempts):
             try:
                 raw = self.llm.invoke([("system", _DECIDE_PROMPT), ("human", context)])
@@ -64,7 +74,7 @@ class ClarifyDecider:
                 return self._parse_json_content(content)
             except (json.JSONDecodeError, ValidationError) as exc:
                 self._last_error = f"结构化输出解析失败: {exc}"
-        return ClarifyDecision(action="handoff", reply="抱歉，暂时无法处理，已为您转人工。")
+        return ClarifyDecision(action="handoff", reply=_FALLBACK_REPLY)
 
     @staticmethod
     def _parse_json_content(content: str) -> ClarifyDecision:
