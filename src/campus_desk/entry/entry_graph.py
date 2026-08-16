@@ -35,7 +35,7 @@ _INTENT_LABELS = {
 # 各路由回复文案（占位壳；M3 接入 KnowledgeGraph 后由下游回复覆盖）
 _ROUTE_REPLIES = {
     KNOWLEDGE: "好的，我来为您查询，请稍等。",
-    TOOL_QUERY: "该查询功能正在建设中，您可以先问我其他校园问题。",
+    TOOL_QUERY: "好的，我来为您查询，请稍等。",  # M2：orchestrator 会以 QueryGraph 回复覆盖
     MULTI_INTENT: "好的，我逐一来回答您的问题。",
     HUMAN_HANDOFF: "已为您转人工处理，请稍候。",
 }

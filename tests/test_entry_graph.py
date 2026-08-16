@@ -32,7 +32,7 @@ def test_route_knowledge():
 def test_route_tool_query():
     out = run("tool_query", 0.9)
     assert out["route"] == TOOL_QUERY
-    assert "建设中" in out["reply"]
+    assert "查询" in out["reply"]
 
 
 def test_route_multi_intent_with_secondary_prompt():
