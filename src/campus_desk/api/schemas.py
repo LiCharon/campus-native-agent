@@ -88,13 +88,16 @@ KNOWLEDGE_TYPE = Literal["info", "process", "index"]
 
 
 class ReviewItem(BaseModel):
-    """待审列表项：来源行 + keywords 预填建议（管理员可编辑）。"""
+    """待审列表项：来源行 + keywords 预填建议（管理员可编辑）。
+
+    note 可空：存量 bad_cases（M1/M2 转人工自动沉淀）迁移加列后为 NULL。
+    """
 
     id: int
     user_id: str
     question: str
     reply: str = ""
-    note: str = ""
+    note: str | None = None
     status: str
     created_at: datetime
     suggested_keywords: str = ""
