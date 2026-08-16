@@ -58,19 +58,20 @@ def check_tool(expected: str, tool_calls: list[str]) -> list[str]:
     return [] if expected in tool_calls else [f"工具缺失: {expected}"]
 
 
-def assert_case(case: ScriptedCase, result: dict, turn_results: list[dict]) -> CaseOutcome:
+def assert_case(case: ScriptedCase, first: dict, final: dict, turn_results: list[dict]) -> CaseOutcome:
+    """断言：route/expected_outcome 用首轮结果；条目/工具/关键词用最终轮结果。"""
     problems: list[str] = []
-    if result.get("route") != case.expected_route:
-        problems.append(f"route: 期望 {case.expected_route} 实际 {result.get('route')}")
-    if case.expected_outcome and result.get("outcome") != case.expected_outcome:
-        problems.append(f"outcome: 期望 {case.expected_outcome} 实际 {result.get('outcome')}")
+    if first.get("route") != case.expected_route:
+        problems.append(f"route: 期望 {case.expected_route} 实际 {first.get('route')}")
+    if case.expected_outcome and first.get("outcome") != case.expected_outcome:
+        problems.append(f"outcome: 期望 {case.expected_outcome} 实际 {first.get('outcome')}")
     if case.category == "knowledge" and case.expected_entry_ids:
-        missing = [i for i in case.expected_entry_ids if i not in result.get("hits", [])]
+        missing = [i for i in case.expected_entry_ids if i not in final.get("hits", [])]
         if missing:
-            problems.append(f"条目未命中: {missing}（实际 hits={result.get('hits')}）")
+            problems.append(f"条目未命中: {missing}（实际 hits={final.get('hits')}）")
     if case.category == "tool_query" and case.expected_tool:
-        problems.extend(check_tool(case.expected_tool, result.get("tool_calls", [])))
-    problems.extend(check_keywords(case.expected_keywords, result.get("reply", "")))
+        problems.extend(check_tool(case.expected_tool, final.get("tool_calls", [])))
+    problems.extend(check_keywords(case.expected_keywords, final.get("reply", "")))
     for idx, t in enumerate(case.turns):
         r = turn_results[idx] if idx < len(turn_results) else {}
         for assertion in t.expect:
@@ -102,7 +103,8 @@ def run_chain_evaluation(cases=None, *, classifier=None, decider=None, tool_llm=
         turn_results = [
             turn(entry, knowledge, query, thread_id, t.student_reply) for t in case.turns
         ]
-        outcome = assert_case(case, turn_results[-1] if turn_results else first, turn_results)
+        final = turn_results[-1] if turn_results else first
+        outcome = assert_case(case, first, final, turn_results)
         outcome.seconds = time.monotonic() - t0
         outcomes.append(outcome)
     return outcomes, time.monotonic() - start

@@ -24,7 +24,7 @@ def test_assert_case_knowledge_pass():
                         expected_route="knowledge", expected_outcome="answer",
                         expected_entry_ids=[1], expected_keywords=["寒假"])
     result = {"route": "knowledge", "outcome": "answer", "hits": [1, 4], "reply": "寒假以通知为准。"}
-    outcome = assert_case(case, result, turn_results=[])
+    outcome = assert_case(case, result, result, turn_results=[])
     assert outcome.passed
 
 
@@ -35,7 +35,7 @@ def test_assert_case_knowledge_missing_entry_fails():
                         expected_route="knowledge", expected_outcome="answer",
                         expected_entry_ids=[1], expected_keywords=["寒假"])
     result = {"route": "knowledge", "outcome": "answer", "hits": [9], "reply": "寒假以通知为准。"}
-    assert not assert_case(case, result, turn_results=[]).passed
+    assert not assert_case(case, result, result, turn_results=[]).passed
 
 
 def test_assert_case_tool_pass():
@@ -46,4 +46,4 @@ def test_assert_case_tool_pass():
                         expected_tool="query_empty_rooms", expected_keywords=["空闲教室"])
     result = {"route": "tool_query", "outcome": "answer",
               "tool_calls": ["query_empty_rooms"], "reply": "3号楼今天下午空闲教室：301。"}
-    assert assert_case(case, result, turn_results=[]).passed
+    assert assert_case(case, result, result, turn_results=[]).passed

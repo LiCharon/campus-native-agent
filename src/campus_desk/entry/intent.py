@@ -73,7 +73,7 @@ _STRUCTURED_PROMPT = """你是校园服务台的入口分流器。请判断学�
 
 意图定义：
 - knowledge: 校园知识问答（校历/放假/办事流程/开放时间/联系方式等，可用知识库回答）
-- tool_query: 查询动态数据（空教室/图书馆座位等，需调用查询工具）
+- tool_query: 查询动态数据（空教室、座位余量等，需调用查询工具）
 - multi_intent: 一句话包含多个独立问题（如"成绩单怎么打？宿舍什么时候清退？"）
 - other: 闲聊/问候/超出校园服务范围
 
@@ -84,6 +84,7 @@ JSON 格式（严格只输出 JSON，不要任何其他文字）：
 - confidence 表示把握：确定时给 0.8-1.0，不确定时给 0.4-0.6
 - 多个问题时 intent 填 multi_intent，primary_intent 填最重要的那个问题的意图，其余填 secondary_intents；单一问题时 primary_intent 填 null
 - 问候语/语气词不算意图："你好，顺便问下校历"只算一个知识问题（intent=knowledge），不要因为有个问候语就判 multi_intent 或 other
+- 区分知识 vs 动态查询：问"流程/怎么办/怎么预约/开放时间"是 knowledge（静态知识库可答），问"现在有没有/余量/空教室"才是 tool_query（动态数据）
 """
 
 
