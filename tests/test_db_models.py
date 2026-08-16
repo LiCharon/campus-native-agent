@@ -141,6 +141,15 @@ class TestRetainedModels:
             assert p.user_id == u.id
 
 
+def test_empty_room_columns(db_session_factory):
+    """M2：empty_rooms 种子行关键字段非空且 weekday 在 1-7。"""
+    from campus_desk.db.models import EmptyRoom
+
+    with db_session_factory() as session:
+        row = session.query(EmptyRoom).first()
+        assert row.building and row.room and row.weekday in range(1, 8) and row.period
+
+
 def test_knowledge_entry_type_and_bad_case(db_session_factory):
     from campus_desk.db.models import BadCase, KnowledgeEntry
 
