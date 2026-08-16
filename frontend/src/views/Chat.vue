@@ -71,12 +71,34 @@
               <el-icon><QuestionFilled /></el-icon>
               <span>等待补充：{{ msg.pendingQuestion }}</span>
             </div>
+
+            <!-- 进化闭环①：未解决反馈（转人工自动沉淀的不重复显示） -->
+            <div
+              v-if="msg.role === 'assistant' && !msg.pending && !msg.error && canFeedback(msg)"
+              class="msg-actions"
+            >
+              <el-button
+                link
+                type="primary"
+                size="small"
+                :disabled="msg.feedbackSubmitted"
+                @click="handleFeedback(msg, idx)"
+              >
+                {{ msg.feedbackSubmitted ? '已反馈' : '没解决？' }}
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 底部输入区 -->
       <div class="input-area">
+        <div class="input-toolbar">
+          <el-link type="primary" :underline="false" class="suggest-link" @click="handleSuggest">
+            <el-icon><ChatLineRound /></el-icon>
+            问题没答案？提个建议
+          </el-link>
+        </div>
         <el-input
           v-model="draft"
           type="textarea"
@@ -110,10 +132,12 @@ import {
   User,
   Cpu,
   ChatDotRound,
+  ChatLineRound,
   QuestionFilled,
   Loading
 } from '@element-plus/icons-vue'
 import { sendChat } from '../api/chat'
+import { submitBadCase, submitSuggestion } from '../api/reviews'
 import { routeLabel } from '../constants/status'
 import { useChat } from '../composables/useChat'
 
@@ -203,7 +227,8 @@ async function handleSend() {
       content: data.reply || '（无回复）',
       route: routeLabel(data.route),
       pendingQuestion: data.pending_question || '',
-      finished: data.finished
+      finished: data.finished,
+      outcome: data.outcome || ''
     })
   } catch {
     replaceLastIn(convId, {
@@ -215,6 +240,90 @@ async function handleSend() {
   } finally {
     sending.value = false
     scrollToBottom()
+  }
+}
+
+// ---- 进化闭环反馈（M3）----
+
+// handoff 已自动沉淀 bad_cases（转人工），不重复显示"没解决"按钮
+function canFeedback(msg) {
+  return msg.outcome !== 'handoff' && !msg.feedbackSubmitted
+}
+
+// 找该条 assistant 回复前最近的用户问题（作为反馈的 question）
+function findLastUserQuestion(idx) {
+  const msgs = currentMessages.value
+  for (let i = idx - 1; i >= 0; i--) {
+    if (msgs[i].role === 'user') return msgs[i].content
+  }
+  return ''
+}
+
+async function handleFeedback(msg, idx) {
+  const question = findLastUserQuestion(idx)
+  if (!question) return
+  let note = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '如果愿意，可以补充说明（选填）：',
+      '反馈未解决',
+      {
+        confirmButtonText: '提交反馈',
+        cancelButtonText: '取消',
+        inputPlaceholder: '选填，例如：我想要的是…',
+        inputValidator: () => true
+      }
+    )
+    note = value || ''
+  } catch {
+    return
+  }
+  try {
+    await submitBadCase({
+      thread_id: current.value.thread_id,
+      question,
+      reply: msg.content,
+      note
+    })
+    msg.feedbackSubmitted = true
+    ElMessage.success('已反馈，管理员审核后会补充到知识库')
+  } catch {
+    ElMessage.error('反馈提交失败，请稍后重试')
+  }
+}
+
+async function handleSuggest() {
+  let question = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '请描述您想问但没有答案的问题：',
+      '提建议',
+      {
+        confirmButtonText: '下一步',
+        cancelButtonText: '取消',
+        inputValidator: (v) => (v && v.trim() ? true : '问题不能为空')
+      }
+    )
+    question = value.trim()
+  } catch {
+    return
+  }
+  let note = ''
+  try {
+    const { value } = await ElMessageBox.prompt('补充说明（选填）：', '提建议', {
+      confirmButtonText: '提交',
+      cancelButtonText: '跳过',
+      inputPlaceholder: '选填'
+    })
+    note = value || ''
+  } catch {
+    /* 跳过补充说明 */
+  }
+  try {
+    await submitSuggestion({ question, note })
+    ElMessage.success('建议已提交，感谢反馈！')
+  } catch {
+    ElMessage.error('提交失败，请稍后重试')
   }
 }
 
@@ -416,11 +525,27 @@ if (!current.value) {
   padding: 4px 10px;
 }
 
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .input-area {
   padding: 12px 16px;
   border-top: 1px solid #e4e7ed;
   background: #fff;
   border-radius: 0 0 8px 8px;
+}
+
+.input-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.suggest-link {
+  font-size: 12px;
 }
 
 .input-actions {

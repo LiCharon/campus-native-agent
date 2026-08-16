@@ -24,6 +24,10 @@
             <el-icon><ChatDotRound /></el-icon>
             <span>对话提交</span>
           </el-menu-item>
+          <el-menu-item v-if="isAdmin" index="/admin">
+            <el-icon><Collection /></el-icon>
+            <span>知识库管理</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -41,7 +45,8 @@ import { useRoute, useRouter } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {
   Service,
-  ChatDotRound
+  ChatDotRound,
+  Collection
 } from '@element-plus/icons-vue'
 import { ROLE_CN } from './constants/status'
 import { logout } from './api/auth'
@@ -65,6 +70,7 @@ const user = computed(() => {
 
 const roleName = computed(() => ROLE_CN[user.value.role] || user.value.role || '未知')
 const displayName = computed(() => user.value.name || user.value.username || '用户')
+const isAdmin = computed(() => user.value.role === 'admin')
 
 const roleTagType = computed(() => {
   const map = { student: 'info', staff: 'warning', it_staff: 'warning', admin: 'danger' }
