@@ -6,6 +6,7 @@
 覆盖：
 - users（5 角色，M6 起带密码哈希，演示密码统一 123456；含 cs-001 客服）
 - knowledge_entries（36 条通用校园知识，6 领域 × 6 条，type: info/process/index）
+- empty_rooms / library_seats（M2 工具查询 mock 表，189 行 / 5 层）
 ⚠️ T2 补丁语义：tickets/repairmen/dorms/accounts/announcements/faq 种子已随
 退役表删除；T9 起知识库种子（36 条）+ cs-001 在本文件落地。
 本地真实信息 → scripts/seed_zjut_local.py 本地注入（config/ 私有文件，不进 git）。
@@ -15,7 +16,7 @@
 
 from sqlalchemy import select
 
-from campus_desk.db.models import KnowledgeEntry, User
+from campus_desk.db.models import EmptyRoom, KnowledgeEntry, LibrarySeat, User
 from campus_desk.db.session import SessionFactory
 from campus_desk.security import hash_password
 
@@ -80,10 +81,40 @@ _KNOWLEDGE = [
     ("生活", "交通,出行", "校区之间怎么通行？", "info", "校区间有定点班车，时刻表见后勤服务号；校外出行地铁/公交便利。"),
 ]
 
+_BUILDINGS = ["1号楼", "2号楼", "3号楼"]
+_PERIODS = ["上午", "下午", "晚上"]
+
+
+def _mock_empty_rooms() -> list[tuple]:
+    """M2 空教室种子：3 楼 × 7 天 × 3 时段 × 3 间（周中/周末两模式）。"""
+    rows = []
+    for idx, building in enumerate(_BUILDINGS, start=1):
+        for weekday in range(1, 8):  # 1=周一 … 7=周日
+            for period in _PERIODS:
+                rooms = (
+                    [f"{idx}01", f"{idx}05", f"{idx}08"]  # 周中模式
+                    if weekday <= 5
+                    else [f"{idx}02", f"{idx}06", f"{idx}09"]  # 周末模式
+                )
+                rows.extend((building, room, weekday, period) for room in rooms)
+    return rows
+
+
+_LIBRARY_SEATS = [
+    ("1F", 35, 120),
+    ("2F", 42, 130),
+    ("3F", 18, 90),
+    ("4F", 50, 150),
+    ("5F", 27, 100),
+]
+
 # (模型, 幂等键列列表, 种子列, 行数据)——种子列顺序与行元组一一对应；
 # 幂等键：字符串 id 表用 id
 _SEED_SPECS = [
     (User, ["id"], ["id", "name", "role", "student_no", "dept", "phone", "password"], _USERS),
+    (EmptyRoom, ["building", "room", "weekday", "period"],
+     ["building", "room", "weekday", "period"], _mock_empty_rooms()),
+    (LibrarySeat, ["floor"], ["floor", "free_seats", "total_seats"], _LIBRARY_SEATS),
 ]
 
 

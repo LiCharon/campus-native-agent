@@ -61,7 +61,7 @@ Python 3.14（M1 实测核心依赖全兼容）· LangGraph（checkpointer: SQLi
 
 ## 6. 里程碑（MVP 三分法，见 ZJUT_DESIGN §10）
 **M1（已完成，2026-08-15）**：入口分流 4 类 + 知识库检索组装（type 分型）+ 追问澄清 + 转人工兜底 + 36 条种子知识 + 前端收敛 Login/Chat + 环境验证（含真 FC 探测）+ 意图评测 24 条基线 95.8%
-**M2（应该有）**：工具查询管道（真 FC + 确定性工具 + mock 表）+ multi_intent 实装 + 链路评测剧本 + 答案正确性口径落地
+**M2（已完成，2026-08-16）**：工具查询管道（真 FC + 空教室/图书馆座位 2 确定性工具 + 2 mock 表 + 四层失败链）+ multi_intent 实装（primary_intent 主意图路由）+ 链路评测 14 条（答案正确性口径）+ 意图 100% / 链路 92.9%
 **M3（应该有）**：进化闭环（bad_cases/建议 + 管理页审查）+ 真实数据收集 + 画像可选
 **以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展
 进度/下一步/基线 → docs/STATUS.md
@@ -85,6 +85,10 @@ Python 3.14（M1 实测核心依赖全兼容）· LangGraph（checkpointer: SQLi
 - **LangGraph checkpointer 版 invoke 必须带 thread_id（M1-ZJUT 新坑）**：带 checkpointer 的图每次 invoke 都要 `config={"configurable": {"thread_id": ...}}`，挂起中 resume 用 `Command(resume=...)` 同款 cfg——orchestrator 是唯一正确范式，别绕过
 - **工作台/前端残留进程（Windows）**：npm run dev 后台任务停了端口仍被占——改前端后验证端口归属 + fetch /src/App.vue 确认 serve 的是新代码
 - **前端 localStorage 非响应式**：computed 无响应式依赖只求值一次（加 `void route.path` 依赖）；模块级单例只在页面首次加载执行，换账号必须显式 reload
+- **两图 checkpoint 同 thread_id 串状态（M2 新坑）**：knowledge/query 两图共享 checkpointer 时同 thread_id 挂起状态互污染；langgraph 1.2.10 的 compile()/config 均无 checkpoint_ns → query 图内部派生 thread_id `{thread_id}:query`
+- **strict FC 工具无可选参数（M2 新坑）**：strict 要求所有 property 必填，可选参数（如 date）不能进 schema → date 由服务端默认今天转周几
+- **json_object 抑制 tool_calls（M2 新坑）**：build_llm 写死 json_object，FC 场景必须用 build_tool_llm（无 response_format），否则 prompt 要带 "json" 且模型可能直接答不调工具
+- **ruff 0.16.1 默认启用 DTZ011（M2 新坑）**：`date.today()` 被 flag → 用 `datetime.now(UTC).date()`
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -93,6 +97,6 @@ Python 3.14（M1 实测核心依赖全兼容）· LangGraph（checkpointer: SQLi
 | venv 与依赖管理 | `py -3.14 -m venv .venv`；pyproject.toml 声明直接依赖（含 `[dev]` 组），requirements.txt = pip freeze 锁定快照 |
 | 镜像 | ⚠️ 官方 PyPI 在国内卡死，统一加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple` |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`（=deepseek-v4-flash）/ `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` / `DATABASE_URL` / `JWT_SECRET` / `JWT_EXPIRE_MINUTES`（config.py 用 pydantic-settings 加载） |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/verify_env.py`（3 项 + FC_SUPPORTED 打印）；种子入库 `.venv/Scripts/python scripts/seed_db.py`；本地化校园真实信息注入 `.venv/Scripts/python scripts/seed_zjut_local.py`（config/zjut_local_data.json 私有文件）；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；意图评测 `PYTHONIOENCODING=utf-8 .venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_zjut_m1.md`；**API 服务 `.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / cs-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `.venv/Scripts/python -m ruff check/format`；环境验证 `PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/verify_env.py`（3 项 + FC_SUPPORTED 打印）；种子入库 `.venv/Scripts/python scripts/seed_db.py`；本地化校园真实信息注入 `.venv/Scripts/python scripts/seed_zjut_local.py`（config/zjut_local_data.json 私有文件）；评测集入库 `.venv/Scripts/python scripts/ingest_eval_data.py`；意图评测 `PYTHONIOENCODING=utf-8 .venv/Scripts/python -m campus_desk.eval.runner --out docs/eval_report_zjut_m1.md`；链路评测 `PYTHONIOENCODING=utf-8 .venv/Scripts/python -m campus_desk.eval.chain_runner --out docs/eval_report_zjut_m2.md`；M2 验收 `PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/accept_m2.py`（5 路径）；**API 服务 `.venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 1`（--workers 1 硬约束：多 worker = 多图单例冲突）**；前端 dev `cd frontend && npm run dev`（5173）/ 构建 `npm run build`；演示账号 student-001 / cs-001 / admin-001（密码统一 123456）；⚠️ 依赖只装在 .venv（`py -3.14` 全局无 pytest/ruff）；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest fixture：StaticPool 单连接，测试串行）；集成冒烟连 **本机 MySQL 8.0.45**（MySQL80 服务，root 密码在 .env DATABASE_URL，%40 编码） |
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph quickstart / DeepSeek 结构化输出 / 真 FC 探测），逻辑在包内 `campus_desk/env_check.py`，pytest 同源复用；无 key 项自动 SKIP（需外部环境项不进 CI）；FC 探测实测 **FC_SUPPORTED=True**（2026-08-15） |

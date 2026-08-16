@@ -17,6 +17,7 @@ checkpointer.db 与真 LLM。
 """
 
 import pytest
+from langchain_core.messages import AIMessage
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -40,6 +41,31 @@ class FakeStructuredLLM:
         if isinstance(item, Exception):
             raise item
         return type("FakeAIMessage", (), {"content": item})()
+
+
+class FakeToolLLM:
+    """QueryGraph 测试 stub：bind_tools 返回自身；invoke 依序列返回消息。
+
+    - 序列元素为 AIMessage：直接返回（模拟 FC 返回 tool_calls）
+    - 序列元素为 Exception：invoke 抛出
+    - 序列用尽：返回无 tool_calls 的空消息
+    """
+
+    def __init__(self, sequence):
+        self.sequence = list(sequence)
+        self.calls = 0
+
+    def bind_tools(self, schemas):
+        return self
+
+    def invoke(self, messages):
+        self.calls += 1
+        if not self.sequence:
+            return AIMessage(content="", tool_calls=[])
+        item = self.sequence.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
 
 
 class FakeIntentClassifier:
@@ -122,9 +148,13 @@ def api_client(db_session_factory):
             return IntentResult(intent="knowledge", confidence=0.9, secondary_intents=[], reason="t")
 
     def _bundle(user_id: str) -> GraphBundle:
+        from campus_desk.query.graph import build_query_graph
+
         entry = build_entry_graph(classifier=FakeClassifier())
         knowledge = build_knowledge_graph(db_session_factory, checkpointer=InMemorySaver(), user_id=user_id)
-        return GraphBundle(entry=entry, knowledge=knowledge)
+        query = build_query_graph(db_session_factory, checkpointer=InMemorySaver(),
+                                  llm=FakeToolLLM([]), user_id=user_id)
+        return GraphBundle(entry=entry, knowledge=knowledge, query=query)
 
     registry = GraphRegistry(db_session_factory, bundle_factory=_bundle)
     app = create_app(session_factory=db_session_factory, registry=registry)

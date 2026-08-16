@@ -90,3 +90,26 @@ class BadCase(Base):
     reply: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(8), default="PENDING", index=True)  # PENDING/RESOLVED
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class EmptyRoom(Base):
+    """空教室 mock 表（M2）：楼栋×房间×周几×时段的空闲教室明细。"""
+
+    __tablename__ = "empty_rooms"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    building: Mapped[str] = mapped_column(String(16), index=True)  # 1号楼/2号楼/3号楼
+    room: Mapped[str] = mapped_column(String(16))  # 101/302 等
+    weekday: Mapped[int] = mapped_column(Integer)  # 1-7（周一=1）
+    period: Mapped[str] = mapped_column(String(8))  # 上午/下午/晚上
+
+
+class LibrarySeat(Base):
+    """图书馆座位 mock 表（M2）：每层空余/总座位数。"""
+
+    __tablename__ = "library_seats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    floor: Mapped[str] = mapped_column(String(8))  # 1F..5F
+    free_seats: Mapped[int] = mapped_column(Integer)
+    total_seats: Mapped[int] = mapped_column(Integer)

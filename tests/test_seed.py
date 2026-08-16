@@ -72,3 +72,27 @@ class TestSeedPassword:
         with db_session_factory() as session:
             u = session.query(User).filter(User.id == "student-001").one()
         assert verify_password("123456", u.password_hash)
+
+
+class TestSeedMockTables:
+    """M2：empty_rooms / library_seats mock 种子（数量 + 周中/周末两模式）。"""
+
+    def test_seed_creates_mock_tables(self, db_session_factory):
+        """M2：empty_rooms 恰 189 行（3 楼×7 天×3 时段×3 间）、library_seats 恰 5 层。"""
+        from campus_desk.db.models import EmptyRoom, LibrarySeat
+
+        with db_session_factory() as session:
+            assert session.query(EmptyRoom).count() == 189
+            assert session.query(LibrarySeat).count() == 5
+
+    def test_seed_mock_weekday_patterns(self, db_session_factory):
+        """周中/周末两模式：同一楼栋相同时段，周中与周末的房间集合不同。"""
+        from campus_desk.db.models import EmptyRoom
+
+        with db_session_factory() as session:
+            wk = {r.room for r in session.query(EmptyRoom).filter(
+                EmptyRoom.building == "3号楼", EmptyRoom.weekday == 3, EmptyRoom.period == "下午")}
+            wkend = {r.room for r in session.query(EmptyRoom).filter(
+                EmptyRoom.building == "3号楼", EmptyRoom.weekday == 6, EmptyRoom.period == "下午")}
+        assert wk == {"301", "305", "308"}
+        assert wkend == {"302", "306", "309"}

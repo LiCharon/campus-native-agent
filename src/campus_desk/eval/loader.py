@@ -28,6 +28,20 @@ _ROUTE_OF_INTENT = {
 }
 
 
+def route_of_intent(intent: str) -> str:
+    """意图标注 → 期望路由（other 汇聚到人工）。M2 链路校验复用。"""
+    return _ROUTE_OF_INTENT[intent]
+
+
+def valid_assertion(assertion: str) -> bool:
+    """断言格式：tool:xxx / status:xxx / outcome:xxx（M2 链路剧本沿用）。"""
+    return (
+        (assertion.startswith("tool:") and len(assertion) > 5)
+        or (assertion.startswith("status:") and len(assertion) > 7)
+        or (assertion.startswith("outcome:") and len(assertion) > 8)
+    )
+
+
 def load_all(dataset_dir: Path | None = None) -> list[ScriptedCase]:
     """加载 dataset/ 下全部 JSON 剧本（每文件一个数组），pydantic 校验。"""
     base = dataset_dir or DATASET_DIR
@@ -62,7 +76,7 @@ def validate_dataset(cases: list[ScriptedCase]) -> list[str]:
             problems.append(f"{case.id}: multi_intent 剧本缺少 secondary_intents")
         if case.category != "multi_intent" and case.secondary_intents:
             problems.append(f"{case.id}: 非 multi_intent 剧本不应有 secondary_intents")
-        if case.expected_route != _ROUTE_OF_INTENT[case.intent]:
+        if case.expected_route != route_of_intent(case.intent):
             problems.append(
                 f"{case.id}: 标注-路由不一致（intent={case.intent} 应路由到 "
                 f"{_ROUTE_OF_INTENT[case.intent]}，实际标注 {case.expected_route}）"
@@ -73,11 +87,7 @@ def validate_dataset(cases: list[ScriptedCase]) -> list[str]:
             if not turn.student_reply.strip():
                 problems.append(f"{case.id}: 第 {idx} 轮 student_reply 为空")
             for assertion in turn.expect:
-                if assertion.startswith("tool:") and len(assertion) > 5:
-                    continue
-                if assertion.startswith("status:") and len(assertion) > 7:
-                    continue
-                if assertion.startswith("outcome:") and len(assertion) > 8:
+                if valid_assertion(assertion):
                     continue
                 problems.append(
                     f"{case.id}: 第 {idx} 轮非法断言 '{assertion}'"

@@ -187,7 +187,7 @@
     "expected_route": "tool_query",
     "secondary_intents": [],
     "turns": [],
-    "note": "动态数据查询：空教室（需查询工具，当前版本未开放）"
+    "note": "动态数据查询：空教室（M2 工具管道实装）"
   },
   {
     "id": "zjut-intent-020",
@@ -197,7 +197,7 @@
     "expected_route": "tool_query",
     "secondary_intents": [],
     "turns": [],
-    "note": "动态数据查询：图书馆座位余量（需查询工具，当前版本未开放）"
+    "note": "动态数据查询：图书馆座位余量（M2 工具管道实装）"
   },
   {
     "id": "zjut-intent-021",
