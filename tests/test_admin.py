@@ -191,3 +191,17 @@ def test_adopt_field_validation(api_client):
     assert _adopt(api_client, "bad_cases", bid, type="unknown").status_code == 422
     assert _adopt(api_client, "bad_cases", bid, keywords="  ").status_code == 422
     assert _adopt(api_client, "bad_cases", bid, answer="").status_code == 422
+
+
+def test_list_with_legacy_null_note_rows(api_client, db_session_factory):
+    """存量行兼容：M1/M2 转人工自动沉淀的 bad_cases note 为 NULL（迁移加列时存量行 NULL），
+    待审列表不得 500（M3 运行态抓出的回归：ReviewItem.note 误声明非 Optional）。"""
+    with db_session_factory() as session, session.begin():
+        session.add(BadCase(user_id="student-001", thread_id=None, question="食堂在哪",
+                            reply="", note=None, status="PENDING"))
+    headers = _login(api_client, "admin-001")
+    r = api_client.get("/api/admin/reviews?kind=bad_cases", headers=headers)
+    assert r.status_code == 200
+    items = r.json()["items"]
+    legacy = next(it for it in items if it["question"] == "食堂在哪")
+    assert legacy["note"] is None  # 前端以 row.note || '—' 兜底展示
