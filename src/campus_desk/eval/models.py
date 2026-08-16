@@ -41,3 +41,9 @@ class ScriptedCase(BaseModel):
     )
     turns: list[ScriptedTurn] = Field(default_factory=list, description="后续轮次（M3/M4 填充）")
     note: str = Field(default="", description="场景说明（评审/面试复盘用）")
+    # ---- M2 链路评测扩展（意图剧本不填，可选）----
+    primary_intent: IntentLabel | None = Field(default=None, description="multi_intent 剧本的主意图（M2）")
+    expected_outcome: str | None = Field(default=None, description="首轮期望 outcome（answer/ask/handoff/degraded）")
+    expected_entry_ids: list[int] = Field(default_factory=list, description="知识剧本：期望命中条目 id（⊆ 断言）")
+    expected_tool: str | None = Field(default=None, description="工具剧本：期望调用工具名")
+    expected_keywords: list[str] = Field(default_factory=list, description="期望答案关键词（全部出现在最终回复）")
