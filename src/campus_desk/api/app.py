@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from campus_desk.api.graphs import GraphRegistry
-from campus_desk.api.routes import auth, chat
+from campus_desk.api.routes import admin, auth, chat, feedback
 from campus_desk.db.session import default_session_factory
 
 
@@ -30,4 +30,6 @@ def create_app(*, session_factory=None, registry: GraphRegistry | None = None) -
     app.state.registry = registry or GraphRegistry(app.state.session_factory)
     app.include_router(auth.router)
     app.include_router(chat.router)
+    app.include_router(feedback.router)
+    app.include_router(admin.router)
     return app

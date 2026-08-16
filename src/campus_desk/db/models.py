@@ -1,15 +1,17 @@
 """业务数据模型（M1-ZJUT：4 业务表 + 2 评测表，T2 删 7 张退役表）。
 
-表职责（ZJUT 设计 §4.5 知识库 + 转人工兜底）：
+表职责（ZJUT 设计 §4.5 知识库 + §5.5 进化闭环）：
 - users             角色与账号（student/cs_staff/admin 三角色），登录用
-- user_profiles     用户长期记忆画像（预留：M3 画像时启用，1:1 users）
+- user_profiles     用户长期记忆画像（预留：画像启用时再定，1:1 users）
 - knowledge_entries 知识库条目（FAQ 式，type 驱动组装：info/process/index）
-- bad_cases         未解决反馈（转人工兜底沉淀；M3 进化闭环接工作台）
+- bad_cases         未解决反馈双通道：① M1 转人工自动沉淀 ② M3 对话页"没解决"按钮
+- suggestions       用户提议通道（M3）："问题没答案"主动提议，管理员审查采纳/驳回
 
 约束要点：
 - knowledge_entries.domain 六领域（教务/后勤/图书馆/IT/证件/生活）；
   keywords 逗号分隔，检索计分用（campus_desk.knowledge.search）
-- bad_cases.status：PENDING/RESOLVED（M1 转人工写入 PENDING，M3 工作台处理闭环）
+- bad_cases.status：PENDING/RESOLVED（自动/手动反馈均 PENDING，M3 管理页审查后 RESOLVED）
+- suggestions.status：PENDING/ADOPTED/REJECTED（采纳=补入知识库，驳回=不补入）
 - 外键关系不配置 relationship() 对象——ORM 查询用显式 join/id 字段，
   避免 lazy-load 隐式 SQL（工具层短会话，防 N+1/DetachedInstanceError）
 """
@@ -80,15 +82,37 @@ class KnowledgeEntry(Base):
 
 
 class BadCase(Base):
-    """未解决反馈（M1 转人工兜底沉淀；M3 进化闭环接工作台）。"""
+    """未解决反馈（M1 转人工自动沉淀 + M3 对话页"没解决"手动通道；进化闭环①）。
+
+    手动通道带 reply（agent 实际回复）供管理员审查判断；thread_id 存对话关联。
+    """
 
     __tablename__ = "bad_cases"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(32), index=True)
+    thread_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     question: Mapped[str] = mapped_column(Text)
     reply: Mapped[str] = mapped_column(Text, default="")
+    # note 可空：存量行（转人工自动沉淀）为 NULL，手动通道才填补充说明
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(8), default="PENDING", index=True)  # PENDING/RESOLVED
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Suggestion(Base):
+    """用户提议（M3 进化闭环②）：学生主动提"问题没有答案"。
+
+    status：PENDING（待审）/ ADOPTED（已采纳=补入知识库）/ REJECTED（已驳回）。
+    """
+
+    __tablename__ = "suggestions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(32), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 用户补充说明（可空）
+    status: Mapped[str] = mapped_column(String(8), default="PENDING", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
