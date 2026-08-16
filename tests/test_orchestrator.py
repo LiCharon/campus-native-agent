@@ -1,11 +1,11 @@
-"""Orchestrator 编排测试（M1-T7）：Entry 分流 → KnowledgeGraph（或占位回复）。
+"""Orchestrator 编排测试（M2-T9）：Entry 分流 → KnowledgeGraph / QueryGraph（三图）。
 
-用 Fake 图（记录 invoke 调用/返回预设 state）断言：
+用 Fake 图（记录 invoke/get_state 调用、返回预设 state）断言：
 - knowledge 路由 → knowledge_graph 被 invoke（新会话 {"user_input": msg}）
-- knowledge_graph 挂起中（get_state().next 非空）→ Command(resume=msg)
-- 挂起中 human_handoff 也 resume 进 knowledge_graph（M3 同源坑：追问不能被当新话题）
-- tool_query → 占位回复不 invoke knowledge_graph
-- multi_intent → invoke + reply 带次要提示
+- tool_query 路由 → query_graph 被 invoke（thread_id 派生 :query）
+- 挂起中（get_state().next 非空）→ Command(resume=msg) 恢复；query 挂起优先
+- multi_intent 按 primary_intent 路由（tool/knowledge/other 取 secondary/缺失兜底 + 礼貌前缀）
+- hits 透传
 """
 
 from langgraph.types import Command
@@ -23,8 +23,6 @@ THREAD = "t-1"
 
 
 class FakeEntryGraph:
-    """记录 invoke 输入，按预设返回路由结果。"""
-
     def __init__(self, route, intent: IntentResult | None = None):
         self.route = route
         self.intent = intent
@@ -38,15 +36,18 @@ class FakeEntryGraph:
         return out
 
 
-class FakeKnowledgeGraph:
-    """记录 invoke 调用，get_state 返回可配 next，invoke 返回预设 state。"""
+class FakeGraph:
+    """记录 invoke 调用与 get_state 的 cfg；get_state 返回可配 next。"""
 
     def __init__(self, state: dict | None = None, pending: bool = False):
-        self.state = state or {"reply": "知识库回答", "finished": True}
+        self.state = state or {"reply": "回答", "finished": True}
         self.pending = pending
         self.invoked = []  # [(args, kwargs)]
+        self.get_state_cfgs = []
 
     def get_state(self, cfg):
+        self.get_state_cfgs.append(cfg)
+
         class _S:
             next = ("collect",) if self.pending else ()
 
@@ -59,8 +60,8 @@ class FakeKnowledgeGraph:
 
 def test_knowledge_route_invokes_graph_with_user_input():
     entry = FakeEntryGraph(KNOWLEDGE)
-    kg = FakeKnowledgeGraph(state={"reply": "校历见教务处网站", "finished": True})
-    out = turn(entry, kg, THREAD, "校历？")
+    kg = FakeGraph(state={"reply": "校历见教务处网站", "finished": True})
+    out = turn(entry, kg, FakeGraph(), THREAD, "校历？")
     assert kg.invoked, "knowledge 路由必须 invoke knowledge_graph"
     args, _ = kg.invoked[0]
     assert args[0] == {"user_input": "校历？"}
@@ -70,9 +71,9 @@ def test_knowledge_route_invokes_graph_with_user_input():
 
 def test_pending_knowledge_resumes_with_command():
     entry = FakeEntryGraph(KNOWLEDGE)
-    kg = FakeKnowledgeGraph(state={"reply": "补充后的回答", "finished": True}, pending=True)
-    out = turn(entry, kg, THREAD, "寒假")
-    assert kg.invoked, "挂起中必须 resume 进 knowledge_graph"
+    kg = FakeGraph(state={"reply": "补充后的回答", "finished": True}, pending=True)
+    out = turn(entry, kg, FakeGraph(), THREAD, "寒假")
+    assert kg.invoked
     args, _ = kg.invoked[0]
     assert isinstance(args[0], Command)
     assert args[0].resume == "寒假"
@@ -80,35 +81,72 @@ def test_pending_knowledge_resumes_with_command():
 
 
 def test_pending_human_handoff_resumes_into_knowledge():
-    # M3 同源坑：knowledge 挂起中，任何输入（即使判为 other/低置信→human_handoff）
-    # 都 resume 进 KnowledgeGraph，不落到人工占位
+    # knowledge 挂起中，任何输入（即使判为 other/低置信→human_handoff）都 resume 进知识图
     entry = FakeEntryGraph(HUMAN_HANDOFF)
-    kg = FakeKnowledgeGraph(state={"reply": "追问后的回答", "finished": True}, pending=True)
-    out = turn(entry, kg, THREAD, "就是图书馆那个")
-    assert kg.invoked, "挂起中 human_handoff 必须 resume 进 knowledge_graph"
+    kg = FakeGraph(state={"reply": "追问后的回答", "finished": True}, pending=True)
+    out = turn(entry, kg, FakeGraph(), THREAD, "就是图书馆那个")
+    assert kg.invoked
     args, _ = kg.invoked[0]
-    assert isinstance(args[0], Command)
-    assert args[0].resume == "就是图书馆那个"
-    assert out["route"] == KNOWLEDGE  # 路由归为 knowledge，不是 human_handoff
+    assert isinstance(args[0], Command) and args[0].resume == "就是图书馆那个"
+    assert out["route"] == KNOWLEDGE
 
 
-def test_tool_query_placeholder_no_knowledge_invoke():
+def test_tool_query_routes_to_query_graph_with_derived_thread():
     entry = FakeEntryGraph(TOOL_QUERY)
-    kg = FakeKnowledgeGraph()
-    out = turn(entry, kg, THREAD, "有空教室吗")
-    assert not kg.invoked, "tool_query 不 invoke knowledge_graph"
+    kg = FakeGraph()
+    qg = FakeGraph(state={"reply": "空闲教室：301", "finished": True,
+                          "tool_calls": ["query_empty_rooms"]})
+    out = turn(entry, kg, qg, THREAD, "3号楼下午有空教室吗")
+    assert qg.invoked and not kg.invoked
     assert out["route"] == TOOL_QUERY
-    assert "建设中" in out["reply"]
+    assert out["tool_calls"] == ["query_empty_rooms"]
+    assert qg.get_state_cfgs[0]["configurable"]["thread_id"] == f"{THREAD}:query"
 
 
-def test_multi_intent_invokes_and_appends_secondary_prompt():
-    intent = IntentResult(
-        intent="multi_intent", confidence=0.9, secondary_intents=["knowledge"]
-    )
+def test_query_pending_resumes_into_query():
+    entry = FakeEntryGraph(HUMAN_HANDOFF)
+    kg = FakeGraph()
+    qg = FakeGraph(state={"reply": "补充后的查询", "finished": True, "tool_calls": []}, pending=True)
+    out = turn(entry, kg, qg, THREAD, "3号楼")
+    assert qg.invoked and not kg.invoked
+    args, _ = qg.invoked[0]
+    assert isinstance(args[0], Command) and args[0].resume == "3号楼"
+    assert out["route"] == TOOL_QUERY
+
+
+def test_multi_primary_tool_routes_to_query():
+    intent = IntentResult(intent="multi_intent", confidence=0.9, primary_intent="tool_query",
+                          secondary_intents=["knowledge"])
     entry = FakeEntryGraph(MULTI_INTENT, intent=intent)
-    kg = FakeKnowledgeGraph(state={"reply": "已回答主问题", "finished": True})
-    out = turn(entry, kg, THREAD, "成绩单怎么打？顺便问校历")
-    assert kg.invoked, "multi_intent 必须 invoke knowledge_graph"
+    qg = FakeGraph(state={"reply": "空闲教室：301", "finished": True,
+                          "tool_calls": ["query_empty_rooms"]})
+    out = turn(entry, FakeGraph(), qg, THREAD, "3号楼有空教室吗？顺便问下校历")
+    assert qg.invoked
     assert out["route"] == MULTI_INTENT
-    assert "已回答主问题" in out["reply"]
     assert "可以继续问我" in out["reply"]
+
+
+def test_multi_primary_other_takes_secondary_with_polite_prefix():
+    intent = IntentResult(intent="multi_intent", confidence=0.9, primary_intent="other",
+                          secondary_intents=["knowledge"])
+    entry = FakeEntryGraph(MULTI_INTENT, intent=intent)
+    kg = FakeGraph(state={"reply": "寒假以通知为准。", "finished": True})
+    out = turn(entry, kg, FakeGraph(), THREAD, "今天天气怎么样？顺便问下校历")
+    assert kg.invoked
+    assert out["reply"].startswith("您好！")
+    assert "可以继续问我" in out["reply"]
+
+
+def test_multi_primary_missing_defaults_knowledge():
+    intent = IntentResult(intent="multi_intent", confidence=0.9)
+    entry = FakeEntryGraph(MULTI_INTENT, intent=intent)
+    kg = FakeGraph(state={"reply": "知识库回答", "finished": True})
+    turn(entry, kg, FakeGraph(), THREAD, "两个问题")
+    assert kg.invoked
+
+
+def test_knowledge_hits_passthrough():
+    entry = FakeEntryGraph(KNOWLEDGE)
+    kg = FakeGraph(state={"reply": "命中", "finished": True, "outcome": "answer", "hits": [1, 4]})
+    out = turn(entry, kg, FakeGraph(), THREAD, "什么时候放寒假？")
+    assert out["hits"] == [1, 4]

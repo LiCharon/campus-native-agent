@@ -148,9 +148,13 @@ def api_client(db_session_factory):
             return IntentResult(intent="knowledge", confidence=0.9, secondary_intents=[], reason="t")
 
     def _bundle(user_id: str) -> GraphBundle:
+        from campus_desk.query.graph import build_query_graph
+
         entry = build_entry_graph(classifier=FakeClassifier())
         knowledge = build_knowledge_graph(db_session_factory, checkpointer=InMemorySaver(), user_id=user_id)
-        return GraphBundle(entry=entry, knowledge=knowledge)
+        query = build_query_graph(db_session_factory, checkpointer=InMemorySaver(),
+                                  llm=FakeToolLLM([]), user_id=user_id)
+        return GraphBundle(entry=entry, knowledge=knowledge, query=query)
 
     registry = GraphRegistry(db_session_factory, bundle_factory=_bundle)
     app = create_app(session_factory=db_session_factory, registry=registry)
