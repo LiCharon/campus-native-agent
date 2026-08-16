@@ -135,3 +135,40 @@ def test_empty_input_not_crash():
     fake = FakeStructuredLLM(["坏JSON"])
     result = IntentClassifier(llm=fake).classify("")
     assert result.intent == "other"
+
+
+# ---------- M2：primary_intent ----------
+
+def ok_content_m2(intent, confidence=0.9, secondary=None, primary=None):
+    return json.dumps(
+        {"intent": intent, "confidence": confidence, "secondary_intents": secondary or [],
+         "primary_intent": primary, "reason": "测试"},
+        ensure_ascii=False,
+    )
+
+
+def test_parse_primary_intent():
+    fake = FakeStructuredLLM([ok_content_m2("multi_intent", 0.9, secondary=["knowledge"], primary="knowledge")])
+    result = IntentClassifier(llm=fake).classify("成绩单怎么打？顺便问下校历")
+    assert result.intent == "multi_intent"
+    assert result.primary_intent == "knowledge"
+
+
+def test_primary_intent_defaults_none():
+    fake = FakeStructuredLLM([ok_content("knowledge", 0.9)])
+    result = IntentClassifier(llm=fake).classify("什么时候放寒假？")
+    assert result.primary_intent is None
+
+
+def test_rule_fallback_multi_primary_tool():
+    fake = FakeStructuredLLM(["坏JSON", "坏JSON"])
+    result = IntentClassifier(llm=fake).classify("3号楼有空教室吗？顺便问下校历")
+    assert result.intent == "multi_intent"
+    assert result.primary_intent == "tool_query"
+
+
+def test_rule_fallback_multi_primary_knowledge():
+    fake = FakeStructuredLLM(["坏JSON", "坏JSON"])
+    result = IntentClassifier(llm=fake).classify("一卡通怎么补办？顺便问下校历")
+    assert result.intent == "multi_intent"
+    assert result.primary_intent == "knowledge"

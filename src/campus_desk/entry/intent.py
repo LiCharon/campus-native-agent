@@ -49,6 +49,9 @@ class IntentResult(BaseModel):
         default_factory=list, description="次要意图列表（一句话包含多个问题时）"
     )
     reason: str = Field(default="", description="判定依据，一句话说明")
+    primary_intent: IntentName | None = Field(
+        default=None, description="multi_intent 时的主意图（最重要的那个问题）；其余意图填 None"
+    )
 
 
 # 规则兜底关键词表：意图 → 关键词（确定性，仅 LLM 不可用时使用）
@@ -70,16 +73,17 @@ _STRUCTURED_PROMPT = """你是校园服务台的入口分流器。请判断学�
 
 意图定义：
 - knowledge: 校园知识问答（校历/放假/办事流程/开放时间/联系方式等，可用知识库回答）
-- tool_query: 查询动态数据（空教室/图书馆座位/课表等，需调用查询工具，当前版本暂未开放）
+- tool_query: 查询动态数据（空教室/图书馆座位等，需调用查询工具）
 - multi_intent: 一句话包含多个独立问题（如"成绩单怎么打？宿舍什么时候清退？"）
 - other: 闲聊/问候/超出校园服务范围
 
 JSON 格式（严格只输出 JSON，不要任何其他文字）：
-{"intent": "knowledge|tool_query|multi_intent|other", "confidence": 0到1之间的小数, "secondary_intents": ["intent", ...], "reason": "一句话依据"}
+{"intent": "knowledge|tool_query|multi_intent|other", "confidence": 0到1之间的小数, "primary_intent": "intent或null", "secondary_intents": ["intent", ...], "reason": "一句话依据"}
 
 注意：
 - confidence 表示把握：确定时给 0.8-1.0，不确定时给 0.4-0.6
-- 多个问题时主意图填最重要的，其余填 secondary_intents，intent 填 multi_intent
+- 多个问题时 intent 填 multi_intent，primary_intent 填最重要的那个问题的意图，其余填 secondary_intents；单一问题时 primary_intent 填 null
+- 问候语/语气词不算意图："你好，顺便问下校历"只算一个知识问题（intent=knowledge），不要因为有个问候语就判 multi_intent 或 other
 """
 
 
@@ -141,16 +145,25 @@ class IntentClassifier:
         否则"一卡通怎么补办？顺便问下校历"会被 knowledge 词（怎么/补办/校历）盖过。
         """
         if any(word in user_input for word in _RULE_KEYWORDS["multi_intent"]):
-            best_intent = "multi_intent"
-        else:
-            best_intent = "other"
-            best_score = 0
-            for intent, keywords in _RULE_KEYWORDS.items():
-                if intent == "multi_intent":
-                    continue  # 已在上面强信号分支处理
-                score = sum(1 for word in keywords if word in user_input)
-                if score > best_score:
-                    best_intent, best_score = intent, score
+            primary = (
+                "tool_query"
+                if any(w in user_input for w in _RULE_KEYWORDS["tool_query"])
+                else "knowledge"
+            )
+            return IntentResult(
+                intent="multi_intent",
+                confidence=_FALLBACK_CONFIDENCE,
+                reason=_FALLBACK_REASON,
+                primary_intent=primary,  # 低置信必转人工，仅作人工接待参考（设计 §5.1 注）
+            )
+        best_intent = "other"
+        best_score = 0
+        for intent, keywords in _RULE_KEYWORDS.items():
+            if intent == "multi_intent":
+                continue  # 已在上面强信号分支处理
+            score = sum(1 for word in keywords if word in user_input)
+            if score > best_score:
+                best_intent, best_score = intent, score
         return IntentResult(
             intent=best_intent,
             confidence=_FALLBACK_CONFIDENCE,
