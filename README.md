@@ -1,6 +1,6 @@
 # Campus Native Agent — 校园智能服务助手
 
-校园信息聚合 + 问答 + 引导 + 索引的智能服务 Agent：学生一句话提问 → 意图分流（4 类）→ 能答的直接答（知识库检索，info/process/index 分型组装）→ 缺信息追问澄清（≤3 轮）→ 仍答不上转人工兜底（bad_cases 沉淀，进化闭环养料）。
+校园信息聚合 + 问答 + 引导 + 索引的智能服务 Agent：学生一句话提问 → 意图分流（4 类）→ 能答的直接答（知识库检索，info/process/index 分型组装）→ 缺信息追问澄清（≤3 轮）→ 仍答不上转人工兜底（问题沉淀进 bad_cases，管理员审查后回流知识库，形成"进化闭环"）。
 
 ## 功能特性
 
@@ -22,10 +22,12 @@
 | 数据 | MySQL 8 + SQLAlchemy 2.0（alembic 迁移，禁手改表）|
 | 前端 | Vue3 + Element Plus（最小闭环）|
 | 可观测 | Langfuse（agent 步骤级 trace）|
-| 语言 | Python 3.14 |
+| 语言 | Python 3.14（需该版本，低版本可能不兼容）|
 | 工程 | pytest + ruff |
 
 ## 快速开始
+
+> **前置**：本地已运行 MySQL 8；Python 3.14（项目依赖该版本特性，低版本可能不兼容）；step 4 需联网并配置 DeepSeek API key（见 `.env`）。
 
 ```bash
 # 1. 创建虚拟环境并安装依赖（官方 PyPI 在国内可能卡死，统一用清华镜像）
@@ -81,7 +83,7 @@ campus-desk/
 ├─ frontend/src/views/         Vue3 2 页（Login / Chat）
 ├─ scripts/                    seed_db / seed_local / verify_env / ingest_eval_data
 ├─ tests/                      15 个测试文件（96 用例）
-└─ docs/                       项目文档（本地私有仓库管理，不进主 git）
+└─ docs/                       项目文档（独立私有文档仓，不随主仓公开，见文末说明）
 ```
 
 ## 关键设计亮点
