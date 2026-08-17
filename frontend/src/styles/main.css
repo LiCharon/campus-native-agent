@@ -11,32 +11,236 @@ body,
 }
 
 body {
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 14px;
-  color: #303133;
-  background-color: #f5f7fa;
+  line-height: 1.75;
+  color: var(--cd-text-1);
+  background: var(--cd-bg);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 消息气泡通用样式（Chat.vue 使用） */
+/* ============ M4 视觉 token（Kimi 工大蓝体系，设计 v3 §3，零红） ============ */
+:root {
+  --cd-primary: #14549c;
+  --cd-primary-2: #1f6fc4;
+  --cd-grad: linear-gradient(135deg, #1f6fc4, #14549c);
+  --cd-primary-soft: #eaf1fb;
+  --cd-bg: #f4f6fb;
+  --cd-panel: #f7f9fd;
+  --cd-card: #ffffff;
+  --cd-text-1: #0f172a;
+  --cd-text-2: #475569;
+  --cd-text-3: #94a3b8;
+  --cd-line: #e6ecf4;
+  --cd-line-2: #eef2f8;
+  --cd-green: #067647;
+  --cd-green-bg: #ecfdf3;
+  --cd-amber: #b54708;
+  --cd-amber-bg: #fffaeb;
+  --cd-gray: #64748b;
+  --cd-gray-bg: #f1f5f9;
+  --cd-danger: #dc2626;
+  --cd-radius-card: 14px;
+  --cd-radius-bubble: 16px;
+  --cd-radius-btn: 10px;
+  --cd-shadow-sm: 0 1px 2px rgba(20, 40, 80, 0.05);
+  --cd-shadow: 0 1px 3px rgba(20, 40, 80, 0.06), 0 8px 24px rgba(20, 40, 80, 0.06);
+
+  /* Element Plus 主题覆盖（Kimi 工大蓝） */
+  --el-color-primary: #14549c;
+  --el-color-primary-dark-2: #0f4278;
+  --el-color-primary-light-3: #4a7db8;
+  --el-color-primary-light-5: #7ba3cd;
+  --el-color-primary-light-7: #acc8e2;
+  --el-color-primary-light-8: #c4d9ec;
+  --el-color-primary-light-9: #eaf1fb;
+  --el-border-radius-base: 10px;
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #475569;
+}
+
+/* ============ 通用（Kimi 组件规格） ============ */
+.cd-card {
+  background: var(--cd-card);
+  border: 1px solid var(--cd-line);
+  border-radius: var(--cd-radius-card);
+  box-shadow: var(--cd-shadow-sm);
+}
+
+.cd-ph {
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--cd-line);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cd-ph h2 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin: 0;
+}
+
+.cd-ph p {
+  font-size: 12.5px;
+  color: var(--cd-text-3);
+  margin: 4px 0 0;
+}
+
+.cd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--cd-grad);
+  color: #fff;
+  border: none;
+  border-radius: var(--cd-radius-btn);
+  padding: 9px 17px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20, 84, 156, 0.22);
+  transition: filter 0.14s;
+}
+
+.cd-btn:hover {
+  filter: brightness(1.05);
+}
+
+.cd-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.cd-btn.ghost {
+  background: #fff;
+  color: var(--cd-text-2);
+  border: 1px solid var(--cd-line);
+  box-shadow: none;
+}
+
+.cd-btn.ghost:hover {
+  border-color: var(--cd-primary);
+  color: var(--cd-primary);
+}
+
+.cd-btn.sm {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.cd-btn.danger {
+  background: #fff;
+  color: var(--cd-danger);
+  border: 1px solid #f3c1c1;
+  box-shadow: none;
+}
+
+.cd-btn.danger:hover {
+  border-color: var(--cd-danger);
+  color: var(--cd-danger);
+  background: #fdf3f3;
+}
+
+.cd-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cd-tag.green {
+  background: var(--cd-green-bg);
+  color: var(--cd-green);
+}
+
+.cd-tag.amber {
+  background: var(--cd-amber-bg);
+  color: var(--cd-amber);
+}
+
+.cd-tag.gray {
+  background: var(--cd-gray-bg);
+  color: var(--cd-gray);
+}
+
+.cd-tag.danger {
+  background: #fdf3f3;
+  color: var(--cd-danger);
+}
+
+.cd-table-card {
+  background: #fff;
+  border: 1px solid var(--cd-line);
+  border-radius: var(--cd-radius-card);
+  overflow: hidden;
+  box-shadow: var(--cd-shadow-sm);
+}
+
+.cd-table-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.cd-table-card th {
+  text-align: left;
+  color: var(--cd-text-3);
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--cd-line);
+}
+
+.cd-table-card td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--cd-line-2);
+  color: var(--cd-text-1);
+  vertical-align: middle;
+}
+
+.cd-table-card tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cd-table-card tbody tr {
+  transition: background 0.12s;
+}
+
+.cd-table-card tbody tr:hover td {
+  background: var(--cd-panel);
+}
+
+.cd-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cd-empty {
+  text-align: center;
+  color: var(--cd-text-3);
+  padding: 48px;
+  font-size: 13.5px;
+}
+
+/* ============ 消息气泡（Kimi §3.3 去头像） ============ */
 .msg-bubble {
-  max-width: 72%;
-  padding: 10px 14px;
-  border-radius: 8px;
-  line-height: 1.6;
+  max-width: 100%;
+  padding: 14px 17px;
+  border-radius: var(--cd-radius-bubble);
+  line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-.msg-bubble.user {
-  background-color: #409eff;
-  color: #fff;
-  border-top-right-radius: 2px;
-}
-
-.msg-bubble.assistant {
-  background-color: #fff;
-  color: #303133;
-  border: 1px solid #e4e7ed;
-  border-top-left-radius: 2px;
+  font-size: 14px;
 }

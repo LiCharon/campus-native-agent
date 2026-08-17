@@ -44,12 +44,14 @@ def verify_password(plain: str, stored: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str, role: str) -> tuple[str, int]:
-    """签发 JWT，返回 (token, 过期秒数)。claims 只带 sub+role，authz 不查库。"""
+def create_access_token(user_id: str, role: str, permissions: list[str] | None = None) -> tuple[str, int]:
+    """签发 JWT，返回 (token, 过期秒数)。claims 带 sub+role+perms（登录时算好的
+    最终权限并集），authz 不查库——改权限需重新登录（M4 已知语义）。"""
     expire_minutes = settings.jwt_expire_minutes
     payload = {
         "sub": user_id,
         "role": role,
+        "perms": permissions or [],
         "iat": datetime.now(UTC),
         "exp": datetime.now(UTC) + timedelta(minutes=expire_minutes),
     }

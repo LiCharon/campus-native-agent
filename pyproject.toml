@@ -45,9 +45,10 @@ line-length = 100
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI 惯用写法：Depends/Query 在参数默认值中调用（B008 官方豁免配置）；
-# require_roles 是"工厂返回依赖"的标准模式（deps.py）
+# require_roles / require_perm 是"工厂返回依赖"的标准模式（deps.py）
 extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.Query",
     "campus_desk.api.deps.require_roles",
+    "campus_desk.api.deps.require_perm",
 ]

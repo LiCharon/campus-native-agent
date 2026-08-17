@@ -3,7 +3,7 @@
 M1-T1：退役报修/投诉/工单/FAQ 模块后，仅保留 auth / chat 契约。
 M1-T8：ChatResponse 删 ticket_id/ticket_status/ticket_type（M1 无工单概念，
 仅保留 orchestrator.turn 实际产出字段）。
-M3：进化闭环契约（feedback 双通道 + admin 审查），见 ZJUT_DESIGN §5.5。
+M3：进化闭环契约（feedback 双通道 + admin 审查），见 docs/design/ZJUT_DESIGN.md §5.5。
 """
 
 from datetime import datetime
@@ -23,6 +23,7 @@ class UserInfo(BaseModel):
     role: str
     dept: str | None = None
     student_no: str | None = None
+    permissions: list[str] = []  # M4：最终权限并集（角色默认 ∪ 附加位）
 
 
 class LoginResponse(BaseModel):
@@ -36,6 +37,15 @@ class ChatRequest(BaseModel):
     msg: str
 
 
+class SourceItem(BaseModel):
+    """来源 chip（M4，Kimi 设计 §3.3）：工具查询 / 知识库引用标注。"""
+
+    type: Literal["tool", "kb"]
+    label: str
+    ref_id: str = ""
+    detail: str = ""
+
+
 class ChatResponse(BaseModel):
     reply: str
     route: str
@@ -44,6 +54,7 @@ class ChatResponse(BaseModel):
     outcome: str | None = None
     tool_calls: list[str] = []
     status_events: list[str] = []
+    sources: list[SourceItem] = []  # M4：来源 chip 数据（工具查询/知识库命中）
 
 
 # ---------- M3 进化闭环（设计 §5.5 双通道 + 管理员审查） ----------
@@ -122,3 +133,85 @@ class AdoptRequest(BaseModel):
 class ReviewActionResponse(BaseModel):
     id: int
     status: str
+
+
+# ---------- M4 管理特权（用户/日志/看板/知识浏览） ----------
+
+
+class UserCreateRequest(BaseModel):
+    """新增用户（user_mgmt）：初始密码必填。"""
+
+    id: str
+    name: str
+    role: Literal["student", "cs_staff", "admin"]
+    student_no: str | None = None
+    dept: str | None = None
+    password: str = Field(min_length=6)
+    permissions: list[str] = []
+
+    _id = field_validator("id")(_strip_nonblank)
+    _name = field_validator("name")(_strip_nonblank)
+
+
+class UserUpdateRequest(BaseModel):
+    """编辑用户：role/permissions/enabled。admin 账号禁止降权/禁用（对抗性审查 #3）。"""
+
+    role: Literal["student", "cs_staff", "admin"]
+    permissions: list[str] = []
+    enabled: bool = True
+
+
+class UserListItem(BaseModel):
+    id: str
+    name: str
+    role: str
+    permissions: list[str]
+    enabled: bool
+    student_no: str | None = None
+
+
+class UserListResponse(BaseModel):
+    items: list[UserListItem]
+
+
+class ResetPasswordRequest(BaseModel):
+    password: str = Field(min_length=6)
+
+
+class KnowledgeItem(BaseModel):
+    id: int
+    domain: str
+    keywords: str
+    question: str
+    type: str
+    answer: str
+
+
+class KnowledgeListResponse(BaseModel):
+    items: list[KnowledgeItem]
+
+
+class StatsResponse(BaseModel):
+    user_count: int
+    knowledge_count: int
+    pending_bad_cases: int
+    pending_suggestions: int
+    adopted: int
+    rejected: int
+    resolved: int  # bad_cases RESOLVED 总数（审查 + 客服两路径）
+    feedback_by_day: list[dict]  # [{date, bad_case, suggestion}] 近 14 天
+    type_dist: dict  # {info: n, process: n, index: n}
+
+
+class LogItem(BaseModel):
+    id: int
+    user_id: str
+    action: str
+    object_type: str
+    object_id: str = ""
+    detail: str = ""
+    created_at: datetime
+
+
+class LogListResponse(BaseModel):
+    items: list[LogItem]

@@ -140,7 +140,7 @@ def check_fc_support() -> CheckResult:
     要求 prompt 含 "json" 字样，否则 400 "Prompt must contain the word 'json'"
     （探测 prompt 因此必须带 json；M2 工具管道同样受此约束：要么 prompt 带
     json 字样，要么工具场景单独构造不带 response_format 的实例）。
-    结果打印并写 docs/STATUS.md，供 M2 工具管道定真 FC / 伪 FC（ZJUT_DESIGN §4.4）。
+    结果打印并写 docs/journal/STATUS.md，供 M2 工具管道定真 FC / 伪 FC（docs/design/ZJUT_DESIGN.md §4.4）。
     """
     if not settings.deepseek_api_key:
         return CheckResult(

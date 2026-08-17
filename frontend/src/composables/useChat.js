@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 
+// 转人工状态三态（§7 状态机）：none=在线咨询 / transferring=转人工处理中 / human=人工客服已接入
+// 真实客服后端未接入，human 由前端在转人工后模拟约 3 秒推进，纯前端态、仅本地持久化。
+export const HANDOFF = { NONE: 'none', TRANSFERRING: 'transferring', HUMAN: 'human' }
+
 // 会话管理：会话列表与消息全部存 localStorage，刷新页面可恢复。
 // 后端硬约束：thread_id 决定对话上下文，新对话必须生成新 thread_id。
 // 会话结构：{ id, thread_id, title, createdAt, messages: [{role, content, route?, pendingQuestion?, pending?, error?}] }
@@ -54,11 +58,14 @@ function findConv(id) {
 }
 
 // 新建会话：thread_id 用 crypto.randomUUID()（浏览器原生，保证每次新对话唯一）
+// M4（Kimi §5.2）：title 占位"新对话"，首条消息后自动取前 12 字；titleSource 标记手动/自动
 export function newConversation() {
   const conv = {
     id: crypto.randomUUID(),
     thread_id: crypto.randomUUID(),
-    title: `对话 ${new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+    title: '新对话',
+    titleSource: 'auto',
+    handoff: HANDOFF.NONE,
     createdAt: Date.now(),
     messages: []
   }
@@ -66,6 +73,24 @@ export function newConversation() {
   currentId.value = conv.id
   persist()
   return conv
+}
+
+// M4：手动重命名（titleSource=manual 后自动生成不再覆盖）
+export function renameConversation(id, title) {
+  const conv = findConv(id)
+  if (!conv) return
+  const t = (title || '').trim()
+  conv.title = t || '新对话'
+  conv.titleSource = t ? 'manual' : 'auto'
+  persist()
+}
+
+// M4：自动生成主题（首条用户消息前 12 字；手动重命名后不覆盖）
+function autoTitleIfNeeded(conv, msg) {
+  if (conv.titleSource === 'manual' || msg.role !== 'user' || !msg.content) return
+  if (conv.title !== '新对话' && conv.messages.length > 0) return
+  const raw = msg.content.replace(/\s+/g, '')
+  conv.title = raw.length > 12 ? `${raw.slice(0, 12)}…` : raw
 }
 
 export function switchConversation(id) {
@@ -85,14 +110,17 @@ export function deleteConversation(id) {
   persist()
 }
 
+// 登出时清空内存会话态（用户隔离：防残留上一账号列表）
+export function clearConversations() {
+  conversations.value = []
+  currentId.value = null
+}
+
 // 向当前会话追加消息（role: 'user' | 'assistant'）
 export function addMessage(msg) {
   const conv = findConv(currentId.value)
   if (!conv) return null
-  // 首条消息作为会话标题
-  if (conv.messages.length === 0 && msg.role === 'user' && msg.content) {
-    conv.title = msg.content.length > 16 ? `${msg.content.slice(0, 16)}…` : msg.content
-  }
+  autoTitleIfNeeded(conv, msg)
   conv.messages.push(msg)
   persist()
   return msg
@@ -110,9 +138,7 @@ export function replaceLastMessage(msg) {
 export function addMessageTo(convId, msg) {
   const conv = findConv(convId)
   if (!conv) return null
-  if (conv.messages.length === 0 && msg.role === 'user' && msg.content) {
-    conv.title = msg.content.length > 16 ? `${msg.content.slice(0, 16)}…` : msg.content
-  }
+  autoTitleIfNeeded(conv, msg)
   conv.messages.push(msg)
   persist()
   return msg
@@ -123,6 +149,14 @@ export function replaceLastIn(convId, msg) {
   const conv = findConv(convId)
   if (!conv || conv.messages.length === 0) return
   conv.messages[conv.messages.length - 1] = msg
+  persist()
+}
+
+// 设置会话转人工状态（none/transferring/human），仅本地持久化
+export function setHandoff(id, state) {
+  const conv = findConv(id)
+  if (!conv) return
+  conv.handoff = state
   persist()
 }
 
@@ -140,10 +174,14 @@ export function useChat() {
     newConversation,
     switchConversation,
     deleteConversation,
+    clearConversations,
+    renameConversation,
     addMessage,
     replaceLastMessage,
     addMessageTo,
     replaceLastIn,
+    setHandoff,
+    HANDOFF,
     reload
   }
 }

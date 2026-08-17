@@ -1,24 +1,26 @@
 """业务数据模型（M1-ZJUT：4 业务表 + 2 评测表，T2 删 7 张退役表）。
 
-表职责（ZJUT 设计 §4.5 知识库 + §5.5 进化闭环）：
+表职责（ZJUT 设计 §4.5 知识库 + §5.5 进化闭环 + M4 权限/审计）：
 - users             角色与账号（student/cs_staff/admin 三角色），登录用
 - user_profiles     用户长期记忆画像（预留：画像启用时再定，1:1 users）
 - knowledge_entries 知识库条目（FAQ 式，type 驱动组装：info/process/index）
 - bad_cases         未解决反馈双通道：① M1 转人工自动沉淀 ② M3 对话页"没解决"按钮
 - suggestions       用户提议通道（M3）："问题没答案"主动提议，管理员审查采纳/驳回
+- audit_logs        审计日志（M4）：登录/审查/接待/用户管理关键操作留痕
 
 约束要点：
 - knowledge_entries.domain 六领域（教务/后勤/图书馆/IT/证件/生活）；
   keywords 逗号分隔，检索计分用（campus_desk.knowledge.search）
 - bad_cases.status：PENDING/RESOLVED（自动/手动反馈均 PENDING，M3 管理页审查后 RESOLVED）
 - suggestions.status：PENDING/ADOPTED/REJECTED（采纳=补入知识库，驳回=不补入）
+- users.permissions：附加权限位（逗号分隔），最终权限 = 角色默认 ∪ 附加位（perms.py）
 - 外键关系不配置 relationship() 对象——ORM 查询用显式 join/id 字段，
   避免 lazy-load 隐式 SQL（工具层短会话，防 N+1/DetachedInstanceError）
 """
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from campus_desk.db.base import Base
@@ -42,6 +44,24 @@ class User(Base):
     # M6 登录鉴权：pbkdf2 哈希串（格式 pbkdf2_sha256$迭代次数$salt$hash，见 security.py）；
     # nullable 兼容存量行，种子负责回填
     password_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # M4 附加权限位（逗号分隔，如 kb_review,view_stats）；最终权限 = 角色默认 ∪ 附加位
+    permissions: Mapped[str] = mapped_column(String(128), default="")
+    # M4 账号启用状态：False 时登录拒绝
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class AuditLog(Base):
+    """审计日志（M4）：关键操作留痕（登录/审查/接待/用户管理）。"""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(32), index=True)
+    action: Mapped[str] = mapped_column(String(32), index=True)  # login/adopt/dismiss/resolve/user_create...
+    object_type: Mapped[str] = mapped_column(String(16))  # system/bad_case/suggestion/user/knowledge
+    object_id: Mapped[str] = mapped_column(String(32), default="")
+    detail: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class UserProfile(Base):

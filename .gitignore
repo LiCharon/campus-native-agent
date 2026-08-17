@@ -9,6 +9,11 @@ venv/
 # 密钥（CLAUDE.md §4 规定密钥不入库）
 .env
 
+# 本地品牌覆盖（含 ZJUT 等本地化配置，不进公开 repo；通用默认值在源码 brand.js 中回退）
+.env.local
+.env.*.local
+
+
 # 本地 SQLite 数据库（checkpointer 会话库 / 临时验证库）
 *.db
 
