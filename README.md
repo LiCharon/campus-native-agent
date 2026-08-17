@@ -4,10 +4,10 @@
 
 ## 功能特性
 
-- **4 类意图分流**：knowledge（知识问答）/ tool_query（动态数据查询，M2 实装）/ multi_intent（多问题）/ other（闲聊与超范围兜底）；LLM 三层防线（结构化输出 → 重试 1 次 → 关键词规则兜底）+ 置信度门控（<0.7 转人工）
+- **4 类意图分流**：knowledge（知识问答）/ tool_query（动态数据查询）/ multi_intent（多问题）/ other（闲聊与超范围兜底）；LLM 三层防线（结构化输出 → 重试 1 次 → 关键词规则兜底）+ 置信度门控（<0.7 转人工）
 - **知识库检索组装**：关键词计分检索 + 条目 type 分型（info 直接答 / process 流程清单 / index 索引引导"去哪查"），检索层可替换（向量检索 RAG 演进预留，Agent 侧零改动）
 - **追问澄清**：检索未命中 → LLM 决策追问（≤3 轮硬约束，图结构执行不靠 LLM 自觉）→ 补充后合并重检索 → 仍未命中转人工
-- **转人工兜底**：未解决问题沉淀进 bad_cases（status=PENDING），M3 进化闭环（管理员审查 → 补入知识库）
+- **转人工兜底**：未解决问题沉淀进 bad_cases（status=PENDING），进化闭环（管理员审查 → 补入知识库）
 - **LangGraph 显式状态图**：entry 分流图 + knowledge 问答图双图编排，interrupt 收敛唯一 wait 节点，SqliteSaver 会话记忆（每用户独立实例 + 全局锁串行化）
 - **Langfuse 全链路可观测**：agent 步骤 / LLM call 埋点，无 key 环境零开销零报错
 - **前端最小闭环**：登录 + 对话（Vue3 + Element Plus），JWT 鉴权 + 三角色（student / cs_staff / admin）
@@ -37,9 +37,9 @@ py -3.14 -m venv .venv
 
 # 3. 种子数据入库（10 个演示账号 + 36 条通用校园知识，幂等可重跑）
 .venv/Scripts/python scripts/seed_db.py
-#    本地化校园真实信息（可选，私有数据不进 git）：按 config/zjut_local_data.json
+#    本地校园真实信息（可选，私有数据不进 git）：按 config/local_data.json
 #    格式准备后运行
-.venv/Scripts/python scripts/seed_zjut_local.py
+.venv/Scripts/python scripts/seed_local.py
 
 # 4. 环境验证（LangGraph quickstart / DeepSeek 结构化输出 / 真 FC 探测）
 PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/verify_env.py
@@ -57,8 +57,8 @@ cd frontend && npm run dev    # 访问 http://localhost:5173
 | 账号 | 角色 | 权限 |
 |------|------|------|
 | student-001 | student | 对话问答（学生）|
-| cs-001 | cs_staff | 人工客服（工作台 M3 接入）|
-| admin-001 | admin | 管理（进化闭环工作台 M3）|
+| cs-001 | cs_staff | 人工客服（工作台接入）|
+| admin-001 | admin | 管理（进化闭环工作台）|
 
 密码统一 `123456`。JWT 鉴权，user_id 取自 token 绝不信任请求体（越权拦截已自动化验收）。
 
@@ -79,7 +79,7 @@ campus-desk/
 │  ├─ env_check.py             环境验证 3 项（含真 FC 探测）
 │  └─ config.py                pydantic-settings 配置加载
 ├─ frontend/src/views/         Vue3 2 页（Login / Chat）
-├─ scripts/                    seed_db / seed_zjut_local / verify_env / ingest_eval_data
+├─ scripts/                    seed_db / seed_local / verify_env / ingest_eval_data
 ├─ tests/                      15 个测试文件（96 用例）
 └─ docs/                       项目文档（本地私有仓库管理，不进主 git）
 ```
@@ -96,7 +96,7 @@ campus-desk/
 轮次上限由图结构执行（rounds 计数 + 条件边），不靠 LLM 自觉；interrupt 收敛唯一 wait 节点（LangGraph 重入不落盘教训：问句/计数由 return 写入 state）。
 
 **4. 真 FC 探测先行，不写死实现**
-M1 环境验证用 `bind_tools` 实测 DeepSeek function calling 可用性（**FC_SUPPORTED=True**）——结果决定 M2 工具管道走真 FC 还是伪 FC 兜底，探测结果出来前不写死任何一种。
+环境验证用 `bind_tools` 实测 DeepSeek function calling 可用性（**FC_SUPPORTED=True**）——结果决定工具管道走真 FC 还是伪 FC 兜底，探测结果出来前不写死任何一种。
 
 ## 文档说明
 
