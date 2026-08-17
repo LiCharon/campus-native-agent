@@ -7,10 +7,9 @@
 - **4 类意图分流**：knowledge（知识问答）/ tool_query（动态数据查询，M2 实装）/ multi_intent（多问题）/ other（闲聊与超范围兜底）；LLM 三层防线（结构化输出 → 重试 1 次 → 关键词规则兜底）+ 置信度门控（<0.7 转人工）
 - **知识库检索组装**：关键词计分检索 + 条目 type 分型（info 直接答 / process 流程清单 / index 索引引导"去哪查"），检索层可替换（向量检索 RAG 演进预留，Agent 侧零改动）
 - **追问澄清**：检索未命中 → LLM 决策追问（≤3 轮硬约束，图结构执行不靠 LLM 自觉）→ 补充后合并重检索 → 仍未命中转人工
-- **转人工兜底**：未解决问题沉淀进 bad_cases（status=PENDING），M3 进化闭环（管理员审查 → 补入知识库，"越用越聪明"）
+- **转人工兜底**：未解决问题沉淀进 bad_cases（status=PENDING），M3 进化闭环（管理员审查 → 补入知识库）
 - **LangGraph 显式状态图**：entry 分流图 + knowledge 问答图双图编排，interrupt 收敛唯一 wait 节点，SqliteSaver 会话记忆（每用户独立实例 + 全局锁串行化）
 - **Langfuse 全链路可观测**：agent 步骤 / LLM call 埋点，无 key 环境零开销零报错
-- **意图评测基线**：24 条剧本真 LLM 评测，意图准确率 95.8%（含低置信门控审计）
 - **前端最小闭环**：登录 + 对话（Vue3 + Element Plus），JWT 鉴权 + 三角色（student / cs_staff / admin）
 
 ## 技术栈
@@ -45,14 +44,11 @@ py -3.14 -m venv .venv
 # 4. 环境验证（LangGraph quickstart / DeepSeek 结构化输出 / 真 FC 探测）
 PYTHONIOENCODING=utf-8 .venv/Scripts/python scripts/verify_env.py
 
-# 5. 意图评测（24 条剧本，真 LLM 跑分；无 key 自动 SKIP）
-PYTHONIOENCODING=utf-8 .venv/Scripts/python -m campus_desk.eval.runner
-
-# 6. 启动后端（--workers 1 硬约束：多 worker = 多图单例冲突）
+# 5. 启动后端（--workers 1 硬约束：多 worker = 多图单例冲突）
 .venv/Scripts/python -m uvicorn campus_desk.api.app:create_app --factory \
   --host 0.0.0.0 --port 8000 --workers 1
 
-# 7. 启动前端
+# 6. 启动前端
 cd frontend && npm run dev    # 访问 http://localhost:5173
 ```
 
@@ -77,7 +73,6 @@ campus-desk/
 │  │                           （search.py / decide.py / graph.py）
 │  ├─ api/                     FastAPI：登录 JWT + 对话 + 图注册表（auth.py / chat.py / graphs.py）
 │  ├─ db/                      SQLAlchemy + 幂等种子（users / knowledge_entries / bad_cases / user_profiles）
-│  ├─ eval/                    意图评测 runner + 24 条剧本（行为断言）
 │  ├─ telemetry.py             Langfuse 惰性埋点（无 key 零开销）
 │  ├─ security.py              JWT（HS256）+ pbkdf2 密码哈希
 │  ├─ llm.py                   build_llm 统一构造（json_object 构造期声明）
@@ -88,19 +83,6 @@ campus-desk/
 ├─ tests/                      15 个测试文件（96 用例）
 └─ docs/                       项目文档（本地私有仓库管理，不进主 git）
 ```
-
-## 评测结果（M1 基线，2026-08-15）
-
-24 条对话剧本意图评测（knowledge 18 + tool_query 2 + multi_intent 2 + other 2），真 LLM 跑分，可重复：
-
-| 指标 | 结果 |
-|------|------|
-| 意图分类准确率 | **95.8%**（23/24）|
-| 路由准确率 | **95.8%**（23/24）|
-| 低置信门控 | zjut-intent-008（"座位怎么预约？"，置信 0.60）→ 转人工（参考信息随行）|
-| 单测 | pytest 96 绿 + ruff 零告警 |
-
-评测口径：行为断言（expected_route + 门控）而非对话字面；真 LLM 跑分（无 key 自动 SKIP，不进 CI）；评测与生产同代码、InMemorySaver 隔离可无限重跑。
 
 ## 关键设计亮点
 
@@ -116,9 +98,6 @@ campus-desk/
 **4. 真 FC 探测先行，不写死实现**
 M1 环境验证用 `bind_tools` 实测 DeepSeek function calling 可用性（**FC_SUPPORTED=True**）——结果决定 M2 工具管道走真 FC 还是伪 FC 兜底，探测结果出来前不写死任何一种。
 
-**5. 评测驱动选型 + 进化闭环**
-24 条剧本行为断言基线 95.8%；每次答不上都沉淀为 bad_cases 知识库养料（M3 管理员审查回流），"越用越聪明"是面试叙事核心。
-
 ## 文档说明
 
-项目内部规范与设计文档（CLAUDE.md / docs/，含选型记录、迭代日志、评测报告）为本地私有仓库，不随本仓库公开——本 README 与代码即公开门面。
+项目内部规范与设计文档（CLAUDE.md / docs/，含选型记录、迭代日志）为本地私有仓库，不随本仓库公开——本 README 与代码即公开门面。
