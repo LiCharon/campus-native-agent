@@ -68,4 +68,6 @@ def run_turn(registry: GraphRegistry, user_id: str, thread_id: str, msg: str) ->
     """锁内调 orchestrator.turn（同步；FastAPI 路由用 def 走线程池）。"""
     bundle = registry.bundle_for(user_id)
     with registry.turn_lock:
-        return orchestrator_turn(bundle.entry, bundle.knowledge, bundle.query, thread_id, msg, user_id=user_id)
+        return orchestrator_turn(
+            bundle.entry, bundle.knowledge, bundle.query, thread_id, msg, user_id=user_id
+        )

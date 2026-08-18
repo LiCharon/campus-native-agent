@@ -66,24 +66,47 @@ def _make_collect(deps: _Deps):
         hits = search_knowledge(deps.session_factory, text)
         if hits:
             answer = assemble_answer(hits)
-            return {"reply": answer, "outcome": "answer", "finished": True,
-                    "pending_question": None, "history": history, "_consumed": consumed,
-                    "hits": [h["id"] for h in hits]}
+            return {
+                "reply": answer,
+                "outcome": "answer",
+                "finished": True,
+                "pending_question": None,
+                "history": history,
+                "_consumed": consumed,
+                "hits": [h["id"] for h in hits],
+            }
 
         rounds = state.get("rounds", 0) + 1
         decision = deps.decider.decide(history, text, missed=True)
         if decision.action == "ask" and rounds <= MAX_CLARIFY_ROUNDS:
             questions = [q for q in decision.questions if q][:2]
-            question_text = "、".join(questions) if questions else (decision.reply or "请补充更多信息。")
+            question_text = (
+                "、".join(questions) if questions else (decision.reply or "请补充更多信息。")
+            )
             history.append(raw)  # 学生原话进历史（不存 summary，防丢检索词）
-            return {"rounds": rounds, "pending_question": question_text, "reply": question_text,
-                    "outcome": "ask", "finished": False, "student_answer": None,
-                    "history": history, "_consumed": consumed, "hits": []}
+            return {
+                "rounds": rounds,
+                "pending_question": question_text,
+                "reply": question_text,
+                "outcome": "ask",
+                "finished": False,
+                "student_answer": None,
+                "history": history,
+                "_consumed": consumed,
+                "hits": [],
+            }
         # handoff 或超限
         _save_bad_case(deps, text)
-        return {"rounds": rounds, "reply": _HANDOFF_REPLY, "outcome": "handoff",
-                "finished": True, "pending_question": None, "history": history, "_consumed": consumed,
-                "hits": []}
+        return {
+            "rounds": rounds,
+            "reply": _HANDOFF_REPLY,
+            "outcome": "handoff",
+            "finished": True,
+            "pending_question": None,
+            "history": history,
+            "_consumed": consumed,
+            "hits": [],
+        }
 
     return collect
 
@@ -100,10 +123,17 @@ def _collect_after(state: KnowledgeState) -> Literal["wait", "end"]:
     return "end" if state.get("finished") else "wait"
 
 
-def build_knowledge_graph(session_factory, *, decider: ClarifyDecider | None = None,
-                          checkpointer=None, user_id: str = "student-001"):
+def build_knowledge_graph(
+    session_factory,
+    *,
+    decider: ClarifyDecider | None = None,
+    checkpointer=None,
+    user_id: str = "student-001",
+):
     """构建知识问答图。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。"""
-    deps = _Deps(session_factory, decider if decider is not None else ClarifyDecider(), user_id=user_id)
+    deps = _Deps(
+        session_factory, decider if decider is not None else ClarifyDecider(), user_id=user_id
+    )
     graph = (
         StateGraph(KnowledgeState)
         .add_node("collect", _make_collect(deps))

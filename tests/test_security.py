@@ -30,9 +30,7 @@ class TestPasswordHash:
         salt = "ab" * 16
         import hashlib
 
-        digest = hashlib.pbkdf2_hmac(
-            "sha256", b"pwd", bytes.fromhex(salt), 10_000
-        )
+        digest = hashlib.pbkdf2_hmac("sha256", b"pwd", bytes.fromhex(salt), 10_000)
         stored = f"pbkdf2_sha256$10000${salt}${digest.hex()}"
         assert security.verify_password("pwd", stored)
 

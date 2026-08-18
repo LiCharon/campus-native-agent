@@ -154,8 +154,13 @@ def test_knowledge_entry_type_and_bad_case(db_session_factory):
     from campus_desk.db.models import BadCase, KnowledgeEntry
 
     with db_session_factory() as s, s.begin():
-        e = KnowledgeEntry(domain="教务", keywords="校历,放假", question="什么时候放寒假？",
-                           type="info", answer="以学校通知为准。")
+        e = KnowledgeEntry(
+            domain="教务",
+            keywords="校历,放假",
+            question="什么时候放寒假？",
+            type="info",
+            answer="以学校通知为准。",
+        )
         s.add(e)
         s.flush()
         b = BadCase(user_id="student-001", question="怎么交学费？", reply="", status="PENDING")

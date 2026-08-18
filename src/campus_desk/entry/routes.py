@@ -1,4 +1,5 @@
 """入口分流路由常量。"""
+
 KNOWLEDGE = "knowledge"
 TOOL_QUERY = "tool_query"
 MULTI_INTENT = "multi_intent"

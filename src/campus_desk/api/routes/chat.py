@@ -29,9 +29,11 @@ def _build_sources(result: dict, session_factory: SessionFactory) -> list[Source
     hit_ids = result.get("hits", [])
     if hit_ids:
         with session_factory() as session:
-            rows = session.execute(
-                select(KnowledgeEntry).where(KnowledgeEntry.id.in_(hit_ids))
-            ).scalars().all()
+            rows = (
+                session.execute(select(KnowledgeEntry).where(KnowledgeEntry.id.in_(hit_ids)))
+                .scalars()
+                .all()
+            )
         for r in rows:
             sources.append(
                 SourceItem(

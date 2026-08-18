@@ -7,7 +7,9 @@
 
 EMPTY_ROOMS_DEGRADED = "空教室实时数据暂时查不到，可到教学楼一层电子屏或值班室查看。"
 LIBRARY_SEATS_DEGRADED = "图书馆座位实时数据暂时查不到，可到图书馆入口大屏查看。"
-CIRCUIT_DEGRADED_REPLY = "实时数据暂时查询不到，可到教学楼一层电子屏或图书馆入口大屏查看，稍后再试。"
+CIRCUIT_DEGRADED_REPLY = (
+    "实时数据暂时查询不到，可到教学楼一层电子屏或图书馆入口大屏查看，稍后再试。"
+)
 HANDOFF_REPLY = "查询服务暂时不可用，已为您记录问题，工作人员会尽快回复。"
 
 DEGRADED_REPLIES = {

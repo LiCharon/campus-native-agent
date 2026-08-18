@@ -57,8 +57,12 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(32), index=True)
-    action: Mapped[str] = mapped_column(String(32), index=True)  # login/adopt/dismiss/resolve/user_create...
-    object_type: Mapped[str] = mapped_column(String(16))  # system/bad_case/suggestion/user/knowledge
+    action: Mapped[str] = mapped_column(
+        String(32), index=True
+    )  # login/adopt/dismiss/resolve/user_create...
+    object_type: Mapped[str] = mapped_column(
+        String(16)
+    )  # system/bad_case/suggestion/user/knowledge
     object_id: Mapped[str] = mapped_column(String(32), default="")
     detail: Mapped[str] = mapped_column(String(256), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -116,7 +120,9 @@ class BadCase(Base):
     reply: Mapped[str] = mapped_column(Text, default="")
     # note 可空：存量行（转人工自动沉淀）为 NULL，手动通道才填补充说明
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(8), default="PENDING", index=True)  # PENDING/RESOLVED
+    status: Mapped[str] = mapped_column(
+        String(8), default="PENDING", index=True
+    )  # PENDING/RESOLVED
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

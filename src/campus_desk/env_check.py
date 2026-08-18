@@ -150,9 +150,7 @@ def check_fc_support() -> CheckResult:
         )
     llm = build_llm()
     try:
-        reply = llm.bind_tools([_FC_PROBE_TOOL]).invoke(
-            "请输出 JSON 调用工具回答：食堂几点开门？"
-        )
+        reply = llm.bind_tools([_FC_PROBE_TOOL]).invoke("请输出 JSON 调用工具回答：食堂几点开门？")
     except Exception as exc:  # noqa: BLE001 — 探测要兜底一切异常（含 400/网络）
         return CheckResult(
             "FC 可用性探测",

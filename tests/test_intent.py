@@ -139,16 +139,24 @@ def test_empty_input_not_crash():
 
 # ---------- M2：primary_intent ----------
 
+
 def ok_content_m2(intent, confidence=0.9, secondary=None, primary=None):
     return json.dumps(
-        {"intent": intent, "confidence": confidence, "secondary_intents": secondary or [],
-         "primary_intent": primary, "reason": "测试"},
+        {
+            "intent": intent,
+            "confidence": confidence,
+            "secondary_intents": secondary or [],
+            "primary_intent": primary,
+            "reason": "测试",
+        },
         ensure_ascii=False,
     )
 
 
 def test_parse_primary_intent():
-    fake = FakeStructuredLLM([ok_content_m2("multi_intent", 0.9, secondary=["knowledge"], primary="knowledge")])
+    fake = FakeStructuredLLM(
+        [ok_content_m2("multi_intent", 0.9, secondary=["knowledge"], primary="knowledge")]
+    )
     result = IntentClassifier(llm=fake).classify("成绩单怎么打？顺便问下校历")
     assert result.intent == "multi_intent"
     assert result.primary_intent == "knowledge"

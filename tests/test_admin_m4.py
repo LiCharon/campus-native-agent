@@ -29,7 +29,8 @@ def _login_data(client, username, password="123456"):
 def _seed_bad_case(client):
     stu = _login(client, "student-001")
     r = client.post(
-        "/api/feedback/bad-case", headers=stu,
+        "/api/feedback/bad-case",
+        headers=stu,
         json={"thread_id": "m4-1", "question": "食堂在哪？", "reply": "超出范围", "note": ""},
     )
     assert r.status_code == 200
@@ -58,7 +59,8 @@ def test_grant_kb_review_to_cs_staff(api_client):
     assert api_client.get("/api/admin/reviews?kind=bad_cases", headers=cs).status_code == 403
     # 授 kb_review
     r = api_client.put(
-        "/api/admin/users/cs-001", headers=admin,
+        "/api/admin/users/cs-001",
+        headers=admin,
         json={"role": "cs_staff", "permissions": ["kb_review"], "enabled": True},
     )
     assert r.status_code == 200
@@ -87,36 +89,62 @@ def test_student_denied_all_admin(api_client):
 def test_create_user_then_login(api_client):
     admin = _login(api_client, "admin-001")
     r = api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-099", "name": "测试生", "role": "student",
-              "student_no": "2099", "password": "secret99", "permissions": []},
+        "/api/admin/users",
+        headers=admin,
+        json={
+            "id": "student-099",
+            "name": "测试生",
+            "role": "student",
+            "student_no": "2099",
+            "password": "secret99",
+            "permissions": [],
+        },
     )
     assert r.status_code == 200
     assert r.json()["enabled"] is True
     # 初始密码可登录
     assert _login_data(api_client, "student-099", "secret99").status_code == 200
     # 重复创建 409
-    assert api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-099", "name": "x", "role": "student", "password": "secret99", "permissions": []},
-    ).status_code == 409
+    assert (
+        api_client.post(
+            "/api/admin/users",
+            headers=admin,
+            json={
+                "id": "student-099",
+                "name": "x",
+                "role": "student",
+                "password": "secret99",
+                "permissions": [],
+            },
+        ).status_code
+        == 409
+    )
 
 
 def test_disable_user_blocks_login(api_client):
     admin = _login(api_client, "admin-001")
     api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-098", "name": "禁测", "role": "student", "password": "secret98", "permissions": []},
+        "/api/admin/users",
+        headers=admin,
+        json={
+            "id": "student-098",
+            "name": "禁测",
+            "role": "student",
+            "password": "secret98",
+            "permissions": [],
+        },
     )
     r = api_client.put(
-        "/api/admin/users/student-098", headers=admin,
+        "/api/admin/users/student-098",
+        headers=admin,
         json={"role": "student", "permissions": [], "enabled": False},
     )
     assert r.status_code == 200
     assert _login_data(api_client, "student-098", "secret98").status_code == 403
     # 恢复
     api_client.put(
-        "/api/admin/users/student-098", headers=admin,
+        "/api/admin/users/student-098",
+        headers=admin,
         json={"role": "student", "permissions": [], "enabled": True},
     )
     assert _login_data(api_client, "student-098", "secret98").status_code == 200
@@ -125,11 +153,19 @@ def test_disable_user_blocks_login(api_client):
 def test_reset_password(api_client):
     admin = _login(api_client, "admin-001")
     api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-095", "name": "密测", "role": "student", "password": "oldpass99", "permissions": []},
+        "/api/admin/users",
+        headers=admin,
+        json={
+            "id": "student-095",
+            "name": "密测",
+            "role": "student",
+            "password": "oldpass99",
+            "permissions": [],
+        },
     )
     r = api_client.post(
-        "/api/admin/users/student-095/reset-password", headers=admin,
+        "/api/admin/users/student-095/reset-password",
+        headers=admin,
         json={"password": "newpass99"},
     )
     assert r.status_code == 200
@@ -140,12 +176,14 @@ def test_reset_password(api_client):
 def test_admin_protected_from_disable_and_demote(api_client):
     admin = _login(api_client, "admin-001")
     r = api_client.put(
-        "/api/admin/users/admin-001", headers=admin,
+        "/api/admin/users/admin-001",
+        headers=admin,
         json={"role": "admin", "permissions": [], "enabled": False},
     )
     assert r.status_code == 403
     r = api_client.put(
-        "/api/admin/users/admin-001", headers=admin,
+        "/api/admin/users/admin-001",
+        headers=admin,
         json={"role": "student", "permissions": [], "enabled": True},
     )
     assert r.status_code == 403
@@ -154,15 +192,27 @@ def test_admin_protected_from_disable_and_demote(api_client):
 def test_student_cannot_carry_extra_permissions(api_client):
     admin = _login(api_client, "admin-001")
     r = api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-097", "name": "x", "role": "student", "password": "secret97",
-              "permissions": ["view_stats"]},
+        "/api/admin/users",
+        headers=admin,
+        json={
+            "id": "student-097",
+            "name": "x",
+            "role": "student",
+            "password": "secret97",
+            "permissions": ["view_stats"],
+        },
     )
     assert r.status_code == 422
     r = api_client.post(
-        "/api/admin/users", headers=admin,
-        json={"id": "student-096", "name": "x", "role": "student", "password": "secret96",
-              "permissions": ["not_a_perm"]},
+        "/api/admin/users",
+        headers=admin,
+        json={
+            "id": "student-096",
+            "name": "x",
+            "role": "student",
+            "password": "secret96",
+            "permissions": ["not_a_perm"],
+        },
     )
     assert r.status_code == 422
 
@@ -194,7 +244,8 @@ def test_audit_written_on_adopt_and_resolve(api_client, db_session_factory):
     assert any(it["object_id"] == str(rid) for it in r.json()["items"])
     # adopt 审计
     api_client.post(
-        f"/api/admin/reviews/bad_cases/{aid}/adopt", headers=admin,
+        f"/api/admin/reviews/bad_cases/{aid}/adopt",
+        headers=admin,
         json={"domain": "后勤", "type": "info", "keywords": "食堂", "answer": "xxx"},
     )
     r = api_client.get("/api/admin/logs?action=adopt", headers=admin)
@@ -248,7 +299,8 @@ def test_chat_sources_kb_hit(api_client):
     """知识命中 → sources 含 kb 来源 chip（#K{id} {type}型 · {domain}）。"""
     stu = _login(api_client, "student-001")
     r = api_client.post(
-        "/api/chat", headers=stu,
+        "/api/chat",
+        headers=stu,
         json={"thread_id": "m4-src-1", "msg": "什么时候放寒假？"},
     )
     assert r.status_code == 200

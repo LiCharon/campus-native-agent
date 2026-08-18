@@ -51,8 +51,13 @@ def main() -> int:
             ).scalar_one_or_none()
             if obj is None:
                 session.add(
-                    KnowledgeEntry(domain=domain, keywords=keywords, question=question,
-                                   type=ktype, answer=answer)
+                    KnowledgeEntry(
+                        domain=domain,
+                        keywords=keywords,
+                        question=question,
+                        type=ktype,
+                        answer=answer,
+                    )
                 )
             else:
                 obj.domain, obj.keywords, obj.type, obj.answer = domain, keywords, ktype, answer

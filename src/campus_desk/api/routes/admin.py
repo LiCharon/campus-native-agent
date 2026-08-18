@@ -85,9 +85,7 @@ def list_reviews(
     with session_factory() as session:
         rows = (
             session.execute(
-                select(model)
-                .where(model.status == status)
-                .order_by(model.created_at.desc())
+                select(model).where(model.status == status).order_by(model.created_at.desc())
             )
             .scalars()
             .all()
@@ -239,12 +237,16 @@ def get_stats(
             select(KnowledgeEntry.type, func.count(KnowledgeEntry.id)).group_by(KnowledgeEntry.type)
         ).all()
         cutoff = datetime.now(UTC) - timedelta(days=14)
-        bad_dates = session.execute(
-            select(BadCase.created_at).where(BadCase.created_at >= cutoff)
-        ).scalars().all()
-        sug_dates = session.execute(
-            select(Suggestion.created_at).where(Suggestion.created_at >= cutoff)
-        ).scalars().all()
+        bad_dates = (
+            session.execute(select(BadCase.created_at).where(BadCase.created_at >= cutoff))
+            .scalars()
+            .all()
+        )
+        sug_dates = (
+            session.execute(select(Suggestion.created_at).where(Suggestion.created_at >= cutoff))
+            .scalars()
+            .all()
+        )
     type_dist = {t: c for t, c in type_rows}
     # 近 14 天按日期补零
     by_day: dict[str, dict] = {}
@@ -254,7 +256,9 @@ def get_stats(
     for dt in bad_dates:
         by_day.setdefault(dt.date().isoformat(), {"bad_case": 0, "suggestion": 0})["bad_case"] += 1
     for dt in sug_dates:
-        by_day.setdefault(dt.date().isoformat(), {"bad_case": 0, "suggestion": 0})["suggestion"] += 1
+        by_day.setdefault(dt.date().isoformat(), {"bad_case": 0, "suggestion": 0})[
+            "suggestion"
+        ] += 1
     return StatsResponse(
         user_count=user_count,
         knowledge_count=knowledge_count,
@@ -324,8 +328,12 @@ def create_user(
         detail=f"新增用户 {payload.id} ({payload.role})",
     )
     return UserListItem(
-        id=obj.id, name=obj.name, role=obj.role,
-        permissions=payload.permissions, enabled=True, student_no=obj.student_no,
+        id=obj.id,
+        name=obj.name,
+        role=obj.role,
+        permissions=payload.permissions,
+        enabled=True,
+        student_no=obj.student_no,
     )
 
 
@@ -356,8 +364,12 @@ def update_user(
         detail=f"编辑用户 {uid}: role={payload.role} enabled={payload.enabled}",
     )
     return UserListItem(
-        id=obj.id, name=obj.name, role=obj.role,
-        permissions=payload.permissions, enabled=obj.enabled, student_no=obj.student_no,
+        id=obj.id,
+        name=obj.name,
+        role=obj.role,
+        permissions=payload.permissions,
+        enabled=obj.enabled,
+        student_no=obj.student_no,
     )
 
 
@@ -382,9 +394,12 @@ def reset_password(
         detail=f"重置密码 {uid}",
     )
     return UserListItem(
-        id=obj.id, name=obj.name, role=obj.role,
+        id=obj.id,
+        name=obj.name,
+        role=obj.role,
         permissions=[p for p in obj.permissions.split(",") if p],
-        enabled=obj.enabled, student_no=obj.student_no,
+        enabled=obj.enabled,
+        student_no=obj.student_no,
     )
 
 

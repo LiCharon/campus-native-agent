@@ -90,9 +90,21 @@ class TestSeedMockTables:
         from campus_desk.db.models import EmptyRoom
 
         with db_session_factory() as session:
-            wk = {r.room for r in session.query(EmptyRoom).filter(
-                EmptyRoom.building == "3号楼", EmptyRoom.weekday == 3, EmptyRoom.period == "下午")}
-            wkend = {r.room for r in session.query(EmptyRoom).filter(
-                EmptyRoom.building == "3号楼", EmptyRoom.weekday == 6, EmptyRoom.period == "下午")}
+            wk = {
+                r.room
+                for r in session.query(EmptyRoom).filter(
+                    EmptyRoom.building == "3号楼",
+                    EmptyRoom.weekday == 3,
+                    EmptyRoom.period == "下午",
+                )
+            }
+            wkend = {
+                r.room
+                for r in session.query(EmptyRoom).filter(
+                    EmptyRoom.building == "3号楼",
+                    EmptyRoom.weekday == 6,
+                    EmptyRoom.period == "下午",
+                )
+            }
         assert wk == {"301", "305", "308"}
         assert wkend == {"302", "306", "309"}

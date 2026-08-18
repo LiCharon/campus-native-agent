@@ -33,7 +33,9 @@ JSON 格式（严格只输出 JSON）：
 
 class ClarifyDecision(BaseModel):
     action: Literal["ask", "handoff"] = Field(description="ask 追问 / handoff 转人工")
-    questions: list[str] = Field(default_factory=list, description="ask 时的追问，最多 2 个", max_length=2)
+    questions: list[str] = Field(
+        default_factory=list, description="ask 时的追问，最多 2 个", max_length=2
+    )
     reply: str = Field(default="", description="给学生的话")
     summary: str = Field(default="", description="一句话摘要")
 
@@ -58,9 +60,7 @@ class ClarifyDecider:
         通用问答器；后续如需按命中状态调整策略（如 missed=False 直接答）
         可在此扩展。
         """
-        context = (
-            f"对话历史:\n{chr(10).join(history[-4:]) or '（无）'}\n学生本轮: {user_text}"
-        )
+        context = f"对话历史:\n{chr(10).join(history[-4:]) or '（无）'}\n学生本轮: {user_text}"
         if self.llm is None:
             return ClarifyDecision(action="handoff", reply=_FALLBACK_REPLY)
         for _ in range(self.max_attempts):

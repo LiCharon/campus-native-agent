@@ -58,7 +58,9 @@ def check_tool(expected: str, tool_calls: list[str]) -> list[str]:
     return [] if expected in tool_calls else [f"工具缺失: {expected}"]
 
 
-def assert_case(case: ScriptedCase, first: dict, final: dict, turn_results: list[dict]) -> CaseOutcome:
+def assert_case(
+    case: ScriptedCase, first: dict, final: dict, turn_results: list[dict]
+) -> CaseOutcome:
     """断言：route/expected_outcome 用首轮结果；条目/工具/关键词用最终轮结果。"""
     problems: list[str] = []
     if first.get("route") != case.expected_route:
@@ -82,7 +84,9 @@ def assert_case(case: ScriptedCase, first: dict, final: dict, turn_results: list
     return CaseOutcome(case=case, passed=not problems, problems=problems)
 
 
-def run_chain_evaluation(cases=None, *, classifier=None, decider=None, tool_llm=None, max_cases=None):
+def run_chain_evaluation(
+    cases=None, *, classifier=None, decider=None, tool_llm=None, max_cases=None
+):
     """跑一遍链路评测。classifier/decider/tool_llm 可注入（测试用 fake），默认真 LLM。"""
     cases = cases or load_chain_cases()
     if max_cases:
@@ -117,9 +121,7 @@ def format_chain_report(outcomes: list[CaseOutcome], duration: float) -> str:
         "# Campus Native Agent 链路评测报告（M2）",
         "",
         f"- 剧本数: {total}",
-        (
-            f"- 通过率: **{passed / total:.1%}**（{passed}/{total}）" if total else "- 通过率: -"
-        ),
+        (f"- 通过率: **{passed / total:.1%}**（{passed}/{total}）" if total else "- 通过率: -"),
         f"- 总耗时: {duration:.1f}s",
         "",
         "## 失败用例明细",

@@ -35,8 +35,18 @@ def test_hit_answers_directly(db_session_factory):
 
     _clear_knowledge(db_session_factory)  # 否则 36 条种子里同 question 条目抢先命中
     with db_session_factory() as s, s.begin():
-        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放假？", type="info", answer="寒假以通知为准。"))
-    graph = build_knowledge_graph(db_session_factory, decider=FakeDecider([]), checkpointer=InMemorySaver())
+        s.add(
+            KnowledgeEntry(
+                domain="教务",
+                keywords="校历,寒假",
+                question="放假？",
+                type="info",
+                answer="寒假以通知为准。",
+            )
+        )
+    graph = build_knowledge_graph(
+        db_session_factory, decider=FakeDecider([]), checkpointer=InMemorySaver()
+    )
     # langgraph 1.x：compile(checkpointer=...) 后 invoke 必须带 thread_id（即使不触发 interrupt）
     cfg = {"configurable": {"thread_id": "t-hit"}}
     out = graph.invoke({"user_input": "什么时候放寒假？"}, cfg)
@@ -50,12 +60,29 @@ def test_miss_asks_then_answers_after_clarify(db_session_factory):
     from campus_desk.db.models import KnowledgeEntry
     from campus_desk.knowledge.decide import ClarifyDecision
 
-    _clear_knowledge(db_session_factory)  # 否则 36 条种子"图书馆几点开门？"首轮直答，miss 流程走不到
+    _clear_knowledge(
+        db_session_factory
+    )  # 否则 36 条种子"图书馆几点开门？"首轮直答，miss 流程走不到
     with db_session_factory() as s, s.begin():
-        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,校图书馆", question="图书馆几点开门？", type="info", answer="8:00-22:00。"))
-    decider = FakeDecider([
-        ClarifyDecision(action="ask", questions=["您问的是哪个图书馆？"], reply="请补充。", summary="问图书馆"),
-    ])
+        s.add(
+            KnowledgeEntry(
+                domain="图书馆",
+                keywords="开放时间,校图书馆",
+                question="图书馆几点开门？",
+                type="info",
+                answer="8:00-22:00。",
+            )
+        )
+    decider = FakeDecider(
+        [
+            ClarifyDecision(
+                action="ask",
+                questions=["您问的是哪个图书馆？"],
+                reply="请补充。",
+                summary="问图书馆",
+            ),
+        ]
+    )
     graph = build_knowledge_graph(db_session_factory, decider=decider, checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "t1"}}
     first = graph.invoke({"user_input": "图书馆几点开门"}, cfg)
@@ -71,9 +98,13 @@ def test_handoff_saves_bad_case(db_session_factory):
     from campus_desk.db.models import BadCase
     from campus_desk.knowledge.decide import ClarifyDecision
 
-    decider = FakeDecider([
-        ClarifyDecision(action="handoff", questions=[], reply="该问题需人工处理。", summary="转人工"),
-    ])
+    decider = FakeDecider(
+        [
+            ClarifyDecision(
+                action="handoff", questions=[], reply="该问题需人工处理。", summary="转人工"
+            ),
+        ]
+    )
     graph = build_knowledge_graph(db_session_factory, decider=decider, checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "t-handoff"}}
     out = graph.invoke({"user_input": "量子力学怎么学"}, cfg)
@@ -96,7 +127,9 @@ def test_max_clarify_rounds_forced_handoff(db_session_factory):
     asks = [
         ClarifyDecision(action="ask", questions=["请补充。"], reply="请补充。", summary="追问"),
     ] * (MAX_CLARIFY_ROUNDS + 1)
-    graph = build_knowledge_graph(db_session_factory, decider=FakeDecider(asks), checkpointer=InMemorySaver())
+    graph = build_knowledge_graph(
+        db_session_factory, decider=FakeDecider(asks), checkpointer=InMemorySaver()
+    )
     cfg = {"configurable": {"thread_id": "t-max"}}
     out = graph.invoke({"user_input": "空调维修流程"}, cfg)
     assert out["finished"] is False
@@ -123,9 +156,13 @@ def test_clarify_merge_joins_all_history(db_session_factory):
     class RecordingDecider:
         def decide(self, history, user_text, missed):
             seen.append((list(history), user_text))
-            return ClarifyDecision(action="ask", questions=["请补充。"], reply="请补充。", summary="追问")
+            return ClarifyDecision(
+                action="ask", questions=["请补充。"], reply="请补充。", summary="追问"
+            )
 
-    graph = build_knowledge_graph(db_session_factory, decider=RecordingDecider(), checkpointer=InMemorySaver())
+    graph = build_knowledge_graph(
+        db_session_factory, decider=RecordingDecider(), checkpointer=InMemorySaver()
+    )
     cfg = {"configurable": {"thread_id": "t-join"}}
     _clear_knowledge(db_session_factory)  # 否则 36 条种子"图书馆几点开门？"直答，decider 永不触发
     graph.invoke({"user_input": "图书馆几点开门"}, cfg)

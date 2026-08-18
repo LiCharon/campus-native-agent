@@ -35,8 +35,11 @@ def validate_chain_dataset(cases: list[ScriptedCase]) -> list[str]:
             problems.append(f"{case.id}: student_input 为空")
         if case.expected_route != route_of_intent(case.intent):
             problems.append(f"{case.id}: 标注-路由不一致")
-        if case.category == "knowledge" and not case.expected_entry_ids \
-                and case.expected_outcome != "handoff":
+        if (
+            case.category == "knowledge"
+            and not case.expected_entry_ids
+            and case.expected_outcome != "handoff"
+        ):
             # 转人工链路剧本（expected_outcome=handoff）不标注条目 id
             problems.append(f"{case.id}: knowledge 剧本缺 expected_entry_ids")
         if case.category == "tool_query" and not case.expected_tool:

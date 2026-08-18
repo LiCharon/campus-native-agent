@@ -85,8 +85,13 @@ def _call_tools(deps: _Deps, text: str):
 
 
 def _finish(reply: str, outcome: str, **extra) -> dict:
-    out = {"reply": reply, "outcome": outcome, "finished": True,
-           "pending_question": None, "_consumed": True}
+    out = {
+        "reply": reply,
+        "outcome": outcome,
+        "finished": True,
+        "pending_question": None,
+        "_consumed": True,
+    }
     out.update(extra)
     return out
 
@@ -94,8 +99,11 @@ def _finish(reply: str, outcome: str, **extra) -> dict:
 def _make_collect(deps: _Deps):
     def collect(state: QueryState) -> dict:
         history = list(state.get("history", []))
-        raw = state.get("user_input", "") if not state.get("_consumed") \
+        raw = (
+            state.get("user_input", "")
+            if not state.get("_consumed")
             else (state.get("student_answer") or "")
+        )
         # 追问轮合并全部历史原话（拍板 Q11：对话短无上下文过长风险，早轮关键词不丢）
         text = " ".join(history + [raw]) if history else raw
         fail_count = state.get("fail_count", 0)
@@ -104,12 +112,24 @@ def _make_collect(deps: _Deps):
         # ④ 熔断后兜底：连续失败达到阈值 → 转人工 + bad_cases
         if fail_count >= CIRCUIT_BREAK_THRESHOLD:
             _save_bad_case(deps, text)
-            return _finish(HANDOFF_REPLY, "handoff", rounds=rounds, history=history,
-                           tool_calls=[], fail_count=fail_count)
+            return _finish(
+                HANDOFF_REPLY,
+                "handoff",
+                rounds=rounds,
+                history=history,
+                tool_calls=[],
+                fail_count=fail_count,
+            )
         # ③ 熔断中：跳过 LLM 直接降级（失败计数继续累计）
         if fail_count >= 1:
-            return _finish(CIRCUIT_DEGRADED_REPLY, "degraded", rounds=rounds, history=history,
-                           tool_calls=[], fail_count=fail_count + 1)
+            return _finish(
+                CIRCUIT_DEGRADED_REPLY,
+                "degraded",
+                rounds=rounds,
+                history=history,
+                tool_calls=[],
+                fail_count=fail_count + 1,
+            )
 
         # 正常路径：FC 两次尝试（重试 1 次）
         tcs = []
@@ -120,16 +140,40 @@ def _make_collect(deps: _Deps):
         if tcs:
             first = tcs[0]
             name = first.get("name", "") if isinstance(first, dict) else getattr(first, "name", "")
-            args = first.get("args", {}) if isinstance(first, dict) else (getattr(first, "args", {}) or {})
+            args = (
+                first.get("args", {})
+                if isinstance(first, dict)
+                else (getattr(first, "args", {}) or {})
+            )
             if name in TOOL_FUNCS:
-                result = _run_tool(deps, name, {k: v for k, v in args.items() if k in ("building", "period")})
+                result = _run_tool(
+                    deps, name, {k: v for k, v in args.items() if k in ("building", "period")}
+                )
                 if result.get("ok"):
-                    return _finish(_assemble(name, result), "answer", rounds=rounds, history=history,
-                                   tool_calls=[name], fail_count=0)
-                return _finish(DEGRADED_REPLIES.get(name, CIRCUIT_DEGRADED_REPLY), "degraded",
-                               rounds=rounds, history=history, tool_calls=[name], fail_count=fail_count + 1)
-            return _finish(CIRCUIT_DEGRADED_REPLY, "degraded", rounds=rounds, history=history,
-                           tool_calls=[], fail_count=fail_count + 1)
+                    return _finish(
+                        _assemble(name, result),
+                        "answer",
+                        rounds=rounds,
+                        history=history,
+                        tool_calls=[name],
+                        fail_count=0,
+                    )
+                return _finish(
+                    DEGRADED_REPLIES.get(name, CIRCUIT_DEGRADED_REPLY),
+                    "degraded",
+                    rounds=rounds,
+                    history=history,
+                    tool_calls=[name],
+                    fail_count=fail_count + 1,
+                )
+            return _finish(
+                CIRCUIT_DEGRADED_REPLY,
+                "degraded",
+                rounds=rounds,
+                history=history,
+                tool_calls=[],
+                fail_count=fail_count + 1,
+            )
 
         # 无 tool_calls → 规则抽取兜底
         fields = extract_fields(text)
@@ -137,29 +181,68 @@ def _make_collect(deps: _Deps):
         if building and period:
             result = _run_tool(deps, "query_empty_rooms", {"building": building, "period": period})
             if result.get("ok"):
-                return _finish(_assemble("query_empty_rooms", result), "answer", rounds=rounds,
-                               history=history, tool_calls=["query_empty_rooms"], fail_count=0)
-            return _finish(DEGRADED_REPLIES["query_empty_rooms"], "degraded", rounds=rounds,
-                           history=history, tool_calls=["query_empty_rooms"], fail_count=fail_count + 1)
+                return _finish(
+                    _assemble("query_empty_rooms", result),
+                    "answer",
+                    rounds=rounds,
+                    history=history,
+                    tool_calls=["query_empty_rooms"],
+                    fail_count=0,
+                )
+            return _finish(
+                DEGRADED_REPLIES["query_empty_rooms"],
+                "degraded",
+                rounds=rounds,
+                history=history,
+                tool_calls=["query_empty_rooms"],
+                fail_count=fail_count + 1,
+            )
         if "图书馆" in text or "座位" in text:
             result = _run_tool(deps, "query_library_seats", {})
             if result.get("ok"):
-                return _finish(_assemble("query_library_seats", result), "answer", rounds=rounds,
-                               history=history, tool_calls=["query_library_seats"], fail_count=0)
-            return _finish(DEGRADED_REPLIES["query_library_seats"], "degraded", rounds=rounds,
-                           history=history, tool_calls=["query_library_seats"], fail_count=fail_count + 1)
+                return _finish(
+                    _assemble("query_library_seats", result),
+                    "answer",
+                    rounds=rounds,
+                    history=history,
+                    tool_calls=["query_library_seats"],
+                    fail_count=0,
+                )
+            return _finish(
+                DEGRADED_REPLIES["query_library_seats"],
+                "degraded",
+                rounds=rounds,
+                history=history,
+                tool_calls=["query_library_seats"],
+                fail_count=fail_count + 1,
+            )
 
         # 缺字段 → 确定性追问（拍板 Q4：不调 LLM）
         rounds += 1
         if rounds > MAX_CLARIFY_ROUNDS:
             _save_bad_case(deps, text)
-            return _finish(HANDOFF_REPLY, "handoff", rounds=rounds, history=history,
-                           tool_calls=[], fail_count=fail_count)
+            return _finish(
+                HANDOFF_REPLY,
+                "handoff",
+                rounds=rounds,
+                history=history,
+                tool_calls=[],
+                fail_count=fail_count,
+            )
         question = _CLARIFY_BUILDING if not building else _CLARIFY_PERIOD
         history.append(raw)
-        return {"rounds": rounds, "pending_question": question, "reply": question,
-                "outcome": "ask", "finished": False, "student_answer": None,
-                "history": history, "tool_calls": [], "fail_count": fail_count, "_consumed": True}
+        return {
+            "rounds": rounds,
+            "pending_question": question,
+            "reply": question,
+            "outcome": "ask",
+            "finished": False,
+            "student_answer": None,
+            "history": history,
+            "tool_calls": [],
+            "fail_count": fail_count,
+            "_consumed": True,
+        }
 
     return collect
 
@@ -176,7 +259,9 @@ def _collect_after(state: QueryState) -> Literal["wait", "end"]:
     return "end" if state.get("finished") else "wait"
 
 
-def build_query_graph(session_factory, *, llm=None, checkpointer=None, user_id: str = "student-001"):
+def build_query_graph(
+    session_factory, *, llm=None, checkpointer=None, user_id: str = "student-001"
+):
     """构建工具查询图。llm/checkpointer 可注入（测试用 fake/InMemorySaver），默认真 FC。"""
     deps = _Deps(session_factory, llm if llm is not None else build_tool_llm(), user_id=user_id)
     graph = (

@@ -70,9 +70,7 @@ def test_suggestion_writes_row(api_client, db_session_factory):
 
 
 def test_feedback_requires_auth(api_client):
-    r = api_client.post(
-        "/api/feedback/bad-case", json={"thread_id": "t", "question": "q"}
-    )
+    r = api_client.post("/api/feedback/bad-case", json={"thread_id": "t", "question": "q"})
     assert r.status_code == 401
     r = api_client.post("/api/feedback/suggestion", json={"question": "q"})
     assert r.status_code == 401

@@ -49,8 +49,15 @@ def _secondary_labels(intent) -> list[str]:
     return [_INTENT_LABELS[s] for s in secondary]
 
 
-def turn(entry_graph, knowledge_graph, query_graph, thread_id: str, msg: str, *,
-         user_id: str | None = None) -> dict:
+def turn(
+    entry_graph,
+    knowledge_graph,
+    query_graph,
+    thread_id: str,
+    msg: str,
+    *,
+    user_id: str | None = None,
+) -> dict:
     """一轮对话：Entry 分流 → 按路由/主意图进 knowledge 或 query 图。"""
     with (
         telemetry.trace_attrs(user_id=user_id, session_id=thread_id, tags=["zjut-m2"]),
@@ -88,8 +95,11 @@ def turn(entry_graph, knowledge_graph, query_graph, thread_id: str, msg: str, *,
             primary = intent.primary_intent if intent else None
             polite = primary == "other"
             if primary not in (KNOWLEDGE, TOOL_QUERY):
-                secondary = [s for s in (intent.secondary_intents if intent else [])
-                             if s in (KNOWLEDGE, TOOL_QUERY)]
+                secondary = [
+                    s
+                    for s in (intent.secondary_intents if intent else [])
+                    if s in (KNOWLEDGE, TOOL_QUERY)
+                ]
                 primary = secondary[0] if secondary else KNOWLEDGE
             if primary == TOOL_QUERY:
                 with telemetry.span("agent.query", metadata={"thread_id": thread_id}):

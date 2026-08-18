@@ -40,11 +40,13 @@ def verify_password(plain: str, stored: str) -> bool:
             "sha256", plain.encode(), bytes.fromhex(salt), int(iterations_s)
         )
         return hmac.compare_digest(digest.hex(), expected)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return False
 
 
-def create_access_token(user_id: str, role: str, permissions: list[str] | None = None) -> tuple[str, int]:
+def create_access_token(
+    user_id: str, role: str, permissions: list[str] | None = None
+) -> tuple[str, int]:
     """签发 JWT，返回 (token, 过期秒数)。claims 带 sub+role+perms（登录时算好的
     最终权限并集），authz 不查库——改权限需重新登录（M4 已知语义）。"""
     expire_minutes = settings.jwt_expire_minutes

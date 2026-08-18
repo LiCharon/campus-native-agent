@@ -16,16 +16,23 @@ def rooms_call(building="3号楼", period="下午"):
     return AIMessage(
         content="",
         tool_calls=[
-            {"name": "query_empty_rooms", "args": {"building": building, "period": period},
-             "id": "call_1", "type": "tool_call"}
+            {
+                "name": "query_empty_rooms",
+                "args": {"building": building, "period": period},
+                "id": "call_1",
+                "type": "tool_call",
+            }
         ],
     )
 
 
 def library_call():
-    return AIMessage(content="", tool_calls=[
-        {"name": "query_library_seats", "args": {}, "id": "call_2", "type": "tool_call"}
-    ])
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {"name": "query_library_seats", "args": {}, "id": "call_2", "type": "tool_call"}
+        ],
+    )
 
 
 def empty():

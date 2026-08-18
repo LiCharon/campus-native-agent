@@ -23,16 +23,22 @@ def login(payload: LoginRequest, session_factory: SessionFactory = Depends(get_s
     """用户名匹配 users.id 或 student_no（学生两种都能登）；密码错统一 401。"""
     with session_factory() as session:
         user = session.execute(
-            select(User).where(or_(User.id == payload.username, User.student_no == payload.username))
+            select(User).where(
+                or_(User.id == payload.username, User.student_no == payload.username)
+            )
         ).scalar_one_or_none()
-        if user is None or user.password_hash is None or not verify_password(
-            payload.password, user.password_hash
+        if (
+            user is None
+            or user.password_hash is None
+            or not verify_password(payload.password, user.password_hash)
         ):
             raise HTTPException(status_code=401, detail="用户名或密码错误")
         if not user.enabled:
             raise HTTPException(status_code=403, detail="账号已禁用，请联系管理员")
         perms = effective_perms(user.role, user.permissions)
-    write_audit(session_factory, user_id=user.id, action="login", object_type="system", detail="登录成功")
+    write_audit(
+        session_factory, user_id=user.id, action="login", object_type="system", detail="登录成功"
+    )
     token, expires_in = create_access_token(user.id, user.role, perms)
     return LoginResponse(
         token=token,

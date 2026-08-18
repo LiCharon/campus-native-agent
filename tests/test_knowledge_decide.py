@@ -14,7 +14,12 @@ from campus_desk.knowledge.decide import ClarifyDecider
 
 def _ask_json() -> str:
     return json.dumps(
-        {"action": "ask", "questions": ["您问的是哪个校区？"], "reply": "请补充校区信息。", "summary": "问校区"},
+        {
+            "action": "ask",
+            "questions": ["您问的是哪个校区？"],
+            "reply": "请补充校区信息。",
+            "summary": "问校区",
+        },
         ensure_ascii=False,
     )
 

@@ -16,8 +16,14 @@ def test_validate_chain_dataset_clean():
 def test_validate_rejects_knowledge_without_entry_ids():
     from campus_desk.eval.models import ScriptedCase
 
-    bad = ScriptedCase(id="x-1", category="knowledge", student_input="放假？", intent="knowledge",
-                       expected_route="knowledge", expected_keywords=["寒假"])
+    bad = ScriptedCase(
+        id="x-1",
+        category="knowledge",
+        student_input="放假？",
+        intent="knowledge",
+        expected_route="knowledge",
+        expected_keywords=["寒假"],
+    )
     problems = validate_chain_dataset([bad])
     assert any("expected_entry_ids" in p for p in problems)
 
@@ -25,8 +31,14 @@ def test_validate_rejects_knowledge_without_entry_ids():
 def test_validate_rejects_tool_without_tool_name():
     from campus_desk.eval.models import ScriptedCase
 
-    bad = ScriptedCase(id="x-2", category="tool_query", student_input="有空教室吗", intent="tool_query",
-                       expected_route="tool_query", expected_keywords=["空闲教室"])
+    bad = ScriptedCase(
+        id="x-2",
+        category="tool_query",
+        student_input="有空教室吗",
+        intent="tool_query",
+        expected_route="tool_query",
+        expected_keywords=["空闲教室"],
+    )
     problems = validate_chain_dataset([bad])
     assert any("expected_tool" in p for p in problems)
 
@@ -34,7 +46,13 @@ def test_validate_rejects_tool_without_tool_name():
 def test_validate_allows_handoff_without_entry_ids():
     from campus_desk.eval.models import ScriptedCase
 
-    ok = ScriptedCase(id="x-3", category="knowledge", student_input="奖学金标准？", intent="knowledge",
-                      expected_route="knowledge", expected_outcome="handoff",
-                      expected_keywords=["工作人员"])
+    ok = ScriptedCase(
+        id="x-3",
+        category="knowledge",
+        student_input="奖学金标准？",
+        intent="knowledge",
+        expected_route="knowledge",
+        expected_outcome="handoff",
+        expected_keywords=["工作人员"],
+    )
     assert validate_chain_dataset([ok]) == []

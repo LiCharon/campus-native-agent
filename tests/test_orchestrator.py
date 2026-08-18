@@ -94,8 +94,9 @@ def test_pending_human_handoff_resumes_into_knowledge():
 def test_tool_query_routes_to_query_graph_with_derived_thread():
     entry = FakeEntryGraph(TOOL_QUERY)
     kg = FakeGraph()
-    qg = FakeGraph(state={"reply": "空闲教室：301", "finished": True,
-                          "tool_calls": ["query_empty_rooms"]})
+    qg = FakeGraph(
+        state={"reply": "空闲教室：301", "finished": True, "tool_calls": ["query_empty_rooms"]}
+    )
     out = turn(entry, kg, qg, THREAD, "3号楼下午有空教室吗")
     assert qg.invoked and not kg.invoked
     assert out["route"] == TOOL_QUERY
@@ -106,7 +107,9 @@ def test_tool_query_routes_to_query_graph_with_derived_thread():
 def test_query_pending_resumes_into_query():
     entry = FakeEntryGraph(HUMAN_HANDOFF)
     kg = FakeGraph()
-    qg = FakeGraph(state={"reply": "补充后的查询", "finished": True, "tool_calls": []}, pending=True)
+    qg = FakeGraph(
+        state={"reply": "补充后的查询", "finished": True, "tool_calls": []}, pending=True
+    )
     out = turn(entry, kg, qg, THREAD, "3号楼")
     assert qg.invoked and not kg.invoked
     args, _ = qg.invoked[0]
@@ -115,11 +118,16 @@ def test_query_pending_resumes_into_query():
 
 
 def test_multi_primary_tool_routes_to_query():
-    intent = IntentResult(intent="multi_intent", confidence=0.9, primary_intent="tool_query",
-                          secondary_intents=["knowledge"])
+    intent = IntentResult(
+        intent="multi_intent",
+        confidence=0.9,
+        primary_intent="tool_query",
+        secondary_intents=["knowledge"],
+    )
     entry = FakeEntryGraph(MULTI_INTENT, intent=intent)
-    qg = FakeGraph(state={"reply": "空闲教室：301", "finished": True,
-                          "tool_calls": ["query_empty_rooms"]})
+    qg = FakeGraph(
+        state={"reply": "空闲教室：301", "finished": True, "tool_calls": ["query_empty_rooms"]}
+    )
     out = turn(entry, FakeGraph(), qg, THREAD, "3号楼有空教室吗？顺便问下校历")
     assert qg.invoked
     assert out["route"] == MULTI_INTENT
@@ -127,8 +135,12 @@ def test_multi_primary_tool_routes_to_query():
 
 
 def test_multi_primary_other_takes_secondary_with_polite_prefix():
-    intent = IntentResult(intent="multi_intent", confidence=0.9, primary_intent="other",
-                          secondary_intents=["knowledge"])
+    intent = IntentResult(
+        intent="multi_intent",
+        confidence=0.9,
+        primary_intent="other",
+        secondary_intents=["knowledge"],
+    )
     entry = FakeEntryGraph(MULTI_INTENT, intent=intent)
     kg = FakeGraph(state={"reply": "寒假以通知为准。", "finished": True})
     out = turn(entry, kg, FakeGraph(), THREAD, "今天天气怎么样？顺便问下校历")

@@ -12,7 +12,9 @@ from datetime import UTC, date, datetime
 _PERIODS = ("上午", "下午", "晚上")
 
 
-def query_empty_rooms(session_factory, *, building: str, period: str, on: date | None = None) -> dict:
+def query_empty_rooms(
+    session_factory, *, building: str, period: str, on: date | None = None
+) -> dict:
     """查 (楼栋, 周几, 时段) 的空闲教室列表。on 默认今天（date 不进 FC schema）。"""
     from campus_desk.db.models import EmptyRoom
 

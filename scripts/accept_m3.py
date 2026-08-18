@@ -49,7 +49,9 @@ def _factory():
 def _build_client(factory):
     class FakeClassifier:
         def classify(self, user_input):
-            return IntentResult(intent="knowledge", confidence=0.9, secondary_intents=[], reason="t")
+            return IntentResult(
+                intent="knowledge", confidence=0.9, secondary_intents=[], reason="t"
+            )
 
     def _bundle(user_id: str) -> GraphBundle:
         entry = build_entry_graph(classifier=FakeClassifier())
@@ -86,7 +88,12 @@ def main() -> None:
     r = client.post(
         "/api/feedback/bad-case",
         headers=student,
-        json={"thread_id": "m3-1", "question": "研究生导师怎么选？", "reply": "超出知识范围", "note": "没解决"},
+        json={
+            "thread_id": "m3-1",
+            "question": "研究生导师怎么选？",
+            "reply": "超出知识范围",
+            "note": "没解决",
+        },
     )
     bid = r.json()["id"] if r.status_code == 200 else None
     results.append(check("1 学生手动反馈落 bad_cases", r.status_code == 200 and bid, f"id={bid}"))
@@ -160,7 +167,9 @@ def main() -> None:
 
     # 7. 权限门控：学生访问管理接口 403
     r = client.get("/api/admin/reviews?kind=bad_cases", headers=student)
-    results.append(check("7 权限：student 访问管理页 403", r.status_code == 403, f"code={r.status_code}"))
+    results.append(
+        check("7 权限：student 访问管理页 403", r.status_code == 403, f"code={r.status_code}")
+    )
 
     print(f"\n验收结果: {sum(results)}/7 通过")
     sys.exit(0 if all(results) else 1)
