@@ -69,7 +69,7 @@ campus-desk/
 │  ├─ query/           工具查询管道（工具注册表 + 字段抽取 + 模板组装）
 │  ├─ api/             FastAPI 路由（鉴权 / 对话 / 管理 / 客服 / 反馈）
 │  ├─ db/              SQLAlchemy + alembic + 幂等种子
-│  └─ telemetry.py     Langfuse 惰性埋点（无 key 零开销）
+│  └─ telemetry.py     Langfuse 全链路埋点
 ├─ frontend/src/views/ Vue3 页面（Login / Chat / CsWorkbench / AdminReview / StatsDashboard / UserManage / LogViewer）
 ├─ scripts/            种子 / 环境验证 / 本地数据注入脚本
 ├─ tests/              pytest
