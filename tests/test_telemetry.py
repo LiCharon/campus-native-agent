@@ -11,6 +11,7 @@ import sys
 import pytest
 
 from campus_desk import telemetry
+from campus_desk.config import settings
 from campus_desk.llm import build_llm
 
 
@@ -47,5 +48,32 @@ def test_langfuse_package_not_imported():
     with telemetry.span("x"), telemetry.trace_attrs(user_id="u"):
         pass
     assert telemetry.langfuse_handler() is None
+    telemetry.score_trace(name="turn.outcome", value=1.0, comment="outcome=answer")
     build_llm()
     assert "langfuse" not in sys.modules
+
+
+def test_score_trace_noop_without_keys():
+    """score_trace 无 key 时纯 no-op：不抛错、不 import langfuse（sys.modules 锁死）。"""
+    telemetry.score_trace(name="turn.outcome", value=1.0)
+    telemetry.score_trace(name="x", value=0.5, comment="c", config_id="cfg")
+    assert "langfuse" not in sys.modules
+
+
+def test_score_trace_calls_current_trace_when_enabled(monkeypatch):
+    """enabled 路径：mock client 的 score_current_trace 被调用（参数透传）。"""
+    monkeypatch.setattr(settings, "langfuse_public_key", "pk")
+    monkeypatch.setattr(settings, "langfuse_secret_key", "sk")
+    monkeypatch.setattr(settings, "langfuse_host", "http://localhost:3001")
+
+    calls = {}
+
+    class FakeClient:
+        def score_current_trace(self, **kwargs):
+            calls.update(kwargs)
+
+    monkeypatch.setattr(telemetry, "_client", FakeClient())
+    telemetry.score_trace(name="turn.outcome", value=0.6, comment="outcome=ask")
+    assert calls["name"] == "turn.outcome"
+    assert calls["value"] == 0.6
+    assert calls["comment"] == "outcome=ask"

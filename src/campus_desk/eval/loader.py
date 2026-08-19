@@ -11,11 +11,12 @@ from campus_desk.eval.models import ScriptedCase
 
 DATASET_DIR = Path(__file__).parent / "dataset"
 
-# 各类别数量区间（M1-T11 ZJUT 4 类：知识问答 15-20，其余各 2-5）
+# 各类别数量区间（M1-T11 ZJUT 4 类：知识问答 15-20，其余各 2-5；
+# M2+ FC 扩展：tool_query 扩到 15-25（12 工具意图全覆盖），multi_intent 放宽到 8）
 COUNT_RANGES: dict[str, tuple[int, int]] = {
     "knowledge": (15, 20),
-    "tool_query": (2, 5),
-    "multi_intent": (2, 5),
+    "tool_query": (15, 25),
+    "multi_intent": (2, 8),
     "other": (2, 5),
 }
 

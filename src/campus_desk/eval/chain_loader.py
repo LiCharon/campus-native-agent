@@ -44,6 +44,10 @@ def validate_chain_dataset(cases: list[ScriptedCase]) -> list[str]:
             problems.append(f"{case.id}: knowledge 剧本缺 expected_entry_ids")
         if case.category == "tool_query" and not case.expected_tool:
             problems.append(f"{case.id}: tool_query 剧本缺 expected_tool")
+        if case.inject_error and case.expected_outcome != "degraded":
+            problems.append(f"{case.id}: inject_error 剧本 expected_outcome 应为 degraded")
+        if case.expected_outcome == "degraded" and case.category == "tool_query" and not case.inject_error:
+            problems.append(f"{case.id}: degraded 剧本缺 inject_error（注入机制未启用）")
         if not case.expected_keywords:
             problems.append(f"{case.id}: 缺 expected_keywords（答案正确性口径必填）")
         if case.category == "multi_intent" and not case.secondary_intents:

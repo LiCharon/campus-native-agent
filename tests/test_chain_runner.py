@@ -79,3 +79,52 @@ def test_assert_case_tool_pass():
         "reply": "3号楼今天下午空闲教室：301。",
     }
     assert assert_case(case, result, result, turn_results=[]).passed
+
+
+def test_assert_case_degraded_pass():
+    """M2+：inject_error 剧本 → outcome=degraded + 期望工具命中 + 降级关键词。"""
+    from campus_desk.eval.models import ScriptedCase
+
+    case = ScriptedCase(
+        id="c-4",
+        category="tool_query",
+        student_input="3号楼下午有空教室吗",
+        intent="tool_query",
+        expected_route="tool_query",
+        expected_outcome="degraded",
+        expected_tool="query_empty_rooms",
+        expected_keywords=["查不到"],
+        inject_error="db",
+    )
+    result = {
+        "route": "tool_query",
+        "outcome": "degraded",
+        "tool_calls": ["query_empty_rooms"],
+        "reply": "空教室实时数据暂时查不到，可到教学楼一层电子屏或值班室查看。",
+    }
+    outcome = assert_case(case, result, result, turn_results=[])
+    assert outcome.passed
+
+
+def test_assert_case_degraded_wrong_outcome_fails():
+    """inject_error 剧本 outcome 不是 degraded → 失败。"""
+    from campus_desk.eval.models import ScriptedCase
+
+    case = ScriptedCase(
+        id="c-5",
+        category="tool_query",
+        student_input="3号楼下午有空教室吗",
+        intent="tool_query",
+        expected_route="tool_query",
+        expected_outcome="degraded",
+        expected_tool="query_empty_rooms",
+        expected_keywords=["查不到"],
+        inject_error="db",
+    )
+    result = {
+        "route": "tool_query",
+        "outcome": "answer",
+        "tool_calls": ["query_empty_rooms"],
+        "reply": "3号楼今天下午空闲教室：301。",
+    }
+    assert not assert_case(case, result, result, turn_results=[]).passed

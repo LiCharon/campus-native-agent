@@ -75,7 +75,40 @@ _RULE_KEYWORDS: dict[str, list[str]] = {
         "学分",
         "成绩单",
     ],
-    "tool_query": ["空教室", "空余教室", "自习室", "座位", "课表", "余量"],
+    "tool_query": [
+        "空教室",
+        "空余教室",
+        "自习室",
+        "座位",
+        "课表",
+        "余量",
+        # M2+ FC 扩展：课表/成绩/考试
+        "课程",
+        "上课",
+        "成绩",
+        "分数",
+        "考试安排",
+        "考试时间",
+        # M2+ FC 扩展：借阅/校园卡/电量
+        "借阅",
+        "在借",
+        "还书",
+        "卡里",
+        "余额",
+        "电量",
+        "电费",
+        "还有多少电",
+        "还剩多少电",
+        # M2+ FC 扩展：失物/校车/校历周次/通知
+        "失物",
+        "招领",
+        "捡到",
+        "校车",
+        "班车",
+        "第几周",
+        "通知",
+        "公告",
+    ],
     "multi_intent": ["还有", "另外", "顺便", "以及"],
 }
 
@@ -90,7 +123,7 @@ _STRUCTURED_PROMPT = """你是校园服务台的入口分流器。请判断学�
 
 意图定义：
 - knowledge: 校园知识问答（校历/放假/办事流程/开放时间/联系方式等，可用知识库回答）
-- tool_query: 查询动态数据（空教室、座位余量等，需调用查询工具）
+- tool_query: 查询动态数据（空教室、座位余量、课表、成绩、考试安排、借阅、校园卡余额、宿舍电量、校车时刻、校历周次、通知公告、失物招领等，需调用查询工具）
 - multi_intent: 一句话包含多个独立问题（如"成绩单怎么打？宿舍什么时候清退？"）
 - other: 闲聊/问候/超出校园服务范围
 
@@ -101,7 +134,8 @@ JSON 格式（严格只输出 JSON，不要任何其他文字）：
 - confidence 表示把握：确定时给 0.8-1.0，不确定时给 0.4-0.6
 - 多个问题时 intent 填 multi_intent，primary_intent 填最重要的那个问题的意图，其余填 secondary_intents；单一问题时 primary_intent 填 null
 - 问候语/语气词不算意图："你好，顺便问下校历"只算一个知识问题（intent=knowledge），不要因为有个问候语就判 multi_intent 或 other
-- 区分知识 vs 动态查询：问"流程/怎么办/怎么预约/开放时间"是 knowledge（静态知识库可答），问"现在有没有/余量/空教室"才是 tool_query（动态数据）
+- 区分知识 vs 动态查询：问"流程/怎么办/怎么预约/开放时间/怎么查/在哪查"是 knowledge（静态知识库可答，如"成绩怎么查"是问查询方法）；问"现在有没有/余量/我的成绩多少分/课表/考试安排/借的书/卡里余额/宿舍电量/校车/通知"才是 tool_query（动态数据查询）
+- 校历区分：问"校历什么时候出/怎么查校历"是 knowledge（静态方法）；问"第几周是考试周/这学期上到第几周/查校历数据"是 tool_query（校历动态数据查询）
 """
 
 
@@ -180,7 +214,12 @@ class IntentClassifier:
             if intent == "multi_intent":
                 continue  # 已在上面强信号分支处理
             score = sum(1 for word in keywords if word in user_input)
-            if score > best_score:
+            # M2+：平局时 tool_query 优先（动态数据查询是强信号，避免被
+            # "怎么/考试/宿舍"等知识词压制，如"成绩怎么样" vs "怎么"）；
+            # 0 分不参与平局（空输入/闲聊保持 other）
+            if score > best_score or (
+                score == best_score and score > 0 and intent == "tool_query"
+            ):
                 best_intent, best_score = intent, score
         return IntentResult(
             intent=best_intent,

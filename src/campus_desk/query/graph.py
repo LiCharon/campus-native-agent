@@ -6,8 +6,15 @@ collect 职责（纯逻辑；interrupt 重入不落盘——问句/计数必须�
 3. 无 tool_calls → 重试 1 次 → 规则抽取 → 字段齐直接查表 / 图书馆词直接查座位 / 缺字段确定性追问
 4. 工具失败 → fail_count+1 → 索引引导降级（②）
 追问上限 MAX_CLARIFY_ROUNDS=3；超限 → 转人工。
+
+M2+ FC 扩展：
+- 工具参数白名单从 TOOL_SCHEMAS required 动态派生（不再硬编码 building/period）
+- system prompt 注入时间上下文（今天/周次/学期），LLM 据此填 week/term
+- _run_tool 统一注入 student_no/user_id（deps 携带，个人数据工具免问学号）
+- clarify 追问按领域关键词路由（电量/校车/失物登记问对应的问题，只问不答）
 """
 
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -19,8 +26,19 @@ from campus_desk.query.assemble import (
     CIRCUIT_DEGRADED_REPLY,
     DEGRADED_REPLIES,
     HANDOFF_REPLY,
+    assemble_announcements,
+    assemble_borrow,
+    assemble_calendar,
+    assemble_card_balance,
+    assemble_dorm_power,
+    assemble_exams,
+    assemble_lost_register,
+    assemble_lost_search,
     assemble_rooms,
+    assemble_scores,
     assemble_seats,
+    assemble_shuttle,
+    assemble_timetable,
 )
 from campus_desk.query.field_extract import extract_fields
 from campus_desk.query.tools import TOOL_FUNCS, TOOL_SCHEMAS
@@ -31,10 +49,86 @@ CIRCUIT_BREAK_THRESHOLD = 2  # 连续失败次数达到后：下一轮直接转�
 _CLARIFY_BUILDING = "请问您想查询哪栋教学楼？（如 1号楼、2号楼、3号楼）"
 _CLARIFY_PERIOD = "请问您想查询哪个时段？（上午、下午或晚上）"
 
-_QUERY_PROMPT = (
-    "你是校园服务台的查询助手。学生要查动态数据（空教室/图书馆座位）时，"
-    "调用工具查询；能查就调用工具，不要直接回答。"
+# M2+：缺参追问按领域路由（只问不答，不做规则直查兜底）
+_CLARIFY_PROMPTS = {
+    "query_empty_rooms": _CLARIFY_BUILDING,
+    "query_timetable": "请问您想查哪天的课？可以告诉我星期几（如 周三），周次默认当前教学周。",
+    "query_dorm_power": "请问您所在宿舍是哪栋楼几号房间？（如 3号楼 205）",
+    "query_shuttle_schedule": "请问您想查询哪条校车线路、什么方向？（如 屏峰-朝晖 去程/返程）",
+    "register_lost_item": "请问您是在哪里捡到的？大概什么时间？（如 3号楼201，今天）",
+}
+_CLARIFY_ROUTES = [
+    ("query_timetable", ("课表", "课程", "上课")),
+    ("query_dorm_power", ("电量", "电费", "宿舍电", "还有多少电", "还剩多少电")),
+    ("query_shuttle_schedule", ("校车", "班车", "通勤车")),
+    ("register_lost_item", ("捡到", "拾到", "失物登记")),
+]
+
+_WEEKDAY_CN = {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "日"}
+
+# M2+：时间上下文默认值（暑假等校历查不到时回退，保证课表/校历查询不空）
+_DEFAULT_TERM = "2026-2027-1"
+_DEFAULT_WEEK = 1
+
+_QUERY_PROMPT_TEMPLATE = (
+    "你是校园服务台的查询助手。学生要查动态数据时，调用工具查询；能查就调用工具，不要直接回答。\n"
+    "今天是 {today}（周{weekday_cn}，{term} 第 {week} 周）。时间换算：学生说'这周/今天'即第 {week} 周，"
+    "'下周'为第 {week_plus} 周；'这学期/本学期'用 {term}，'上学期'用 {prev_term}；"
+    "未指明周次/学期时按当前值填。\n"
+    "查询个人数据（课表/成绩/考试/借阅/余额）无需学生提供学号，系统已注入。\n"
+    "校车 line 格式为'起点-终点'（如 屏峰-朝晖），direction=去程 表示从起点发车，"
+    "direction=返程 表示从终点返回；学生说'屏峰到朝晖'即 line=屏峰-朝晖、direction=去程。\n"
+    "学生未提供宿舍楼栋/房间号、校车线路/方向、课表查询的星期几时，不要猜测，先向学生确认。"
 )
+
+
+def _prev_term(term: str) -> str:
+    """学期前推：2026-2027-1 → 2025-2026-2；2025-2026-2 → 2025-2026-1。"""
+    try:
+        start, end = term.split("-")[0:2]
+        suffix = term.rsplit("-", 1)[-1]
+        if suffix == "1":
+            return f"{int(start) - 1}-{int(end) - 1}-2"
+        return f"{start}-{end}-1"
+    except Exception:  # noqa: BLE001 — 格式异常原样返回，不阻断 prompt 构建
+        return term
+
+
+def _time_context(deps: _Deps) -> dict:
+    """按 today 推算学期/周次/上下周；today 不在任何教学周（暑假等）回退默认；异常整体兜底。"""
+    today = deps.today or datetime.now(UTC).date()
+    ctx = {
+        "today": today.isoformat(),
+        "weekday_cn": _WEEKDAY_CN.get(today.weekday() + 1, ""),
+        "term": _DEFAULT_TERM,
+        "week": _DEFAULT_WEEK,
+        "week_plus": _DEFAULT_WEEK + 1,
+        "prev_term": _prev_term(_DEFAULT_TERM),
+    }
+    try:
+        from campus_desk.db.models import AcademicCalendar
+
+        with deps.session_factory() as session, session.begin():
+            candidates = (
+                session.query(AcademicCalendar)
+                .filter(AcademicCalendar.week_start <= today)
+                .all()
+            )
+        row = next(
+            (r for r in candidates if r.week_start + timedelta(days=7) > today), None
+        )
+        if row is not None:
+            ctx["term"] = row.term
+            ctx["week"] = row.week
+            ctx["week_plus"] = row.week + 1
+            ctx["prev_term"] = _prev_term(row.term)
+    except Exception:  # noqa: BLE001, S110 — 校历查询失败不阻断（inject_error 场景）
+        pass
+    return ctx
+
+
+def _build_query_prompt(deps: _Deps) -> str:
+    return _QUERY_PROMPT_TEMPLATE.format(**_time_context(deps))
 
 
 class QueryState(TypedDict):
@@ -52,10 +146,26 @@ class QueryState(TypedDict):
 
 
 class _Deps:
-    def __init__(self, session_factory, llm, user_id: str = "student-001"):
+    def __init__(
+        self,
+        session_factory,
+        llm,
+        user_id: str = "student-001",
+        student_no: str | None = None,
+        today: date | None = None,
+    ):
         self.session_factory = session_factory
         self.llm = llm
         self.user_id = user_id
+        self.student_no = student_no
+        self.today = today
+        self._prompt: str | None = None
+
+    def query_prompt(self) -> str:
+        """时间上下文 prompt（图生命周期内构建一次，避免每轮重复查校历）。"""
+        if self._prompt is None:
+            self._prompt = _build_query_prompt(self)
+        return self._prompt
 
 
 def _save_bad_case(deps: _Deps, question: str) -> None:
@@ -67,21 +177,56 @@ def _save_bad_case(deps: _Deps, question: str) -> None:
 
 def _run_tool(deps: _Deps, name: str, args: dict) -> dict:
     with telemetry.span("agent.tool", metadata={"name": name}):
-        return TOOL_FUNCS[name](deps.session_factory, **args)
+        return TOOL_FUNCS[name](
+            deps.session_factory, **args, student_no=deps.student_no, user_id=deps.user_id
+        )
+
+
+_ASSEMBLERS = {
+    "query_empty_rooms": assemble_rooms,
+    "query_library_seats": assemble_seats,
+    "query_timetable": assemble_timetable,
+    "query_exam_scores": assemble_scores,
+    "query_exam_schedule": assemble_exams,
+    "query_library_borrow": assemble_borrow,
+    "query_card_balance": assemble_card_balance,
+    "query_dorm_power": assemble_dorm_power,
+    "register_lost_item": assemble_lost_register,
+    "search_lost_items": assemble_lost_search,
+    "query_shuttle_schedule": assemble_shuttle,
+    "query_calendar": assemble_calendar,
+    "query_announcements": assemble_announcements,
+}
 
 
 def _assemble(name: str, result: dict) -> str:
-    return assemble_rooms(result) if name == "query_empty_rooms" else assemble_seats(result)
+    assembler = _ASSEMBLERS.get(name)
+    return assembler(result) if assembler else CIRCUIT_DEGRADED_REPLY
 
 
 def _call_tools(deps: _Deps, text: str):
     """FC 调用：返回 tool_calls 列表（异常时返回空列表，不抛）。"""
     try:
         llm_tools = deps.llm.bind_tools(TOOL_SCHEMAS)
-        reply = llm_tools.invoke([("system", _QUERY_PROMPT), ("human", text)])
+        reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", text)])
         return getattr(reply, "tool_calls", None) or []
     except Exception:  # noqa: BLE001 — 外部调用兜底
         return []
+
+
+def _match_clarify_domain(text: str) -> str | None:
+    """按关键词匹配追问领域（电量/校车/失物登记）；未命中返回 None 走默认追问。"""
+    for name, keywords in _CLARIFY_ROUTES:
+        if any(k in text for k in keywords):
+            return name
+    return None
+
+
+# M2+：工具参数白名单从 schema required 动态派生（防 FC 幻觉参数，扩容免改）
+_REQUIRED_ARGS: dict[str, set[str]] = {
+    s["function"]["name"]: set(s["function"]["parameters"].get("required", []))
+    for s in TOOL_SCHEMAS
+}
 
 
 def _finish(reply: str, outcome: str, **extra) -> dict:
@@ -146,9 +291,8 @@ def _make_collect(deps: _Deps):
                 else (getattr(first, "args", {}) or {})
             )
             if name in TOOL_FUNCS:
-                result = _run_tool(
-                    deps, name, {k: v for k, v in args.items() if k in ("building", "period")}
-                )
+                filtered = {k: v for k, v in args.items() if k in _REQUIRED_ARGS.get(name, set())}
+                result = _run_tool(deps, name, filtered)
                 if result.get("ok"):
                     return _finish(
                         _assemble(name, result),
@@ -218,6 +362,7 @@ def _make_collect(deps: _Deps):
             )
 
         # 缺字段 → 确定性追问（拍板 Q4：不调 LLM）
+        # M2+：先按领域关键词路由（电量/校车/失物登记），未命中回退空教室两问
         rounds += 1
         if rounds > MAX_CLARIFY_ROUNDS:
             _save_bad_case(deps, text)
@@ -229,7 +374,13 @@ def _make_collect(deps: _Deps):
                 tool_calls=[],
                 fail_count=fail_count,
             )
-        question = _CLARIFY_BUILDING if not building else _CLARIFY_PERIOD
+        clarify_name = _match_clarify_domain(text)
+        if clarify_name:
+            question = _CLARIFY_PROMPTS[clarify_name]
+        elif not building:
+            question = _CLARIFY_PROMPTS["query_empty_rooms"]
+        else:
+            question = _CLARIFY_PERIOD
         history.append(raw)
         return {
             "rounds": rounds,
@@ -259,11 +410,44 @@ def _collect_after(state: QueryState) -> Literal["wait", "end"]:
     return "end" if state.get("finished") else "wait"
 
 
+def lookup_student_no(session_factory, user_id: str) -> str | None:
+    """按 user_id 查 users.student_no（图构建期一次查询；失败返回 None 不阻断）。
+
+    chain_runner 复用（inject_error 剧本需预解析学号）；per-user 图缓存下零额外开销。
+    """
+    try:
+        from campus_desk.db.models import User
+
+        with session_factory() as session, session.begin():
+            row = session.query(User).filter(User.id == user_id).first()
+        return row.student_no if row else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def build_query_graph(
-    session_factory, *, llm=None, checkpointer=None, user_id: str = "student-001"
+    session_factory,
+    *,
+    llm=None,
+    checkpointer=None,
+    user_id: str = "student-001",
+    student_no: str | None = None,
+    today: date | None = None,
 ):
-    """构建工具查询图。llm/checkpointer 可注入（测试用 fake/InMemorySaver），默认真 FC。"""
-    deps = _Deps(session_factory, llm if llm is not None else build_tool_llm(), user_id=user_id)
+    """构建工具查询图。llm/checkpointer 可注入（测试用 fake/InMemorySaver），默认真 FC。
+
+    M2+：student_no 未显式传入时按 user_id 查库一次（个人数据工具免问学号）；
+    today 可注入（评测固定日期保证确定性，生产默认今天）。
+    """
+    if student_no is None:
+        student_no = lookup_student_no(session_factory, user_id)
+    deps = _Deps(
+        session_factory,
+        llm if llm is not None else build_tool_llm(),
+        user_id=user_id,
+        student_no=student_no,
+        today=today,
+    )
     graph = (
         StateGraph(QueryState)
         .add_node("collect", _make_collect(deps))

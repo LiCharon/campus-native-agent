@@ -6,6 +6,8 @@ M3 起"DB 变更走迁移"（alembic）——此处锁定的是 ORM 定义本身
 迁移文件与 ORM 的一致性由 alembic autogenerate 对比（见 test_mysql_smoke）。
 """
 
+from typing import ClassVar
+
 from sqlalchemy import inspect
 
 from campus_desk.db.models import BadCase, KnowledgeEntry, User, UserProfile
@@ -33,14 +35,14 @@ class TestTables:
                 "eval_turn",
             }
             assert expected <= tables, f"缺表: {expected - tables}"
-            # 退役表必须不在（M1-T2 已删）
+            # 退役表必须不在（M1-T2 已删）。announcements 表名已被 FC 扩展（M2+）
+            # 复用为"通知公告 mock 表"（新职责，非退役旧表），故不列入退役集合。
             retired = {
                 "tickets",
                 "ticket_logs",
                 "repairmen",
                 "dorms",
                 "accounts",
-                "announcements",
                 "faq",
             }
             assert not (retired & tables), f"退役表残留: {retired & tables}"
@@ -139,6 +141,43 @@ class TestRetainedModels:
             session.add(p)
             session.flush()
             assert p.user_id == u.id
+
+
+class TestFcMockTables:
+    """FC 工具扩展（M2+）：10 张新 mock 表建表 + 关键列存在（跨 SQLite/MySQL）。"""
+
+    FC_COLUMNS: ClassVar[dict[str, set[str]]] = {
+        "timetables": {"student_no", "week", "weekday", "period", "course", "location", "teacher"},
+        "exam_scores": {"student_no", "term", "course", "score", "credit"},
+        "exam_schedules": {"student_no", "term", "course", "exam_date", "exam_time", "location"},
+        "library_borrows": {"student_no", "book_title", "borrow_date", "due_date", "status"},
+        "card_balances": {"student_no", "balance"},
+        "dorm_power": {"building", "room", "power_left", "updated_at"},
+        "lost_items": {"item_name", "location", "lost_date", "reporter", "status"},
+        "shuttle_schedules": {"line", "direction", "depart_time"},
+        "academic_calendar": {"term", "week", "week_start", "label"},
+        "announcements": {"title", "content", "publish_date", "source"},
+    }
+
+    def test_fc_tables_created(self, db_session_factory):
+        with db_session_factory() as session:
+            insp = inspect(session.connection())
+            tables = set(insp.get_table_names())
+            missing = set(self.FC_COLUMNS) - tables
+            assert not missing, f"缺 FC mock 表: {missing}"
+
+    def test_fc_table_columns(self, db_session_factory):
+        for table, cols in self.FC_COLUMNS.items():
+            got = _columns(db_session_factory, table)
+            missing = cols - got
+            assert not missing, f"{table} 缺列: {missing}"
+
+    def test_fc_no_foreign_keys(self, db_session_factory):
+        """新 mock 表全部无外键（独立样例数据）。"""
+        with db_session_factory() as session:
+            insp = inspect(session.connection())
+            for table in self.FC_COLUMNS:
+                assert insp.get_foreign_keys(table) == [], f"{table} 不应有外键"
 
 
 def test_empty_room_columns(db_session_factory):

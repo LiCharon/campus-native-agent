@@ -121,6 +121,30 @@ def trace_attrs(
         yield None
 
 
+def score_trace(
+    *,
+    name: str,
+    value: float,
+    comment: str | None = None,
+    config_id: str | None = None,
+) -> None:
+    """为当前 trace 打 Score（满意度/指标聚合，方案 §六）。无 key 纯 no-op。
+
+    langfuse 4.14.2 实测签名：client.score_current_trace(*, name, value,
+    score_id, data_type, comment, config_id, metadata)——在 trace/span 上下文内
+    为当前 trace 评分；value 为 float 时 data_type 默认 NUMERIC。
+    埋点不阻断业务：任何异常吞掉（与 audit 旁路同风格）。
+    """
+    if not enabled():
+        return
+    try:
+        _ensure_client().score_current_trace(
+            name=name, value=value, comment=comment, config_id=config_id
+        )
+    except Exception:  # noqa: BLE001, S110 — 埋点旁路，失败不影响主流程
+        pass
+
+
 def flush() -> None:
     """冲刷未上报的 span 事件（短生命周期脚本/评测结束调用）。无 key 时 no-op。"""
     if not enabled():

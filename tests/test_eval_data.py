@@ -10,7 +10,7 @@ from campus_desk.eval.loader import COUNT_RANGES, load_all, validate_dataset
 
 def test_dataset_counts_within_ranges():
     cases = load_all()
-    assert len(cases) >= 24, f"总剧本数不足: {len(cases)}"
+    assert len(cases) >= 40, f"总剧本数不足: {len(cases)}"
     by_category: dict[str, int] = {}
     for case in cases:
         by_category[case.category] = by_category.get(case.category, 0) + 1

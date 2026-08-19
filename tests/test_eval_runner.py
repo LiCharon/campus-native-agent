@@ -28,12 +28,12 @@ class PerInputClassifier:
 
 
 def test_run_evaluation_all_correct_with_fake():
-    """per-input fake → 24 条意图/路由全对，门控不误伤。"""
+    """per-input fake → 全部意图/路由全对，门控不误伤。"""
     cases = load_all()
     report = run_evaluation(cases=cases, classifier=PerInputClassifier(cases))
-    assert report.total == 24
+    assert report.total == len(cases)
     assert report.intent_accuracy == 1.0
-    assert report.route_correct == 24
+    assert report.route_correct == len(cases)
     assert report.handoff_cases == []
 
 

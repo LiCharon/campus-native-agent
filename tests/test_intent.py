@@ -180,3 +180,46 @@ def test_rule_fallback_multi_primary_knowledge():
     result = IntentClassifier(llm=fake).classify("一卡通怎么补办？顺便问下校历")
     assert result.intent == "multi_intent"
     assert result.primary_intent == "knowledge"
+
+
+# ---------- M2+ FC 扩展：新工具关键词规则兜底 ----------
+
+
+def _fallback(text: str) -> str:
+    fake = FakeStructuredLLM(["坏JSON", "坏JSON"])
+    return IntentClassifier(llm=fake).classify(text).intent
+
+
+class TestFcRuleKeywords:
+    """FC 扩展：新增 tool_query 关键词在 LLM 不可用时正确兜底。"""
+
+    def test_timetable_keyword(self):
+        assert _fallback("帮我查下这周三的课表") == "tool_query"
+
+    def test_scores_keyword(self):
+        assert _fallback("我这学期的成绩怎么样") == "tool_query"
+
+    def test_exam_schedule_keyword(self):
+        assert _fallback("这学期考试安排是什么") == "tool_query"
+
+    def test_card_balance_keyword(self):
+        assert _fallback("查下我的校园卡余额") == "tool_query"
+
+    def test_dorm_power_keyword(self):
+        assert _fallback("查下我们宿舍电量") == "tool_query"
+
+    def test_lost_register_keyword(self):
+        assert _fallback("我捡到一张校园卡，帮我登记一下") == "tool_query"
+
+    def test_shuttle_keyword(self):
+        assert _fallback("屏峰到朝晖的校车几点发") == "tool_query"
+
+    def test_announcements_keyword(self):
+        assert _fallback("教务处最近有什么通知") == "tool_query"
+
+    def test_calendar_week_keyword(self):
+        assert _fallback("这学期第几周是考试周") == "tool_query"
+
+    def test_score_slip_still_knowledge(self):
+        """成绩单（知识词）不被新增的"成绩"抢走：成绩单怎么打 → knowledge。"""
+        assert _fallback("成绩单怎么打") == "knowledge"

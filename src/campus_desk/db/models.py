@@ -9,7 +9,7 @@
 - audit_logs        审计日志（M4）：登录/审查/接待/用户管理关键操作留痕
 
 约束要点：
-- knowledge_entries.domain 六领域（教务/后勤/图书馆/IT/证件/生活）；
+- knowledge_entries.domain 11 领域（教务/图书馆/网络与IT/校园卡与证件/住宿后勤/奖助/医疗健康/社团与活动/就业与职业发展/安全与保卫/生活服务）；
   keywords 逗号分隔，检索计分用（campus_desk.knowledge.search）
 - bad_cases.status：PENDING/RESOLVED（自动/手动反馈均 PENDING，M3 管理页审查后 RESOLVED）
 - suggestions.status：PENDING/ADOPTED/REJECTED（采纳=补入知识库，驳回=不补入）
@@ -20,7 +20,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from campus_desk.db.base import Base
@@ -95,7 +95,7 @@ class KnowledgeEntry(Base):
     __tablename__ = "knowledge_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # domain 六领域：教务/后勤/图书馆/IT/证件/生活
+    # domain 11 领域：教务/图书馆/网络与IT/校园卡与证件/住宿后勤/奖助/医疗健康/社团与活动/就业与职业发展/安全与保卫/生活服务
     # （IT 域用英文缩写是刻意——T9 Minor 决策：种子/评测/检索同源一致，改中文需同步迁移数据，成本高收益低）
     domain: Mapped[str] = mapped_column(String(16), default="", index=True)
     keywords: Mapped[str] = mapped_column(String(128))  # 逗号分隔，检索计分用
@@ -163,3 +163,164 @@ class LibrarySeat(Base):
     floor: Mapped[str] = mapped_column(String(8))  # 1F..5F
     free_seats: Mapped[int] = mapped_column(Integer)
     total_seats: Mapped[int] = mapped_column(Integer)
+
+
+# ---- FC 工具扩展（M2+）：10 张新 mock 表，全部样例数据，幂等键列在 docstring 标注 ----
+# 幂等键：student_no/term/... 业务唯一列；lost_items 无幂等键（register 追加行，种子仅演示）。
+
+
+class Timetable(Base):
+    """课表 mock 表（FC 扩展）：学生 × 教学周 × 星期 × 时段的课程明细。
+
+    幂等键：(student_no, week, weekday, period)。
+    """
+
+    __tablename__ = "timetables"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_no: Mapped[str] = mapped_column(String(32), index=True)
+    week: Mapped[int] = mapped_column(Integer)  # 教学周 1-18
+    weekday: Mapped[int] = mapped_column(Integer)  # 1-7（周一=1）
+    period: Mapped[str] = mapped_column(String(8))  # 上午/下午/晚上
+    course: Mapped[str] = mapped_column(String(64))
+    location: Mapped[str] = mapped_column(String(64))
+    teacher: Mapped[str] = mapped_column(String(32))
+
+
+class ExamScore(Base):
+    """成绩 mock 表（FC 扩展）：学生 × 学期 × 课程的成绩与学分。
+
+    幂等键：(student_no, term, course)。
+    """
+
+    __tablename__ = "exam_scores"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_no: Mapped[str] = mapped_column(String(32), index=True)
+    term: Mapped[str] = mapped_column(String(16), index=True)  # 2025-2026-2 / 2026-2027-1
+    course: Mapped[str] = mapped_column(String(64))
+    score: Mapped[int] = mapped_column(Integer)
+    credit: Mapped[float] = mapped_column(Float)
+
+
+class ExamSchedule(Base):
+    """考试安排 mock 表（FC 扩展）：学生 × 学期 × 课程的考试时间地点。
+
+    幂等键：(student_no, term, course)。
+    """
+
+    __tablename__ = "exam_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_no: Mapped[str] = mapped_column(String(32), index=True)
+    term: Mapped[str] = mapped_column(String(16), index=True)
+    course: Mapped[str] = mapped_column(String(64))
+    exam_date: Mapped[datetime] = mapped_column(Date)
+    exam_time: Mapped[str] = mapped_column(String(16))  # 上午/下午/晚上
+    location: Mapped[str] = mapped_column(String(64))
+
+
+class LibraryBorrow(Base):
+    """借阅 mock 表（FC 扩展）：学生在借图书与应还日。
+
+    幂等键：(student_no, book_title, borrow_date)。
+    """
+
+    __tablename__ = "library_borrows"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_no: Mapped[str] = mapped_column(String(32), index=True)
+    book_title: Mapped[str] = mapped_column(String(64))
+    borrow_date: Mapped[datetime] = mapped_column(Date)
+    due_date: Mapped[datetime] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(8), default="BORROWED")  # BORROWED/OVERDUE
+
+
+class CardBalance(Base):
+    """校园卡余额 mock 表（FC 扩展）：学生 × 卡余额。
+
+    幂等键：(student_no)。
+    """
+
+    __tablename__ = "card_balances"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_no: Mapped[str] = mapped_column(String(32), index=True)
+    balance: Mapped[float] = mapped_column(Float)
+
+
+class DormPower(Base):
+    """宿舍电量 mock 表（FC 扩展）：楼栋 × 房间的剩余电量。
+
+    幂等键：(building, room)。
+    """
+
+    __tablename__ = "dorm_power"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    building: Mapped[str] = mapped_column(String(16), index=True)
+    room: Mapped[str] = mapped_column(String(16))
+    power_left: Mapped[float] = mapped_column(Float)  # 剩余电量（度）
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class LostItem(Base):
+    """失物招领 mock 表（FC 扩展，内部 UGC）：学生登记的拾获物品。
+
+    无幂等键——register_lost_item 追加行（唯一写库工具）；种子行仅供 search 演示。
+    """
+
+    __tablename__ = "lost_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_name: Mapped[str] = mapped_column(String(64), index=True)
+    location: Mapped[str] = mapped_column(String(64), index=True)
+    lost_date: Mapped[datetime] = mapped_column(Date)
+    reporter: Mapped[str] = mapped_column(String(32), default="")  # 登记人 user_id
+    status: Mapped[str] = mapped_column(String(8), default="found")  # found/claimed
+    description: Mapped[str] = mapped_column(String(128), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ShuttleSchedule(Base):
+    """校车时刻 mock 表（FC 扩展）：线路 × 方向 × 发车时刻。
+
+    幂等键：(line, direction, depart_time)。
+    """
+
+    __tablename__ = "shuttle_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    line: Mapped[str] = mapped_column(String(32), index=True)  # 屏峰-朝晖 / 朝晖-屏峰
+    direction: Mapped[str] = mapped_column(String(8))  # 去程/返程
+    depart_time: Mapped[str] = mapped_column(String(5))  # 07:30
+
+
+class AcademicCalendar(Base):
+    """校历 mock 表（FC 扩展）：学期 × 教学周的起止与标签。
+
+    幂等键：(term, week)。week_start 用于按当前日期推算"今天第几周/当前学期"。
+    """
+
+    __tablename__ = "academic_calendar"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    term: Mapped[str] = mapped_column(String(16), index=True)
+    week: Mapped[int] = mapped_column(Integer)
+    week_start: Mapped[datetime] = mapped_column(Date)
+    label: Mapped[str] = mapped_column(String(16), default="教学周")  # 教学周/考试周/国庆假期
+
+
+class Announcement(Base):
+    """通知公告 mock 表（FC 扩展）：标题/正文/发布日期/来源。
+
+    幂等键：(title, publish_date)。
+    """
+
+    __tablename__ = "announcements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(64))
+    content: Mapped[str] = mapped_column(Text, default="")
+    publish_date: Mapped[datetime] = mapped_column(Date, index=True)
+    source: Mapped[str] = mapped_column(String(32), default="")

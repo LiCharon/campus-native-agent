@@ -21,6 +21,21 @@ from campus_desk.entry.routes import KNOWLEDGE, MULTI_INTENT, TOOL_QUERY
 
 _POLITE_PREFIX = "您好！"
 
+# M2+：按轮次 outcome 自动评分（方案 §六 满意度/指标聚合；无 key 时 no-op）
+_OUTCOME_SCORE = {"answer": 1.0, "ask": 0.6, "degraded": 0.3, "handoff": 0.0}
+
+
+def _score_outcome(outcome: str | None) -> None:
+    """给当前 trace 打 turn.outcome 分（answer 1.0 … handoff 0.0）。"""
+    value = _OUTCOME_SCORE.get(outcome)
+    if value is not None:
+        telemetry.score_trace(name="turn.outcome", value=value, comment=f"outcome={outcome}")
+
+
+def _scored(result: dict) -> dict:
+    _score_outcome(result.get("outcome"))
+    return result
+
 
 def _knowledge_result(state: dict) -> dict:
     return {
@@ -75,21 +90,21 @@ def turn(
         if q_pending:
             with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
                 state = query_graph.invoke(Command(resume=msg), cfg_q)
-            return _query_result(state)
+            return _scored(_query_result(state))
         if k_pending:
             with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
                 state = knowledge_graph.invoke(Command(resume=msg), cfg_k)
-            return _knowledge_result(state)
+            return _scored(_knowledge_result(state))
 
         if route == KNOWLEDGE:
             with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
                 state = knowledge_graph.invoke({"user_input": msg}, cfg_k)
-            return _knowledge_result(state)
+            return _scored(_knowledge_result(state))
 
         if route == TOOL_QUERY:
             with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
                 state = query_graph.invoke({"user_input": msg}, cfg_q)
-            return _query_result(state)
+            return _scored(_query_result(state))
 
         if route == MULTI_INTENT:
             primary = intent.primary_intent if intent else None
@@ -117,7 +132,7 @@ def turn(
             if labels:
                 reply += f" 另外，您提到的其他问题（{'、'.join(labels)}）可以继续问我。"
             result["reply"] = reply
-            return result
+            return _scored(result)
 
         # knowledge/query 均未挂起时的兜底（other/低置信 → human_handoff）
         return {

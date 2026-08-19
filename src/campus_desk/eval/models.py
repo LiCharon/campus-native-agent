@@ -55,3 +55,8 @@ class ScriptedCase(BaseModel):
     expected_keywords: list[str] = Field(
         default_factory=list, description="期望答案关键词（全部出现在最终回复）"
     )
+    # ---- M2+ FC 扩展 ----
+    inject_error: str | None = Field(
+        default=None,
+        description="失败降级剧本：注入数据源异常（当前支持 db），断言走四层失败链",
+    )

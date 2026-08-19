@@ -238,5 +238,235 @@
     "secondary_intents": [],
     "turns": [],
     "note": "课程学习方法提问：超出校园服务范围转人工"
+  },
+  {
+    "id": "zjut-intent-025",
+    "category": "tool_query",
+    "student_input": "这周三上午我有啥课？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：课表查询（周次/星期由时间上下文换算）"
+  },
+  {
+    "id": "zjut-intent-026",
+    "category": "tool_query",
+    "student_input": "今天下午的课表查一下",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：课表查询语义变体（今天=当前周次）"
+  },
+  {
+    "id": "zjut-intent-027",
+    "category": "tool_query",
+    "student_input": "我这学期的成绩怎么样？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：成绩查询（当前学期由时间上下文换算）"
+  },
+  {
+    "id": "zjut-intent-028",
+    "category": "tool_query",
+    "student_input": "帮我查下期末成绩",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：成绩查询语义变体（期末成绩=本学期成绩）"
+  },
+  {
+    "id": "zjut-intent-029",
+    "category": "tool_query",
+    "student_input": "这学期期末考试怎么安排的？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：考试安排查询（与 knowledge 的'考试流程'区分）"
+  },
+  {
+    "id": "zjut-intent-030",
+    "category": "tool_query",
+    "student_input": "我图书馆借的书什么时候还？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：借阅查询（应还日）"
+  },
+  {
+    "id": "zjut-intent-031",
+    "category": "tool_query",
+    "student_input": "查下我在借的书",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：借阅查询语义变体"
+  },
+  {
+    "id": "zjut-intent-032",
+    "category": "tool_query",
+    "student_input": "我校园卡里还有多少钱？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：校园卡余额查询"
+  },
+  {
+    "id": "zjut-intent-033",
+    "category": "tool_query",
+    "student_input": "我们宿舍还有多少电？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：宿舍电量查询"
+  },
+  {
+    "id": "zjut-intent-034",
+    "category": "tool_query",
+    "student_input": "我捡到一张校园卡，帮我登记一下",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：失物登记（动词语气，与'怎么登记'知识问法区分）"
+  },
+  {
+    "id": "zjut-intent-035",
+    "category": "tool_query",
+    "student_input": "我丢了个书包，帮我找找",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：失物招领查询（搜索匹配）"
+  },
+  {
+    "id": "zjut-intent-036",
+    "category": "tool_query",
+    "student_input": "屏峰到朝晖的校车几点发？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：校车时刻查询"
+  },
+  {
+    "id": "zjut-intent-037",
+    "category": "tool_query",
+    "student_input": "去朝晖的班车时刻",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：校车查询语义变体（班车=校车）"
+  },
+  {
+    "id": "zjut-intent-038",
+    "category": "tool_query",
+    "student_input": "这学期第几周是考试周？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：校历周次查询（避开 knowledge 的'校历'词）"
+  },
+  {
+    "id": "zjut-intent-039",
+    "category": "tool_query",
+    "student_input": "教务处最近有什么通知？",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：通知公告查询"
+  },
+  {
+    "id": "zjut-intent-040",
+    "category": "tool_query",
+    "student_input": "看看最新的校园公告",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：通知公告查询语义变体"
+  },
+  {
+    "id": "zjut-intent-041",
+    "category": "multi_intent",
+    "student_input": "帮我查下这周三的课表？顺便问下校历",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge"],
+    "turns": [],
+    "note": "FC 扩展：课表查询为主（tool_query），顺便问校历（knowledge）"
+  },
+  {
+    "id": "zjut-intent-042",
+    "category": "tool_query",
+    "student_input": "下周一有什么课",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：课表查询变体（下周周次推算）"
+  },
+  {
+    "id": "zjut-intent-043",
+    "category": "tool_query",
+    "student_input": "我高数考了多少分",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：成绩查询变体（具体课程分数）"
+  },
+  {
+    "id": "zjut-intent-044",
+    "category": "tool_query",
+    "student_input": "期末考试在哪考",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：考试安排查询变体（考点位置）"
+  },
+  {
+    "id": "zjut-intent-045",
+    "category": "tool_query",
+    "student_input": "宿舍电费还够吗",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：宿舍电量查询变体（电费=电量口语）"
+  },
+  {
+    "id": "zjut-intent-046",
+    "category": "tool_query",
+    "student_input": "朝晖到屏峰的班车",
+    "intent": "tool_query",
+    "expected_route": "tool_query",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "FC 扩展：校车查询变体（反方向线路）"
+  },
+  {
+    "id": "zjut-intent-047",
+    "category": "multi_intent",
+    "student_input": "查下今天课表，顺便问下图书馆开馆时间",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge"],
+    "turns": [],
+    "note": "FC 扩展：课表查询为主（tool_query），顺便问开放时间（knowledge）"
   }
 ]

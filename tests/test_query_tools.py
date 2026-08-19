@@ -51,7 +51,24 @@ def test_db_failure_returns_ok_false_with_error_kind():
 
 
 def test_tool_schemas_strict_and_required():
-    assert set(TOOL_FUNCS) == {"query_empty_rooms", "query_library_seats"}
+    assert set(TOOL_FUNCS) == {
+        "query_empty_rooms",
+        "query_library_seats",
+        "query_timetable",
+        "query_exam_scores",
+        "query_exam_schedule",
+        "query_library_borrow",
+        "query_card_balance",
+        "query_dorm_power",
+        "register_lost_item",
+        "search_lost_items",
+        "query_shuttle_schedule",
+        "query_calendar",
+        "query_announcements",
+    }
+    assert len(TOOL_SCHEMAS) == len(TOOL_FUNCS) == 13
+    schema_names = {s["function"]["name"] for s in TOOL_SCHEMAS}
+    assert schema_names == set(TOOL_FUNCS)
     for schema in TOOL_SCHEMAS:
         fn = schema["function"]
         assert fn["strict"] is True
