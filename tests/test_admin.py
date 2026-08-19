@@ -15,7 +15,7 @@ from sqlalchemy import select
 from campus_desk.db.models import BadCase, KnowledgeEntry, Suggestion
 from campus_desk.knowledge.search import search_knowledge
 
-_DOMAINS = ["教务", "后勤", "图书馆", "IT", "证件", "生活"]
+_DOMAINS = ["教务", "图书馆", "网络与IT", "校园卡与证件", "住宿后勤", "奖助", "医疗健康", "社团与活动", "就业与职业发展", "安全与保卫", "生活服务"]
 
 
 def _login(client, username, password="123456"):

@@ -108,3 +108,78 @@ class TestSeedMockTables:
             }
         assert wk == {"301", "305", "308"}
         assert wkend == {"302", "306", "309"}
+
+    def test_seed_creates_fc_mock_tables(self, db_session_factory):
+        """FC 扩展：10 张新 mock 表种子数量（3 学生 × 18 周 × 5 时段=270 等）。"""
+        from campus_desk.db.models import (
+            AcademicCalendar,
+            Announcement,
+            CardBalance,
+            DormPower,
+            ExamSchedule,
+            ExamScore,
+            LibraryBorrow,
+            LostItem,
+            ShuttleSchedule,
+            Timetable,
+        )
+
+        with db_session_factory() as session:
+            assert session.query(Timetable).count() == 270
+            assert session.query(ExamScore).count() == 36
+            assert session.query(ExamSchedule).count() == 15
+            assert session.query(LibraryBorrow).count() == 9
+            assert session.query(CardBalance).count() == 3
+            assert session.query(DormPower).count() == 15
+            assert session.query(LostItem).count() == 10
+            assert session.query(ShuttleSchedule).count() == 24
+            assert session.query(AcademicCalendar).count() == 37
+            assert session.query(Announcement).count() == 8
+
+    def test_seed_fc_mock_covers_all_students(self, db_session_factory):
+        """课表/成绩/余额覆盖 3 个学生；校历覆盖 2026-2027-1 第 19 周考试周。"""
+        from campus_desk.db.models import AcademicCalendar, CardBalance, Timetable
+
+        with db_session_factory() as session:
+            students = {r[0] for r in session.query(Timetable.student_no).distinct()}
+            assert students == {"2024001", "2024002", "2024003"}
+            assert session.query(CardBalance).count() == 3
+            exam_week = (
+                session.query(AcademicCalendar)
+                .filter(AcademicCalendar.term == "2026-2027-1", AcademicCalendar.label == "考试周")
+                .all()
+            )
+            assert len(exam_week) == 1 and exam_week[0].week == 19
+
+    def test_seed_fc_idempotent(self, db_session_factory):
+        """FC mock 表重跑种子不重复（幂等键 upsert）。"""
+        from campus_desk.db.models import (
+            AcademicCalendar,
+            Announcement,
+            CardBalance,
+            DormPower,
+            ExamSchedule,
+            ExamScore,
+            LibraryBorrow,
+            LostItem,
+            ShuttleSchedule,
+            Timetable,
+        )
+
+        models = (
+            Timetable,
+            ExamScore,
+            ExamSchedule,
+            LibraryBorrow,
+            CardBalance,
+            DormPower,
+            LostItem,
+            ShuttleSchedule,
+            AcademicCalendar,
+            Announcement,
+        )
+        before = {m.__tablename__: _count(db_session_factory, m) for m in models}
+        counts = seed_all(db_session_factory)
+        assert all(v == 0 for v in counts.values()), f"重复入库 {counts}"
+        after = {m.__tablename__: _count(db_session_factory, m) for m in models}
+        assert before == after

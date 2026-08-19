@@ -246,7 +246,7 @@ def test_audit_written_on_adopt_and_resolve(api_client, db_session_factory):
     api_client.post(
         f"/api/admin/reviews/bad_cases/{aid}/adopt",
         headers=admin,
-        json={"domain": "后勤", "type": "info", "keywords": "食堂", "answer": "xxx"},
+        json={"domain": "住宿后勤", "type": "info", "keywords": "食堂", "answer": "xxx"},
     )
     r = api_client.get("/api/admin/logs?action=adopt", headers=admin)
     assert any(it["object_id"] == str(aid) for it in r.json()["items"])

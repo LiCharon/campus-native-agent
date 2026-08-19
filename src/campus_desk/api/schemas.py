@@ -94,8 +94,20 @@ class FeedbackResponse(BaseModel):
 # 审查来源：bad_cases（未解决反馈）/ suggestions（用户提议）
 ReviewKind = Literal["bad_cases", "suggestions"]
 
-# 知识库六领域 + type 三型（与 models.py/seed.py 同源）
-KNOWLEDGE_DOMAIN = Literal["教务", "后勤", "图书馆", "IT", "证件", "生活"]
+# 知识库 11 领域 + type 三型（与 models.py/seed.py/AdminReview.vue 同源）
+KNOWLEDGE_DOMAIN = Literal[
+    "教务",
+    "图书馆",
+    "网络与IT",
+    "校园卡与证件",
+    "住宿后勤",
+    "奖助",
+    "医疗健康",
+    "社团与活动",
+    "就业与职业发展",
+    "安全与保卫",
+    "生活服务",
+]
 KNOWLEDGE_TYPE = Literal["info", "process", "index"]
 
 

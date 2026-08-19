@@ -36,7 +36,9 @@ def main() -> int:
     data = json.loads(_CONFIG.read_text(encoding="utf-8"))
     factory = default_session_factory()
     # 先保证通用种子存在（users + 36 条），本地条目作为注入层叠加
-    seed_all(factory)
+    # force=True：把 seed.py 中的领域重命名（后勤→住宿后勤 等）同步到已有通用行，
+    # 保证全库领域词表与 9 领域契约一致（本地条目自身按 question 幂等 upsert，不受影响）
+    seed_all(factory, force=True)
 
     touched = 0
     with factory() as session, session.begin():
