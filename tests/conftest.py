@@ -18,7 +18,7 @@ checkpointer.db 与真 LLM。
 
 import pytest
 from langchain_core.messages import AIMessage
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -84,12 +84,21 @@ def db_session_factory():
 
     注意：StaticPool 单连接 + 内存库 = 同一连接跨会话共享，
     fixture 内完成 create_all 与种子后，业务代码可正常多会话读写。
+    M5-ZJUT：SQLite 默认关闭外键约束，connect 事件启用 PRAGMA foreign_keys=ON——
+    否则 messages 的级联删除（ondelete CASCADE）在测试里不生效。
     """
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    @event.listens_for(engine, "connect")
+    def _enable_fk(dbapi_conn, _record):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     seed_all(factory)

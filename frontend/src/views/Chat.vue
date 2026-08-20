@@ -128,10 +128,17 @@ const QUICK_QUESTIONS = [
   '本科生能申请保研吗？'
 ]
 
-const { conversations, currentId, newConversation, deleteConversation, addMessageTo, replaceLastIn } = useChat()
+const {
+  conversations,
+  currentId,
+  currentMessages,
+  newConversation,
+  deleteConversation,
+  addMessageTo,
+  replaceLastIn
+} = useChat()
 
 const currentConv = computed(() => conversations.value.find((c) => c.id === currentId.value) || null)
-const currentMessages = computed(() => (currentConv.value ? currentConv.value.messages : []))
 // 三态：none=在线咨询(绿) / transferring|pending=转人工处理中(琥珀) / human|active=人工客服已接入(蓝)
 const handoffState = computed(() => (currentConv.value && currentConv.value.handoff) || HANDOFF.NONE)
 const isHandoffBusy = computed(() => handoffState.value === 'transferring' || handoffState.value === 'pending')
@@ -192,7 +199,7 @@ function srcDetail(sources) {
 async function send(text) {
   const msg = (text ?? draft.value).trim()
   if (!msg || sending.value) return
-  if (!currentConv.value) newConversation()
+  if (!currentConv.value) await newConversation() // M5-ZJUT：先建会话拿 thread_id
   const convId = currentId.value
   draft.value = ''
   autoGrow()
@@ -360,15 +367,15 @@ async function handleClear() {
   } catch {
     return
   }
-  deleteConversation(currentId.value)
+  await deleteConversation(currentId.value)
   if (!conversations.value.length) {
-    newConversation()
+    await newConversation()
   }
   ElMessage.success('会话已删除')
 }
 
 watch(
-  () => (currentConv.value ? currentConv.value.messages.length : 0),
+  () => currentMessages.value.length,
   () => scrollToBottom()
 )
 watch(draft, () => autoGrow())

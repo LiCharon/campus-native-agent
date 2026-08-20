@@ -25,6 +25,11 @@
 | docs/requirements/TECH_DECISIONS.md | 选型原因 + 面试话术（活弹药）|
 | docs/plans/RAG_ROADMAP.md | RAG 实现蓝图（A 路线 + sqlite-vec，2026-08-18 拍板）|
 
+### 0.3 里程碑命名规范（2026-08-20 拍板，防新旧混淆）
+- 新系列统一 `M{n}-ZJUT` 后缀（重构后 2026-08-15 起：M1-ZJUT ~ M10-ZJUT）；旧系列 M0–M7 无后缀、为重构前历史基线。
+- 所有文档（STATUS/CLAUDE/DEV_JOURNAL 新记录/计划）引用新系列必须带 `-ZJUT`；DEV_JOURNAL 历史记录带日期天然消歧，不改。
+- 防冲突机制 = 文档即记忆（本文件在主仓库内、拷贝即见）；本地记忆与 docs/ 私有仓均不承载命名权威。
+
 ## 1. 为什么做（面试叙事，防止跑偏）
 - InterviewAI 教训：AI 占比有限，多 Agent 像多次 LLM 调用，无记忆/skill/FC/规划
 - 本项目补齐：LangGraph 编排 + 工具调用（M2 起）+ 用户记忆 + Langfuse 可观测 + 量化评测
@@ -58,15 +63,16 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 - **收尾必做（三件套，缺一不可）**：① DEV_JOURNAL.md 追加（做了什么/为什么/坑/量化/面试点）② STATUS.md 同步（进度/下一步/基线）③ 本次改动涉及的权威文档回填（ZJUT_DESIGN/_INDEX 等，以代码为准）。**非里程碑的实体改动（改数据/接口/架构）同样触发收尾**，不只在里程碑跑完
 - 防忘清单（项目特有）：工具有独立单测 ・ DB 变更走迁移 ・ 追问轮次有测试锁定 ・ Langfuse 有 trace ・ 分支 feature/* from main ・ 数据/接口改完先问"STATUS 和 DESIGN 还准吗？"
 
-## 6. 里程碑（细节/基线 → docs/journal/STATUS.md）
-**M1 最小闭环（✅ 2026-08-15）**：入口分流 4 类 + 检索组装 + 追问 + 转人工 + 36 条种子 + 意图评测 24 条 95.8%
-**M2 工具管道（✅ 2026-08-16）**：真 FC + 2 确定性工具 + 2 mock 表 + 四层失败链 + multi_intent + 链路评测 14 条 92.9%
-**M3 进化闭环（✅ 2026-08-16）**：双通道反馈 + 管理页审查 + 补入知识库 + accept_m3 7 路径
-**M4 前端重构 + 权限（✅ 2026-08-17）**：Kimi 工大蓝设计 + 角色权限体系 + 客服工作台 + 对话页重写 + 审计日志
-**M2+ 工具扩展（✅ 2026-08-19）**：2→13 工具 + 10 mock 表 + 时间上下文注入 + 评测意图 47/链路 44 + score_trace
-**M4.5 知识库重构（✅ 2026-08-19）**：11 域零重叠 + 本地注入 262 条 + 近重复自动检测（构建期硬关卡）
-**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / 用户画像 / SSE 流式 / 后端会话表
-**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1 96 passed；M3 166 passed + accept_m3 7/7；M4 180 passed + 运行态 8/8；当前 pytest 248 passed
+## 6. 里程碑（细节/基线 → docs/journal/STATUS.md；新系列统一 M{n}-ZJUT 后缀，见 §0.3）
+**M1-ZJUT 最小闭环（✅ 2026-08-15）**：入口分流 4 类 + 检索组装 + 追问 + 转人工 + 36 条种子 + 意图评测 24 条 95.8%
+**M2-ZJUT 工具管道（✅ 2026-08-16）**：真 FC + 2 确定性工具 + 2 mock 表 + 四层失败链 + multi_intent + 链路评测 14 条 92.9%
+**M3-ZJUT 进化闭环（✅ 2026-08-16）**：双通道反馈 + 管理页审查 + 补入知识库 + accept_m3 7 路径
+**M4-ZJUT 前端重构 + 权限（✅ 2026-08-17）**：Kimi 工大蓝设计 + 角色权限体系 + 客服工作台 + 对话页重写 + 审计日志
+**M2+-ZJUT 工具扩展（✅ 2026-08-19）**：2→13 工具 + 10 mock 表 + 时间上下文注入 + 评测意图 47/链路 44 + score_trace
+**M4.5-ZJUT 知识库重构（✅ 2026-08-19）**：11 域零重叠 + 本地注入 262 条 + 近重复自动检测（构建期硬关卡）
+**M5-ZJUT 会话服务端化（✅ 2026-08-20）**：conversations/messages 两表 + /api/sessions 增删改查 + /api/chat 归属校验与落库 + 自动标题后端化 + handoff 落库 + useChat.js 从 localStorage 迁 API
+**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / 用户画像 / SSE 流式
+**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；当前 pytest 261 passed
 
 ## 7. 当前状态
 进度/下一步/基线数据 → docs/journal/STATUS.md（随里程碑和收尾更新；本规范文件不含状态）
@@ -75,7 +81,7 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **外部评审**：默认按**文档/契约**吸收（零成本面试弹药）；**代码/模块级**单独过"演示项目是否值得"关；评审"审查对象"声明不可信，对照磁盘逐条核验；同一倾向反复出现时裁决一致
 **DeepSeek 结构化**：不支持 langchain with_structured_output 三种 method（实测全 400）——统一**自写 prompt（含 "json" 字样）+ response_format=json_object + pydantic 校验**（intent.py 已沉淀模板）
 **LangGraph**：interrupt 重入不落盘（问句/计数必须 return 写入 state，双节点 ping-pong）；终态 thread 再 invoke = 旧 state 残留（新会话新 thread_id，评测 InMemorySaver）；普通边多出边 = 并行分支（用条件边）；带 checkpointer 的 invoke 必须带 thread_id，挂起 resume 用 Command(resume=)
-**SQLAlchemy/MySQL**：SELECT 隐式开事务与 begin() 混用报 already begun；rollback 后实例 expire（helper 返回整数 id）；写操作必须 `with factory() as s, s.begin():`；MySQL TEXT 列无 DEFAULT（nullable 无 server_default）；非事务 DDL 半应用先 DROP 再修迁移；alembic autogenerate 前验证表数（env.py 漏 import）；alembic.ini 只英文注释；密码含 @ 需 %40 URL 编码
+**SQLAlchemy/MySQL**：SELECT 隐式开事务与 begin() 混用报 already begun；rollback 后实例 expire（helper 返回整数 id）；写操作必须 `with factory() as s, s.begin():`；MySQL TEXT 列无 DEFAULT（nullable 无 server_default）；非事务 DDL 半应用先 DROP 再修迁移；alembic autogenerate 前验证表数（env.py 漏 import）；alembic.ini 只英文注释；密码含 @ 需 %40 URL 编码；**VARCHAR 长度按最长枚举值留余量（"assistant" 9 字符超 VARCHAR(8)，SQLite 测试库不校验长度、MySQL 严格模式 1406 才暴露——新表/新列务必冒烟连真实库）；downgrade 顺序：先 drop FK 约束再 drop 索引，否则 MySQL 1553**
 **M2 工具管道**：json_object 抑制 tool_calls（FC 场景必须 build_tool_llm 无 response_format）；strict FC 无可选参数（date 不进 schema，服务端默认今天）；knowledge/query 两图同 thread_id 串挂起（query 图派生 `{thread_id}:query`）；ruff DTZ011 用 `datetime.now(UTC).date()`；require_perm 加 pyproject B008 豁免
 **种子/测试**：36 条通用种子会破坏检索测试假设（测试显式清空或断言具体命中条目）；规则抽取与真 LLM 行为差异（turns 按真 LLM 设计，规则版只做机制验证）；orchestrator hits 是 int 列表（API 展示需回查 DB）；真 LLM 意图方差影响运行态验收（sources 断言放宽，由 pytest Fake 图稳定覆盖）
 **前端/进程（Windows）**：npm run dev 后台停端口仍被占（改前端后验证端口 + fetch App.vue 确认新代码）；localStorage 非响应式（computed 加 `void route.path` 依赖；换账号必须 reload）

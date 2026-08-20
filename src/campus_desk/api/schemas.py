@@ -4,12 +4,13 @@ M1-T1：退役报修/投诉/工单/FAQ 模块后，仅保留 auth / chat 契约�
 M1-T8：ChatResponse 删 ticket_id/ticket_status/ticket_type（M1 无工单概念，
 仅保留 orchestrator.turn 实际产出字段）。
 M3：进化闭环契约（feedback 双通道 + admin 审查），见 docs/design/ZJUT_DESIGN.md §5.5。
+M5-ZJUT：会话契约（Session* / MessageItem），会话列表/消息历史/重命名/删除/转人工状态。
 """
 
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class LoginRequest(BaseModel):
@@ -228,3 +229,67 @@ class LogItem(BaseModel):
 
 class LogListResponse(BaseModel):
     items: list[LogItem]
+
+
+# ---------- M5-ZJUT 会话契约（服务端会话/消息/转人工状态） ----------
+
+# 转人工三态（与前端 useChat.js HANDOFF 同源）
+HandoffState = Literal["none", "transferring", "human"]
+
+
+class SessionItem(BaseModel):
+    """会话列表项（不含消息——消息走 GET /sessions/{id}/messages）。"""
+
+    id: str
+    thread_id: str
+    title: str
+    title_source: Literal["auto", "manual"] = "auto"
+    handoff: HandoffState = "none"
+    created_at: datetime
+    updated_at: datetime
+
+
+class SessionListResponse(BaseModel):
+    items: list[SessionItem]
+
+
+class SessionUpdateRequest(BaseModel):
+    """会话更新：title（重命名，置 title_source=manual）/ handoff（转人工状态）。
+
+    至少一项必填（model_validator 校验）；两者可同时更新。
+    title 限长 64 与 conversations.title 列宽一致（超长 MySQL 严格模式 500）。
+    """
+
+    title: str | None = Field(default=None, max_length=64)
+    handoff: HandoffState | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> SessionUpdateRequest:
+        if self.title is None and self.handoff is None:
+            raise ValueError("title 与 handoff 至少提供一项")
+        return self
+
+
+class MessageItem(BaseModel):
+    """消息历史项：sources/tool_calls/status_events 为解析后的 list。
+
+    error/feedback_submitted 保留（前端反馈状态与失败标记的持久化位，
+    当前仅 feedback_submitted 会被写回）。
+    """
+
+    id: int
+    role: Literal["user", "assistant", "system"]
+    content: str
+    route: str | None = None
+    outcome: str | None = None
+    pending_question: str | None = None
+    tool_calls: list[str] = []
+    status_events: list[str] = []
+    sources: list[SourceItem] = []
+    error: bool = False
+    feedback_submitted: bool = False
+    created_at: datetime
+
+
+class MessageListResponse(BaseModel):
+    items: list[MessageItem]

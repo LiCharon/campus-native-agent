@@ -141,12 +141,12 @@ const {
   reload
 } = useChat()
 
-reload()
+void reload() // M5-ZJUT：异步拉取会话列表（服务端）
 
 // 会话用户隔离（bug 修复）：模块级会话状态只 load 一次，换账号（user.id 变）强制重载
 watch(
   () => user.value.id,
-  () => reload()
+  () => void reload()
 )
 
 // ---- 会话重命名（Kimi §5.2：双击/hover 行内编辑） ----
@@ -167,13 +167,13 @@ function cancelRename() {
   renamingId.value = null
 }
 
-function handleNewConversation() {
-  newConversation()
+async function handleNewConversation() {
+  await newConversation() // M5-ZJUT：服务端建会话
   go('/chat')
 }
 
-function handleSwitch(id) {
-  switchConversation(id)
+async function handleSwitch(id) {
+  await switchConversation(id) // 切换会话 + 拉取消息历史
   go('/chat')
 }
 

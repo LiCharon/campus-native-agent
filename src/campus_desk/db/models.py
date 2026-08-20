@@ -1,9 +1,11 @@
 """业务数据模型（M1-ZJUT：4 业务表 + 2 评测表，T2 删 7 张退役表）。
 
-表职责（ZJUT 设计 §4.5 知识库 + §5.5 进化闭环 + M4 权限/审计）：
+表职责（ZJUT 设计 §4.5 知识库 + §5.5 进化闭环 + M4 权限/审计 + M5-ZJUT 会话）：
 - users             角色与账号（student/cs_staff/admin 三角色），登录用
 - user_profiles     用户长期记忆画像（预留：画像启用时再定，1:1 users）
 - knowledge_entries 知识库条目（FAQ 式，type 驱动组装：info/process/index）
+- conversations     会话（M5-ZJUT 服务端化）：归属用户 + thread_id（LangGraph checkpointer key）
+- messages          会话消息（M5-ZJUT）：展示层落库，sources/tool_calls 等 JSON 文本
 - bad_cases         未解决反馈双通道：① M1 转人工自动沉淀 ② M3 对话页"没解决"按钮
 - suggestions       用户提议通道（M3）："问题没答案"主动提议，管理员审查采纳/驳回
 - audit_logs        审计日志（M4）：登录/审查/接待/用户管理关键操作留痕
@@ -14,6 +16,10 @@
 - bad_cases.status：PENDING/RESOLVED（自动/手动反馈均 PENDING，M3 管理页审查后 RESOLVED）
 - suggestions.status：PENDING/ADOPTED/REJECTED（采纳=补入知识库，驳回=不补入）
 - users.permissions：附加权限位（逗号分隔），最终权限 = 角色默认 ∪ 附加位（perms.py）
+- conversations：id 业务 id（服务端 UUID hex），thread_id 唯一（LangGraph checkpointer key）；
+  handoff 三态 none/transferring/human（M5-ZJUT 起落库，前端 3 秒模拟仅推进状态）
+- messages：role user/assistant/system；tool_calls/status_events/sources 存 JSON 文本（展示层）；
+  pending 占位与请求失败标记是前端 UI 态，只落最终消息
 - 外键关系不配置 relationship() 对象——ORM 查询用显式 join/id 字段，
   避免 lazy-load 隐式 SQL（工具层短会话，防 N+1/DetachedInstanceError）
 """
@@ -324,3 +330,59 @@ class Announcement(Base):
     content: Mapped[str] = mapped_column(Text, default="")
     publish_date: Mapped[datetime] = mapped_column(Date, index=True)
     source: Mapped[str] = mapped_column(String(32), default="")
+
+
+class Conversation(Base):
+    """会话（M5-ZJUT 服务端化）：归属用户 + thread_id（LangGraph checkpointer key）。
+
+    - id：业务 id（服务端 UUID hex，32 位）；thread_id 唯一——会话上下文键
+    - title/title_source：标题（auto 自动=首条消息前 12 字 / manual 手动重命名）
+    - handoff：转人工三态 none/transferring/human（M5-ZJUT 起落库，
+      前端 3 秒模拟仅推进状态；刷新停在中间态不再自动推进——已确认接受）
+    - updated_at：发消息/改名/转态时更新，会话列表按它降序
+    """
+
+    __tablename__ = "conversations"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(32), index=True)
+    thread_id: Mapped[str] = mapped_column(String(64), unique=True)
+    title: Mapped[str] = mapped_column(String(64), default="新对话")
+    title_source: Mapped[str] = mapped_column(String(8), default="auto")  # auto/manual
+    handoff: Mapped[str] = mapped_column(
+        String(16), default="none"
+    )  # none/transferring/human
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+
+class Message(Base):
+    """会话消息（M5-ZJUT）：展示层落库，sources/tool_calls 等 JSON 文本。
+
+    role：user/assistant/system（转人工系统提示条）。
+    tool_calls/status_events/sources 存 JSON 数组文本（默认 "[]"），读时解析。
+    pending 占位与请求失败标记是前端 UI 态，不落库；只落最终消息。
+    级联删除：conversation 删除时 messages 随删（ondelete CASCADE）。
+    """
+
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
+    # String(16)：assistant 9 字符——VARCHAR(8) 在 MySQL 严格模式存不下
+    # （SQLite 测试库不校验长度，真实环境冒烟才暴露）
+    role: Mapped[str] = mapped_column(String(16))  # user/assistant/system
+    content: Mapped[str] = mapped_column(Text)
+    route: Mapped[str | None] = mapped_column(String(16), nullable=True)  # knowledge/query/...
+    outcome: Mapped[str | None] = mapped_column(String(16), nullable=True)  # answer/ask/handoff/...
+    pending_question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tool_calls: Mapped[str] = mapped_column(Text, default="[]")  # JSON 数组
+    status_events: Mapped[str] = mapped_column(Text, default="[]")  # JSON 数组
+    sources: Mapped[str] = mapped_column(Text, default="[]")  # JSON 数组（来源 chip）
+    error: Mapped[bool] = mapped_column(Boolean, default=False)
+    feedback_submitted: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -298,10 +298,12 @@ def test_cs_queue_and_resolve(api_client, db_session_factory):
 def test_chat_sources_kb_hit(api_client):
     """知识命中 → sources 含 kb 来源 chip（#K{id} {type}型 · {domain}）。"""
     stu = _login(api_client, "student-001")
+    # M5-ZJUT：thread_id 必须来自已建会话（严格归属校验）
+    conv = api_client.post("/api/sessions", headers=stu).json()
     r = api_client.post(
         "/api/chat",
         headers=stu,
-        json={"thread_id": "m4-src-1", "msg": "什么时候放寒假？"},
+        json={"thread_id": conv["thread_id"], "msg": "什么时候放寒假？"},
     )
     assert r.status_code == 200
     data = r.json()
