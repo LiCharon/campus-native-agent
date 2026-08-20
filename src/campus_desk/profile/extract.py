@@ -85,7 +85,8 @@ def merge_profile(
 
     - building：last-write-wins，有值覆盖
     - frequent_categories：每域 +1，轮内去重（同一轮重复命中同域只计 1 次）
-    - 无任何变化时返回原 dict（id 不变，upsert 可跳过写库）
+    - 无任何变化时返回原引用（可能 None）：None=新用户无信息，dict=老用户无新信息；
+      upsert 据此跳过写库，保持"无画像行=新用户"语义（不建空行）
     """
     old_building = (existing or {}).get("building")
     old_categories = (existing or {}).get("frequent_categories") or ""
@@ -101,7 +102,7 @@ def merge_profile(
     new_categories = _serialize_categories(counts)
 
     if new_building == old_building and not changed:
-        return existing if existing is not None else {}
+        return existing
 
     return {"building": new_building, "frequent_categories": new_categories}
 

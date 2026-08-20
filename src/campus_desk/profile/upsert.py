@@ -45,6 +45,9 @@ def update_profile_after_turn(
                 building,
                 domains,
             )
+            if merged is None:
+                # 无变化且原本无画像行：跳过建行，保持"无画像行=新用户"语义
+                return
             if profile is None:
                 session.add(
                     UserProfile(

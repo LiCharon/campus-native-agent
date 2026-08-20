@@ -94,6 +94,10 @@ class TestMergeProfile:
         p = merge_profile(existing, "1号楼", [])
         assert p == existing
 
+    def test_no_change_new_user_returns_none(self):
+        """新用户首轮无楼栋无领域（如"你好"）：返回 None，upsert 据此跳过建行。"""
+        assert merge_profile(None, None, []) is None
+
 
 # ---------- format_profile_text ----------
 
@@ -154,6 +158,32 @@ class TestUpdateProfileAfterTurn:
         update_profile_after_turn(
             _BoomFactory(), user_id="student-001", msg="1号楼", sources=[]
         )
+
+    def test_skip_empty_new_user(self, db_session_factory):
+        """新用户首句无画像信息（如"你好"）不建空行，保持"无画像行=新用户"语义。"""
+        from campus_desk.db.models import UserProfile
+        from campus_desk.profile.upsert import update_profile_after_turn
+
+        update_profile_after_turn(
+            db_session_factory, user_id="student-002", msg="你好", sources=[]
+        )
+        with db_session_factory() as s:
+            p = s.get(UserProfile, "student-002")
+        assert p is None  # 不建空行、不抛异常
+
+    def test_skip_no_change_existing(self, db_session_factory):
+        """已建画像行但本轮无新信息（寒暄、sources 空）：merged 返回原引用，跳过写库不抛异常。"""
+        from campus_desk.db.models import UserProfile
+        from campus_desk.profile.upsert import update_profile_after_turn
+
+        sources = [SourceItem(type="kb", label="知识库", ref_id="#K1", detail="info型 · 教务")]
+        update_profile_after_turn(db_session_factory, user_id="student-001", msg="1号楼网不好", sources=sources)
+        # 第二轮无新信息（寒暄）→ 无变化，merged 返回原引用，正常跳过不报错
+        update_profile_after_turn(db_session_factory, user_id="student-001", msg="你好", sources=[])
+        with db_session_factory() as s:
+            p = s.get(UserProfile, "student-001")
+        assert p.building == "1号楼"
+        assert p.frequent_categories == "教务:1"
 
 
 # ---------- 注入：ClarifyDecider / query prompt ----------
@@ -308,3 +338,79 @@ def test_api_chat_skip_non_student(api_client, db_session_factory):
     with db_session_factory() as s:
         p = s.get(UserProfile, "cs-001")
     assert p is None
+
+
+# ---------- GraphBundle 画像版本失效（M7 招牌特性：画像更新→同进程第二问重建注入）----------
+
+
+class TestGraphBundleProfileInvalidation:
+    def test_rebuild_on_profile_change(self, db_session_factory, monkeypatch):
+        """画像 updated_at 变化后，下一次 bundle_for 应重建 knowledge+query 图。"""
+        from datetime import UTC, datetime
+
+        from campus_desk.api import graphs as gmod
+        from campus_desk.api.graphs import GraphRegistry
+        from campus_desk.db.models import UserProfile
+
+        calls = {"n": 0}
+
+        def _stub(*a, **k):
+            calls["n"] += 1
+            return object()
+
+        # 轻量化图构建，避开真 LLM 与 checkpointer.db 文件副作用
+        monkeypatch.setattr(gmod, "build_knowledge_graph", _stub)
+        monkeypatch.setattr(gmod, "build_query_graph", _stub)
+        monkeypatch.setattr(gmod, "build_entry_graph", _stub)
+        monkeypatch.setattr(gmod, "SqliteSaver", lambda *a, **k: None)
+
+        registry = GraphRegistry(db_session_factory)
+        with db_session_factory() as s, s.begin():
+            s.add(
+                UserProfile(
+                    user_id="student-001",
+                    building="1号楼",
+                    frequent_categories="教务:1",
+                    updated_at=datetime.now(UTC),
+                )
+            )
+        registry.bundle_for("student-001")  # 首次构建
+        before = calls["n"]
+        with db_session_factory() as s, s.begin():
+            s.get(UserProfile, "student-001").building = "2号楼"  # 触发 updated_at 变化
+        registry.bundle_for("student-001")  # 画像已变 → 应重建
+        assert calls["n"] - before == 2  # knowledge + query 各重建一次
+
+    def test_no_rebuild_when_unchanged(self, db_session_factory, monkeypatch):
+        """画像未变时，bundle_for 不应重建（避免每轮无谓重建）。"""
+        from datetime import UTC, datetime
+
+        from campus_desk.api import graphs as gmod
+        from campus_desk.api.graphs import GraphRegistry
+        from campus_desk.db.models import UserProfile
+
+        calls = {"n": 0}
+
+        def _stub(*a, **k):
+            calls["n"] += 1
+            return object()
+
+        monkeypatch.setattr(gmod, "build_knowledge_graph", _stub)
+        monkeypatch.setattr(gmod, "build_query_graph", _stub)
+        monkeypatch.setattr(gmod, "build_entry_graph", _stub)
+        monkeypatch.setattr(gmod, "SqliteSaver", lambda *a, **k: None)
+
+        registry = GraphRegistry(db_session_factory)
+        with db_session_factory() as s, s.begin():
+            s.add(
+                UserProfile(
+                    user_id="student-001",
+                    building="1号楼",
+                    frequent_categories="教务:1",
+                    updated_at=datetime.now(UTC),
+                )
+            )
+        registry.bundle_for("student-001")
+        before = calls["n"]
+        registry.bundle_for("student-001")  # 画像未变 → 不重建
+        assert calls["n"] - before == 0
