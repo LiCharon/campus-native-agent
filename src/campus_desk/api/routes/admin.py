@@ -23,11 +23,15 @@ from campus_desk.api.schemas import (
     KnowledgeListResponse,
     LogItem,
     LogListResponse,
+    PermissionItem,
+    PermissionListResponse,
     ResetPasswordRequest,
     ReviewActionResponse,
     ReviewItem,
     ReviewKind,
     ReviewListResponse,
+    RoleItem,
+    RoleListResponse,
     StatsResponse,
     UserCreateRequest,
     UserListItem,
@@ -35,10 +39,17 @@ from campus_desk.api.schemas import (
     UserUpdateRequest,
 )
 from campus_desk.audit import write_audit
-from campus_desk.db.models import AuditLog, BadCase, KnowledgeEntry, Suggestion, User
+from campus_desk.db.models import (
+    AuditLog,
+    BadCase,
+    KnowledgeEntry,
+    Permission,
+    Role,
+    Suggestion,
+    User,
+)
 from campus_desk.db.session import SessionFactory
 from campus_desk.knowledge.suggest import suggest_keywords
-from campus_desk.perms import GRANTABLE_PERMS
 from campus_desk.security import hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -61,9 +72,17 @@ def _fetch_pending(kind: str, rid: int, session_factory: SessionFactory):
     return row
 
 
-def _validate_permissions(role: str, permissions: list[str]) -> None:
-    """附加权限位校验：仅白名单位；student 不允许携带（对抗性审查 #4）。"""
-    unknown = [p for p in permissions if p not in GRANTABLE_PERMS]
+def _validate_permissions(
+    role: str, permissions: list[str], session_factory: SessionFactory
+) -> None:
+    """附加权限位校验（M6 查库）：role 须在 roles 表、permissions 须在 permissions 表；
+    student 不允许携带附加位（对抗性审查 #4）。"""
+    with session_factory() as session:
+        valid_roles = {r for (r,) in session.execute(select(Role.id))}
+        valid_perms = {p for (p,) in session.execute(select(Permission.id))}
+    if role not in valid_roles:
+        raise HTTPException(status_code=422, detail=f"未知角色: {role}")
+    unknown = [p for p in permissions if p not in valid_perms]
     if unknown:
         raise HTTPException(status_code=422, detail=f"非法的权限位: {', '.join(unknown)}")
     if role == "student" and permissions:
@@ -272,6 +291,29 @@ def get_stats(
     )
 
 
+# ---------- M6 RBAC 只读接口（user_mgmt）：角色/权限下拉查库 ----------
+
+
+@router.get("/roles", response_model=RoleListResponse)
+def list_roles(
+    user: AuthUser = Depends(require_perm("user_mgmt")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    with session_factory() as session:
+        rows = session.execute(select(Role).order_by(Role.id)).scalars().all()
+    return RoleListResponse(items=[RoleItem(id=r.id, name=r.name) for r in rows])
+
+
+@router.get("/permissions", response_model=PermissionListResponse)
+def list_permissions(
+    user: AuthUser = Depends(require_perm("user_mgmt")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    with session_factory() as session:
+        rows = session.execute(select(Permission).order_by(Permission.id)).scalars().all()
+    return PermissionListResponse(items=[PermissionItem(id=p.id, name=p.name) for p in rows])
+
+
 # ---------- M4 用户管理（user_mgmt） ----------
 
 
@@ -303,7 +345,7 @@ def create_user(
     user: AuthUser = Depends(require_perm("user_mgmt")),
     session_factory: SessionFactory = Depends(get_session_factory),
 ):
-    _validate_permissions(payload.role, payload.permissions)
+    _validate_permissions(payload.role, payload.permissions, session_factory)
     with session_factory() as session, session.begin():
         exists = session.get(User, payload.id)
         if exists is not None:
@@ -344,7 +386,7 @@ def update_user(
     user: AuthUser = Depends(require_perm("user_mgmt")),
     session_factory: SessionFactory = Depends(get_session_factory),
 ):
-    _validate_permissions(payload.role, payload.permissions)
+    _validate_permissions(payload.role, payload.permissions, session_factory)
     with session_factory() as session, session.begin():
         obj = session.get(User, uid)
         if obj is None:

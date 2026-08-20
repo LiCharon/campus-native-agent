@@ -12,7 +12,7 @@ from campus_desk.api.schemas import LoginRequest, LoginResponse, UserInfo
 from campus_desk.audit import write_audit
 from campus_desk.db.models import User
 from campus_desk.db.session import SessionFactory
-from campus_desk.perms import effective_perms
+from campus_desk.perms import effective_perms_from_db
 from campus_desk.security import create_access_token, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -35,7 +35,7 @@ def login(payload: LoginRequest, session_factory: SessionFactory = Depends(get_s
             raise HTTPException(status_code=401, detail="用户名或密码错误")
         if not user.enabled:
             raise HTTPException(status_code=403, detail="账号已禁用，请联系管理员")
-        perms = effective_perms(user.role, user.permissions)
+        perms = effective_perms_from_db(session, user.role, user.permissions)
     write_audit(
         session_factory, user_id=user.id, action="login", object_type="system", detail="登录成功"
     )

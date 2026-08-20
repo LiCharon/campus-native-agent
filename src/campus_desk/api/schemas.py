@@ -5,6 +5,7 @@ M1-T8：ChatResponse 删 ticket_id/ticket_status/ticket_type（M1 无工单概�
 仅保留 orchestrator.turn 实际产出字段）。
 M3：进化闭环契约（feedback 双通道 + admin 审查），见 docs/design/ZJUT_DESIGN.md §5.5。
 M5-ZJUT：会话契约（Session* / MessageItem），会话列表/消息历史/重命名/删除/转人工状态。
+M6-ZJUT：RBAC 只读契约（RoleItem / PermissionItem），admin 用户页角色/权限下拉查库。
 """
 
 from datetime import datetime
@@ -157,7 +158,8 @@ class UserCreateRequest(BaseModel):
 
     id: str
     name: str
-    role: Literal["student", "cs_staff", "admin"]
+    # M6：改为 str，运行时查 roles 表校验存在性（角色下拉查库后值动态）
+    role: str
     student_no: str | None = None
     dept: str | None = None
     password: str = Field(min_length=6)
@@ -170,7 +172,8 @@ class UserCreateRequest(BaseModel):
 class UserUpdateRequest(BaseModel):
     """编辑用户：role/permissions/enabled。admin 账号禁止降权/禁用（对抗性审查 #3）。"""
 
-    role: Literal["student", "cs_staff", "admin"]
+    # M6：改为 str，运行时查 roles 表校验存在性（角色下拉查库后值动态）
+    role: str
     permissions: list[str] = []
     enabled: bool = True
 
@@ -186,6 +189,27 @@ class UserListItem(BaseModel):
 
 class UserListResponse(BaseModel):
     items: list[UserListItem]
+
+
+# ---------- M6-ZJUT RBAC 只读契约（admin 用户页下拉查库） ----------
+
+
+class RoleItem(BaseModel):
+    id: str
+    name: str
+
+
+class RoleListResponse(BaseModel):
+    items: list[RoleItem]
+
+
+class PermissionItem(BaseModel):
+    id: str
+    name: str
+
+
+class PermissionListResponse(BaseModel):
+    items: list[PermissionItem]
 
 
 class ResetPasswordRequest(BaseModel):

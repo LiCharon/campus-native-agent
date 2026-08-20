@@ -6,6 +6,7 @@
 - knowledge_entries 知识库条目（FAQ 式，type 驱动组装：info/process/index）
 - conversations     会话（M5-ZJUT 服务端化）：归属用户 + thread_id（LangGraph checkpointer key）
 - messages          会话消息（M5-ZJUT）：展示层落库，sources/tool_calls 等 JSON 文本
+- roles / permissions / role_permissions  RBAC 三表（M6）：角色-权限映射入库，perms.py 运行时查库（users.role 字符串列保留指向 roles.id）
 - bad_cases         未解决反馈双通道：① M1 转人工自动沉淀 ② M3 对话页"没解决"按钮
 - suggestions       用户提议通道（M3）："问题没答案"主动提议，管理员审查采纳/驳回
 - audit_logs        审计日志（M4）：登录/审查/接待/用户管理关键操作留痕
@@ -349,9 +350,7 @@ class Conversation(Base):
     thread_id: Mapped[str] = mapped_column(String(64), unique=True)
     title: Mapped[str] = mapped_column(String(64), default="新对话")
     title_source: Mapped[str] = mapped_column(String(8), default="auto")  # auto/manual
-    handoff: Mapped[str] = mapped_column(
-        String(16), default="none"
-    )  # none/transferring/human
+    handoff: Mapped[str] = mapped_column(String(16), default="none")  # none/transferring/human
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now
@@ -386,3 +385,32 @@ class Message(Base):
     error: Mapped[bool] = mapped_column(Boolean, default=False)
     feedback_submitted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Role(Base):
+    """角色定义（M6 RBAC）：users.role 字符串列指向本表 id（一人一角色，无 user_roles）。"""
+
+    __tablename__ = "roles"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # student / cs_staff / admin
+    name: Mapped[str] = mapped_column(String(32))  # 学生 / 客服 / 管理员
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Permission(Base):
+    """权限位定义（M6 RBAC）：chat/cs_workbench/kb_review/view_stats/user_mgmt/view_logs。"""
+
+    __tablename__ = "permissions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)  # chat / cs_workbench / ...
+    name: Mapped[str] = mapped_column(String(64))  # 中文显示名（前端勾选 label）
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class RolePermission(Base):
+    """角色-权限关联（M6 RBAC）：复合主键 (role_id, permission_id)，运行时查库取角色默认权限。"""
+
+    __tablename__ = "role_permissions"
+
+    role_id: Mapped[str] = mapped_column(ForeignKey("roles.id"), primary_key=True)
+    permission_id: Mapped[str] = mapped_column(ForeignKey("permissions.id"), primary_key=True)

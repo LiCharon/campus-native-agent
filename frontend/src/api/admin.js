@@ -15,6 +15,15 @@ export function fetchUsers() {
   return client.get('/admin/users')
 }
 
+// M6 RBAC：角色/权限下拉数据源（查库，替代前端硬编码枚举）
+export function fetchRoles() {
+  return client.get('/admin/roles')
+}
+
+export function fetchPermissions() {
+  return client.get('/admin/permissions')
+}
+
 export function createUser(payload) {
   return client.post('/admin/users', payload)
 }

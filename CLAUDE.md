@@ -47,7 +47,7 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 - **追问澄清 ≤3 轮**：检索未命中 → ClarifyDecider（LLM ask/handoff）→ 补充后合并全部 history 重检索 → 仍未命中转人工；轮次上限图结构硬约束
 - **转人工兜底 + 进化闭环**：knowledge 管道 handoff 写 bad_cases；对话页"没解决"按钮 + "问题没答案"提建议（suggestions）→ 管理页审查（keywords 预填建议可编辑）→ 补入知识库（人工把关，"越用越聪明"）
 - **工具查询（M2 起）**：真 FC → 字段抽取 + 确定性工具 + mock 表；**M2+ 已扩至 13 工具 + 10 mock 表**；参数白名单 schema 动态派生 + 按领域路由追问；每工具独立单测不依赖 LLM
-- **权限体系（M4）**：角色默认权限 ∪ users.permissions 附加位；require_perm 工厂；前端 constants/perms.js 同源；改权限需重登；admin 不可禁用；student 不可带附加位；审计日志旁路不阻断
+- **权限体系（M4 + M6-ZJUT RBAC 三表化）**：roles/permissions/role_permissions 三表（M6 起）；**运行时以 DB 为准**——login 查库算"角色默认权限 ∪ users.permissions 附加位"写 JWT claims，鉴权（require_perm/require_roles）不查库；perms.py 的 ROLE_PERMS/GRANTABLE_PERMS 降级为种子源+兜底（与 seed.py 三表种子、前端 constants/perms.js 同源）；用户管理页角色/权限下拉查 /api/admin/roles、/api/admin/permissions（require_perm user_mgmt）；改权限需重登；admin 不可禁用；student 不可带附加位；审计日志旁路不阻断
 
 ## 4. 工程化标准（贯穿，不做就白做）
 - Langfuse 全链路埋点（orchestrator.turn + build_llm 挂载）+ score_trace 按 outcome 自动评分（answer 1.0/ask 0.6/degraded 0.3/handoff 0.0）
@@ -71,8 +71,9 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **M2+-ZJUT 工具扩展（✅ 2026-08-19）**：2→13 工具 + 10 mock 表 + 时间上下文注入 + 评测意图 47/链路 44 + score_trace
 **M4.5-ZJUT 知识库重构（✅ 2026-08-19）**：11 域零重叠 + 本地注入 262 条 + 近重复自动检测（构建期硬关卡）
 **M5-ZJUT 会话服务端化（✅ 2026-08-20）**：conversations/messages 两表 + /api/sessions 增删改查 + /api/chat 归属校验与落库 + 自动标题后端化 + handoff 落库 + useChat.js 从 localStorage 迁 API
+**M6-ZJUT 权限模型升级（✅ 2026-08-20）**：RBAC 三表（roles/permissions/role_permissions）+ perms.py 查库化（login 查库算并集写 JWT）+ 只读接口 /api/admin/roles、/api/admin/permissions + UserManage.vue 下拉查库
 **以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / 用户画像 / SSE 流式
-**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；当前 pytest 261 passed
+**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；当前 pytest 273 passed
 
 ## 7. 当前状态
 进度/下一步/基线数据 → docs/journal/STATUS.md（随里程碑和收尾更新；本规范文件不含状态）
@@ -83,7 +84,7 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **LangGraph**：interrupt 重入不落盘（问句/计数必须 return 写入 state，双节点 ping-pong）；终态 thread 再 invoke = 旧 state 残留（新会话新 thread_id，评测 InMemorySaver）；普通边多出边 = 并行分支（用条件边）；带 checkpointer 的 invoke 必须带 thread_id，挂起 resume 用 Command(resume=)
 **SQLAlchemy/MySQL**：SELECT 隐式开事务与 begin() 混用报 already begun；rollback 后实例 expire（helper 返回整数 id）；写操作必须 `with factory() as s, s.begin():`；MySQL TEXT 列无 DEFAULT（nullable 无 server_default）；非事务 DDL 半应用先 DROP 再修迁移；alembic autogenerate 前验证表数（env.py 漏 import）；alembic.ini 只英文注释；密码含 @ 需 %40 URL 编码；**VARCHAR 长度按最长枚举值留余量（"assistant" 9 字符超 VARCHAR(8)，SQLite 测试库不校验长度、MySQL 严格模式 1406 才暴露——新表/新列务必冒烟连真实库）；downgrade 顺序：先 drop FK 约束再 drop 索引，否则 MySQL 1553**
 **M2 工具管道**：json_object 抑制 tool_calls（FC 场景必须 build_tool_llm 无 response_format）；strict FC 无可选参数（date 不进 schema，服务端默认今天）；knowledge/query 两图同 thread_id 串挂起（query 图派生 `{thread_id}:query`）；ruff DTZ011 用 `datetime.now(UTC).date()`；require_perm 加 pyproject B008 豁免
-**种子/测试**：36 条通用种子会破坏检索测试假设（测试显式清空或断言具体命中条目）；规则抽取与真 LLM 行为差异（turns 按真 LLM 设计，规则版只做机制验证）；orchestrator hits 是 int 列表（API 展示需回查 DB）；真 LLM 意图方差影响运行态验收（sources 断言放宽，由 pytest Fake 图稳定覆盖）
+**种子/测试**：36 条通用种子会破坏检索测试假设（测试显式清空或断言具体命中条目）；规则抽取与真 LLM 行为差异（turns 按真 LLM 设计，规则版只做机制验证）；orchestrator hits 是 int 列表（API 展示需回查 DB）；真 LLM 意图方差影响运行态验收（sources 断言放宽，由 pytest Fake 图稳定覆盖）；**权限顺序断言（M6）**：查库版按 permission_id 字母序（chat<cs_workbench<kb_review<user_mgmt<view_logs<view_stats），与硬编码 ROLE_PERMS 顺序不同——test_admin_m4.py 的 _ALL_PERMS 已按字母序更新，别改回硬编码序
 **前端/进程（Windows）**：npm run dev 后台停端口仍被占（改前端后验证端口 + fetch App.vue 确认新代码）；localStorage 非响应式（computed 加 `void route.path` 依赖；换账号必须 reload）
 **多 agent worktree**：worktree 创建时 baseRef 默认取 origin/main（落后本地）→ 子任务开工先 `git log` 核基线；worktree 的 .venv 可能指向主仓 src → 跑脚本加 PYTHONPATH=src
 

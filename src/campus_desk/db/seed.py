@@ -30,6 +30,9 @@ from campus_desk.db.models import (
     LibraryBorrow,
     LibrarySeat,
     LostItem,
+    Permission,
+    Role,
+    RolePermission,
     ShuttleSchedule,
     Timetable,
     User,
@@ -41,6 +44,35 @@ from campus_desk.security import hash_password
 # 幂等键列必须是种子列之一；自增 id 表不显式插 id（幂等键用业务唯一列）。
 # M6 登录鉴权：所有演示账号统一密码 "123456"（seed_all 内转哈希入库）。
 _DEMO_PASSWORD = "123456"
+
+# ---- M6 RBAC 三表种子：角色/权限定义入库（与 perms.py 硬编码映射一致，运行时查库） ----
+_ROLES = [
+    ("student", "学生"),
+    ("cs_staff", "客服"),
+    ("admin", "管理员"),
+]
+
+_PERMISSIONS = [
+    ("chat", "对话服务"),
+    ("cs_workbench", "客服工作台（接待标记）"),
+    ("kb_review", "知识库审查补入"),
+    ("view_stats", "数据看板"),
+    ("user_mgmt", "用户管理"),
+    ("view_logs", "日志管理"),
+]
+
+_ROLE_PERMISSIONS = [
+    ("student", "chat"),
+    ("cs_staff", "chat"),
+    ("cs_staff", "cs_workbench"),
+    ("admin", "chat"),
+    ("admin", "cs_workbench"),
+    ("admin", "kb_review"),
+    ("admin", "view_stats"),
+    ("admin", "user_mgmt"),
+    ("admin", "view_logs"),
+]
+
 _USERS = [
     # (id, name, role, student_no, dept, phone, password)
     ("student-001", "李华", "student", "2024001", None, "13800000001", _DEMO_PASSWORD),
@@ -567,12 +599,24 @@ def _mock_calendar() -> list[tuple]:
         rows.append(
             (_CURRENT_TERM, week, _CALENDAR_START_2026_1 + timedelta(weeks=week - 1), label)
         )
-    rows.append((_CURRENT_TERM, 19, _CALENDAR_START_2026_1 + timedelta(weeks=_SEMESTER_WEEKS), "考试周"))
+    rows.append(
+        (_CURRENT_TERM, 19, _CALENDAR_START_2026_1 + timedelta(weeks=_SEMESTER_WEEKS), "考试周")
+    )
     return rows
+
 
 # (模型, 幂等键列列表, 种子列, 行数据)——种子列顺序与行元组一一对应；
 # 幂等键：字符串 id 表用 id
 _SEED_SPECS = [
+    # M6 RBAC 三表（排在 User 前：role_permissions 依赖 roles/permissions 已存在，PRAGMA foreign_keys=ON）
+    (Role, ["id"], ["id", "name"], _ROLES),
+    (Permission, ["id"], ["id", "name"], _PERMISSIONS),
+    (
+        RolePermission,
+        ["role_id", "permission_id"],
+        ["role_id", "permission_id"],
+        _ROLE_PERMISSIONS,
+    ),
     (User, ["id"], ["id", "name", "role", "student_no", "dept", "phone", "password"], _USERS),
     (
         EmptyRoom,

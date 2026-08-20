@@ -1,5 +1,7 @@
 // M4 权限体系（设计文档 §2）：角色默认权限 ∪ 附加权限位 = 最终权限
-// 后端 users.permissions 列落地后，登录响应 user.permissions 传入；当前先按角色计算
+// M6-ZJUT 起运行时以 DB 为准：登录响应 user.permissions 已是角色权限(role_permissions 表) ∪
+// 附加位的最终并集；下方 ROLE_PERMS / GRANTABLE_PERMS 仅作兜底（种子源），
+// 用户管理页的勾选项已改为查 /api/admin/roles、/api/admin/permissions 接口。
 
 export const PERM = {
   CHAT: 'chat',

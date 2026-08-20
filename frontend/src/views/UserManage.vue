@@ -50,9 +50,7 @@
           <div>
             <label>角色</label>
             <select v-model="form.role">
-              <option value="student">student（学生）</option>
-              <option value="cs_staff">cs_staff（客服）</option>
-              <option value="admin">admin（管理员）</option>
+              <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.label }}</option>
             </select>
           </div>
           <div v-if="!editing">
@@ -100,8 +98,14 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createUser, fetchUsers, resetPassword, updateUser } from '../api/admin'
-import { GRANTABLE_PERMS } from '../constants/perms'
+import {
+  createUser,
+  fetchPermissions,
+  fetchRoles,
+  fetchUsers,
+  resetPassword,
+  updateUser
+} from '../api/admin'
 
 const ROLE_LABEL = { student: 'student', cs_staff: 'cs_staff', admin: 'admin' }
 
@@ -112,7 +116,9 @@ const submitting = ref(false)
 const resetVisible = ref(false)
 const resetTarget = ref('')
 const resetPwd = ref('')
-const grantable = GRANTABLE_PERMS
+// M6：角色/权限下拉来自后端查库（roles/permissions 表），替代硬编码枚举
+const roles = ref([])
+const grantable = ref([])
 
 const form = reactive({ id: '', name: '', role: 'student', password: '', permissions: [], enabled: true })
 
@@ -123,6 +129,25 @@ async function load() {
   } catch {
     ElMessage.error('加载失败，请检查后端是否启动')
     items.value = []
+  }
+}
+
+async function loadMeta() {
+  // M6：角色/权限下拉查库；后端未就绪时兜底三项默认角色 + 空权限（提交时后端校验）
+  try {
+    const [r1, r2] = await Promise.all([fetchRoles(), fetchPermissions()])
+    roles.value = (r1.data.items || []).map((r) => ({ id: r.id, label: r.name }))
+    // chat 是全员基础位，不放进可勾选附加权限位（与 GRANTABLE_PERMS 语义一致）
+    grantable.value = (r2.data.items || [])
+      .filter((p) => p.id !== 'chat')
+      .map((p) => ({ key: p.id, label: p.name }))
+  } catch {
+    roles.value = [
+      { id: 'student', label: 'student（学生）' },
+      { id: 'cs_staff', label: 'cs_staff（客服）' },
+      { id: 'admin', label: 'admin（管理员）' }
+    ]
+    grantable.value = []
   }
 }
 
@@ -207,6 +232,7 @@ async function handleReset() {
 }
 
 onMounted(load)
+onMounted(loadMeta)
 </script>
 
 <style scoped>

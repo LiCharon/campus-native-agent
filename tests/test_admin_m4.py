@@ -13,7 +13,8 @@
 
 from campus_desk.db.models import BadCase
 
-_ALL_PERMS = ["chat", "cs_workbench", "kb_review", "view_stats", "user_mgmt", "view_logs"]
+# M6 起权限来自 role_permissions 表（permission_id 字母序），不再是硬编码 ROLE_PERMS 顺序
+_ALL_PERMS = ["chat", "cs_workbench", "kb_review", "user_mgmt", "view_logs", "view_stats"]
 
 
 def _login(client, username, password="123456"):
