@@ -72,8 +72,9 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **M4.5-ZJUT 知识库重构（✅ 2026-08-19）**：11 域零重叠 + 本地注入 262 条 + 近重复自动检测（构建期硬关卡）
 **M5-ZJUT 会话服务端化（✅ 2026-08-20）**：conversations/messages 两表 + /api/sessions 增删改查 + /api/chat 归属校验与落库 + 自动标题后端化 + handoff 落库 + useChat.js 从 localStorage 迁 API
 **M6-ZJUT 权限模型升级（✅ 2026-08-20）**：RBAC 三表（roles/permissions/role_permissions）+ perms.py 查库化（login 查库算并集写 JWT）+ 只读接口 /api/admin/roles、/api/admin/permissions + UserManage.vue 下拉查库
-**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / 用户画像 / SSE 流式
-**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；当前 pytest 273 passed
+**M7-ZJUT 用户长期记忆（✅ 2026-08-20）**：user_profiles 每轮增量抽取（student 门控、纯确定性——building 正则 + 知识命中 domain 计数）+ 注入 ClarifyDecider 追问判定与 QueryGraph FC prompt + GraphRegistry bundle 画像版本失效（第二问即生效）
+**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / LLM 摘要画像 / SSE 流式
+**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；M7-ZJUT 302 passed + MySQL 冒烟（画像落库/role 门控/同进程第二问注入）；当前 pytest 302 passed
 
 ## 7. 当前状态
 进度/下一步/基线数据 → docs/journal/STATUS.md（随里程碑和收尾更新；本规范文件不含状态）

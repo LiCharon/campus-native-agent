@@ -129,11 +129,16 @@ def build_knowledge_graph(
     decider: ClarifyDecider | None = None,
     checkpointer=None,
     user_id: str = "student-001",
+    profile: str = "",
 ):
-    """构建知识问答图。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。"""
-    deps = _Deps(
-        session_factory, decider if decider is not None else ClarifyDecider(), user_id=user_id
-    )
+    """构建知识问答图。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。
+
+    profile（M7-ZJUT）：可选画像文本段，仅对内部默认构造的 ClarifyDecider 生效
+    （调用方显式传 decider 时由调用方决定是否带画像）。
+    """
+    if decider is None:
+        decider = ClarifyDecider(profile=profile)
+    deps = _Deps(session_factory, decider, user_id=user_id)
     graph = (
         StateGraph(KnowledgeState)
         .add_node("collect", _make_collect(deps))

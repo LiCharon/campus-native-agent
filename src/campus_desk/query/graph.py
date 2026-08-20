@@ -128,7 +128,11 @@ def _time_context(deps: _Deps) -> dict:
 
 
 def _build_query_prompt(deps: _Deps) -> str:
-    return _QUERY_PROMPT_TEMPLATE.format(**_time_context(deps))
+    prompt = _QUERY_PROMPT_TEMPLATE.format(**_time_context(deps))
+    if deps.profile_text:
+        # M7-ZJUT：画像段追加在模板之后（不用占位符——模板 format 缺键会 KeyError）
+        prompt += f"\n{deps.profile_text}"
+    return prompt
 
 
 class QueryState(TypedDict):
@@ -153,12 +157,14 @@ class _Deps:
         user_id: str = "student-001",
         student_no: str | None = None,
         today: date | None = None,
+        profile_text: str = "",
     ):
         self.session_factory = session_factory
         self.llm = llm
         self.user_id = user_id
         self.student_no = student_no
         self.today = today
+        self.profile_text = profile_text  # M7-ZJUT：画像文本段（空串不注入）
         self._prompt: str | None = None
 
     def query_prompt(self) -> str:
@@ -433,11 +439,13 @@ def build_query_graph(
     user_id: str = "student-001",
     student_no: str | None = None,
     today: date | None = None,
+    profile_text: str = "",
 ):
     """构建工具查询图。llm/checkpointer 可注入（测试用 fake/InMemorySaver），默认真 FC。
 
     M2+：student_no 未显式传入时按 user_id 查库一次（个人数据工具免问学号）；
     today 可注入（评测固定日期保证确定性，生产默认今天）。
+    M7-ZJUT：profile_text 可选画像段（图构建期查库，注入 _QUERY_PROMPT_TEMPLATE）。
     """
     if student_no is None:
         student_no = lookup_student_no(session_factory, user_id)
@@ -447,6 +455,7 @@ def build_query_graph(
         user_id=user_id,
         student_no=student_no,
         today=today,
+        profile_text=profile_text,
     )
     graph = (
         StateGraph(QueryState)

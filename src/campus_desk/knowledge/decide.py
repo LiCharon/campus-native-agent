@@ -41,11 +41,22 @@ class ClarifyDecision(BaseModel):
 
 
 class ClarifyDecider:
-    """追问决策：LLM 决定；失败兜底 handoff。"""
+    """追问决策：LLM 决定；失败兜底 handoff。
 
-    def __init__(self, llm: BaseChatModel | None = _USE_DEFAULT_LLM, max_attempts: int = 2):
+    profile（M7-ZJUT）：可选画像文本段，非空时拼入 system prompt——
+    帮助追问更贴合该学生上下文（如已知常驻楼栋）。仅默认构造注入，
+    测试显式传 llm 时由调用方决定是否带画像。
+    """
+
+    def __init__(
+        self,
+        llm: BaseChatModel | None = _USE_DEFAULT_LLM,
+        max_attempts: int = 2,
+        profile: str = "",
+    ):
         self.llm = self._default_llm() if llm is _USE_DEFAULT_LLM else llm
         self.max_attempts = max_attempts
+        self.profile = profile
         self._last_error = ""
 
     @staticmethod
@@ -61,11 +72,14 @@ class ClarifyDecider:
         可在此扩展。
         """
         context = f"对话历史:\n{chr(10).join(history[-4:]) or '（无）'}\n学生本轮: {user_text}"
+        system_prompt = _DECIDE_PROMPT
+        if self.profile:
+            system_prompt += f"\n\n关于该学生：{self.profile}"
         if self.llm is None:
             return ClarifyDecision(action="handoff", reply=_FALLBACK_REPLY)
         for _ in range(self.max_attempts):
             try:
-                raw = self.llm.invoke([("system", _DECIDE_PROMPT), ("human", context)])
+                raw = self.llm.invoke([("system", system_prompt), ("human", context)])
             except Exception as exc:  # noqa: BLE001 — 外部调用兜底
                 self._last_error = f"LLM 调用异常: {exc!r}"
                 continue

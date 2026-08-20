@@ -76,9 +76,10 @@ class AuditLog(Base):
 
 
 class UserProfile(Base):
-    """用户长期记忆画像（M4，需求 §7）：随工单提交/关闭更新，分类定级前注入。
+    """用户长期记忆画像（M7-ZJUT 启用；M4 建表预留）：每轮对话后增量抽取。
 
-    1:1 users；无画像行 = 新用户（首次报修，正常流程不注入）。
+    1:1 users；无画像行 = 新用户（正常流程不注入）；building/常问领域由
+    profile/upsert.py 从消息与 sources 确定性抽取（纯正则+计数，无 LLM）。
     """
 
     __tablename__ = "user_profiles"
@@ -87,10 +88,10 @@ class UserProfile(Base):
     building: Mapped[str | None] = mapped_column(String(32), nullable=True)  # 常驻楼栋
     frequent_categories: Mapped[str] = mapped_column(
         String(128), default=""
-    )  # 逗号分隔，按报修次数排序（"又坏了"关联用）
+    )  # "域:次数" 逗号分隔，按次数降序（每轮每域 +1，轮内去重）
     last_ticket_summary: Mapped[str | None] = mapped_column(
         Text, nullable=True
-    )  # 上次工单摘要（描述+类别+状态）
+    )  # 最近对话要点摘要（LLM 摘要后置里程碑，本轮不写）
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now
     )

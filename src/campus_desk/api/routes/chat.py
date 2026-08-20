@@ -136,6 +136,15 @@ def chat(
             )
             conv.updated_at = datetime.now(UTC)
 
+    # 4. M7-ZJUT 用户画像：student 每轮对话后增量抽取（building 正则 + 领域计数）。
+    # 独立事务 + 内部异常隔离（旁路），失败不影响主对话流程。
+    if user.role == "student":
+        from campus_desk.profile.upsert import update_profile_after_turn
+
+        update_profile_after_turn(
+            session_factory, user_id=user.id, msg=payload.msg, sources=sources
+        )
+
     return ChatResponse(
         reply=result["reply"],
         route=result["route"],
