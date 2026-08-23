@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "name": "M10 S5 检索评测集",
+    "built_at": "2026-08-24",
+    "source": "从 knowledge_entries 现有 262 条中抽代表性样本，query 人工构造",
+    "categories": {
+      "keyword": "query 复用条目关键词（词法重叠），测 jieba-BM25 稀疏腿召回",
+      "semantic": "query 用同义改写、刻意避开原关键词，测 bge 稠密腿语义召回",
+      "cross_domain": "query 跨多域，验证主域条目在 top3 不被干扰域挤出"
+    },
+    "metric": "Recall@3（expected_id 是否进入各档检索 top3）+ 延迟(ms)"
+  },
+  "cases": [
+    {"expected_id": 4, "domain": "教务", "category": "keyword", "query": "寒假从几号开始放"},
+    {"expected_id": 5, "domain": "教务", "category": "keyword", "query": "选课和退课在哪里操作"},
+    {"expected_id": 10, "domain": "住宿后勤", "category": "keyword", "query": "宿舍物品损坏怎么报修"},
+    {"expected_id": 17, "domain": "图书馆", "category": "keyword", "query": "图书馆开放时间是几点"},
+    {"expected_id": 18, "domain": "图书馆", "category": "keyword", "query": "图书馆座位怎么提前预约"},
+    {"expected_id": 22, "domain": "网络与IT", "category": "keyword", "query": "校园网连接上网怎么弄"},
+    {"expected_id": 28, "domain": "校园卡与证件", "category": "keyword", "query": "一卡通丢失了如何补办"},
+    {"expected_id": 31, "domain": "校园卡与证件", "category": "keyword", "query": "我的校园卡找不到了怎么挂失"},
+    {"expected_id": 35, "domain": "生活服务", "category": "keyword", "query": "医保费用怎么报销"},
+    {"expected_id": 119, "domain": "奖助", "category": "keyword", "query": "助学贷款申请条件是什么"},
+    {"expected_id": 160, "domain": "就业与职业发展", "category": "keyword", "query": "就业信息网入口和联系方式"},
+    {"expected_id": 172, "domain": "安全与保卫", "category": "keyword", "query": "保卫处报警电话是多少"},
+
+    {"expected_id": 6, "domain": "教务", "category": "semantic", "query": "在哪能看到我每学期的分数"},
+    {"expected_id": 8, "domain": "教务", "category": "semantic", "query": "想暂停学业一段时间怎么办理"},
+    {"expected_id": 12, "domain": "住宿后勤", "category": "semantic", "query": "就餐区域早晨几点开放"},
+    {"expected_id": 13, "domain": "住宿后勤", "category": "semantic", "query": "网购的包裹在学校哪个点位领取"},
+    {"expected_id": 16, "domain": "图书馆", "category": "semantic", "query": "怎么从阅览室把书带出去到期再送回"},
+    {"expected_id": 19, "domain": "图书馆", "category": "semantic", "query": "去哪能获取到学术期刊文章"},
+    {"expected_id": 23, "domain": "网络与IT", "category": "semantic", "query": "进系统的口令忘掉了怎么重新设"},
+    {"expected_id": 29, "domain": "校园卡与证件", "category": "semantic", "query": "怎么给饭卡里充钱"},
+    {"expected_id": 32, "domain": "校园卡与证件", "category": "semantic", "query": "开学要交的那个在校读书的证明怎么开"},
+    {"expected_id": 125, "domain": "医疗健康", "category": "semantic", "query": "学校有合作的精神科专家门诊吗"},
+    {"expected_id": 158, "domain": "就业", "category": "semantic", "query": "大学生创新创业项目怎么立项"},
+    {"expected_id": 175, "domain": "安全与保卫", "category": "semantic", "query": "怎么辨别冒充客服的骗局"},
+
+    {"expected_id": 18, "domain": "图书馆", "category": "cross_domain", "query": "图书馆座位预约和食堂营业时间分别是多少"},
+    {"expected_id": 28, "domain": "校园卡与证件", "category": "cross_domain", "query": "一卡通和学生证都丢了先补办哪个"},
+    {"expected_id": 34, "domain": "生活服务", "category": "cross_domain", "query": "校医院在哪开门医疗费怎么报销"},
+    {"expected_id": 17, "domain": "图书馆", "category": "cross_domain", "query": "图书馆和自习室分别几点能进"},
+    {"expected_id": 22, "domain": "网络与IT", "category": "cross_domain", "query": "校园网连不上学生邮箱也登不进"},
+    {"expected_id": 160, "domain": "就业与职业发展", "category": "cross_domain", "query": "就业信息网入口和创业支持政策"},
+    {"expected_id": 172, "domain": "安全与保卫", "category": "cross_domain", "query": "保卫处电话和防电信诈骗找谁"},
+    {"expected_id": 119, "domain": "奖助", "category": "cross_domain", "query": "助学贷款和国家助学金怎么同时申请"},
+    {"expected_id": 13, "domain": "住宿后勤", "category": "cross_domain", "query": "快递点在哪宿舍东西坏了找谁"},
+    {"expected_id": 63, "domain": "医疗健康", "category": "cross_domain", "query": "心理中心在哪预约入学体检怎么安排"}
+  ]
+}

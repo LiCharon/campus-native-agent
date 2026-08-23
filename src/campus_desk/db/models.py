@@ -110,6 +110,8 @@ class KnowledgeEntry(Base):
     question: Mapped[str] = mapped_column(String(256))
     type: Mapped[str] = mapped_column(String(8), default="info")  # info/process/index
     answer: Mapped[str] = mapped_column(Text)
+    # M10 稠密向量（bge-small-zh 512 维，JSON 列表）：MySQL 兜底语义检索 + S5 基线复用
+    dense_vector: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

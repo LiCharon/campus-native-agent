@@ -65,8 +65,9 @@ def test_tool_schemas_strict_and_required():
         "query_shuttle_schedule",
         "query_calendar",
         "query_announcements",
+        "retrieve_knowledge",
     }
-    assert len(TOOL_SCHEMAS) == len(TOOL_FUNCS) == 13
+    assert len(TOOL_SCHEMAS) == len(TOOL_FUNCS) == 14
     schema_names = {s["function"]["name"] for s in TOOL_SCHEMAS}
     assert schema_names == set(TOOL_FUNCS)
     for schema in TOOL_SCHEMAS:

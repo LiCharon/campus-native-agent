@@ -447,6 +447,41 @@ def query_announcements(
         return {"ok": False, "error_kind": "db", "error": str(exc)}
 
 
+def retrieve_knowledge(
+    session_factory,
+    *,
+    query: str,
+    domain: str,
+    student_no: str | None = None,
+    user_id: str | None = None,
+) -> dict:
+    """检索校园知识库（FAQ 式问答），用于混合意图中需解答校园办事类问题。
+
+    返回结构化命中（id/domain/question/type/answer），供 LLM 内联引用；
+    不背追问/转人工逻辑（那是 KnowledgeGraph 的职责）。
+    """
+    from campus_desk.knowledge.search import search_knowledge
+
+    try:
+        hits = search_knowledge(session_factory, query, domain=domain)
+        return {
+            "ok": True,
+            "query": query,
+            "results": [
+                {
+                    "id": h["id"],
+                    "domain": h["domain"],
+                    "question": h["question"],
+                    "type": h["type"],
+                    "answer": h["answer"],
+                }
+                for h in hits
+            ],
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error_kind": "unknown", "error": str(exc)}
+
+
 TOOL_FUNCS = {
     "query_empty_rooms": query_empty_rooms,
     "query_library_seats": query_library_seats,
@@ -461,6 +496,7 @@ TOOL_FUNCS = {
     "query_shuttle_schedule": query_shuttle_schedule,
     "query_calendar": query_calendar,
     "query_announcements": query_announcements,
+    "retrieve_knowledge": retrieve_knowledge,
 }
 
 TOOL_SCHEMAS = [
@@ -663,6 +699,42 @@ TOOL_SCHEMAS = [
                     "keyword": {"type": "string", "description": "关键词，如 教务处"},
                 },
                 "required": ["keyword"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "retrieve_knowledge",
+            "description": "检索校园知识库，回答校园办事类问题（校园卡/图书馆/奖助/宿舍/教务等）。当对话中需要解答校园常识或办事流程、且不是纯数据查询时使用。",
+            "strict": True,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "关于校园办事的自然语言问题，如 校园卡丢了怎么办",
+                    },
+                    "domain": {
+                        "type": "string",
+                        "enum": [
+                            "教务",
+                            "图书馆",
+                            "网络与IT",
+                            "校园卡与证件",
+                            "住宿后勤",
+                            "奖助",
+                            "医疗健康",
+                            "社团与活动",
+                            "就业与职业发展",
+                            "安全与保卫",
+                            "生活服务",
+                        ],
+                        "description": "限定检索领域，缩小范围；跨领域问题可分两次调用",
+                    },
+                },
+                "required": ["query", "domain"],
                 "additionalProperties": False,
             },
         },

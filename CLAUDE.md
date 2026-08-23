@@ -23,7 +23,7 @@
 | docs/journal/DEV_JOURNAL.md | 新会话看最新迭代记录（做了什么/坑/面试点）|
 | docs/requirements/PROJECT_REQUIREMENTS.md | CampusDesk 历史需求（已退役，仅参考演进脉络）|
 | docs/requirements/TECH_DECISIONS.md | 选型原因 + 面试话术（活弹药）|
-| docs/plans/RAG_ROADMAP.md | RAG 实现蓝图（A 路线 + sqlite-vec，2026-08-18 拍板）|
+| docs/plans/RAG_ROADMAP.md | RAG 实现蓝图（M10 已落地 Qdrant 混合检索，默认 Tier2 选配；演进脉络见 RAG_ROADMAP.md §1.2）|
 
 ### 0.3 里程碑命名规范（2026-08-20 拍板，防新旧混淆）
 - 新系列统一 `M{n}-ZJUT` 后缀（重构后 2026-08-15 起：M1-ZJUT ~ M10-ZJUT）；旧系列 M0–M7 无后缀、为重构前历史基线。
@@ -39,7 +39,7 @@
 ## 2. 技术栈（已拍板）
 Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（自托管 localhost:3001）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + httpx · MCP（扩展期演示加分）
 **真 FC 已探测可用（M1-T12）**：deepseek-v4-flash bind_tools 返回真实 tool_calls（FC_SUPPORTED=True）；但 build_llm 写死 response_format=json_object，工具调用 prompt 必须含 "json" 字样否则 400——M2 工具管道按此设计（详见 env_check.py 注释 + docs/journal/DEV_JOURNAL.md）
-**以后再说**：Redis 缓存（当前 36 条知识遍历 <0.1ms 不是瓶颈，规模上去再评估 cache-aside）；向量检索 RAG（检索层已做成可替换模块，路线见 RAG_ROADMAP.md）；MCP 暴露
+**以后再说**：Redis 缓存（当前知识遍历毫秒级不是瓶颈，规模上去再评估 cache-aside）；MCP 暴露
 
 ## 3. 核心设计（拍板结论；细节 → docs/design/ZJUT_DESIGN.md）
 - **入口分流 4 类意图**：knowledge / tool_query（M2 实装）/ multi_intent / other；三层防线（结构化输出 → 重试 1 次 → 关键词规则兜底）+ 置信度门控（<0.7 转人工）；index/ambiguous 不设入口意图
@@ -73,7 +73,10 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **M5-ZJUT 会话服务端化（✅ 2026-08-20）**：conversations/messages 两表 + /api/sessions 增删改查 + /api/chat 归属校验与落库 + 自动标题后端化 + handoff 落库 + useChat.js 从 localStorage 迁 API
 **M6-ZJUT 权限模型升级（✅ 2026-08-20）**：RBAC 三表（roles/permissions/role_permissions）+ perms.py 查库化（login 查库算并集写 JWT）+ 只读接口 /api/admin/roles、/api/admin/permissions + UserManage.vue 下拉查库
 **M7-ZJUT 用户长期记忆（✅ 2026-08-20）**：user_profiles 每轮增量抽取（student 门控、纯确定性——building 正则 + 知识命中 domain 计数）+ 注入 ClarifyDecider 追问判定与 QueryGraph FC prompt + GraphRegistry bundle 画像版本失效（第二问即生效）
-**以后再说**：真·多意图拆解 / 向量检索 RAG / MCP 暴露 / 渠道扩展 / LLM 摘要画像 / SSE 流式
+**M8-ZJUT 数据与洞察（📋 已规划未开工）**：聚合报表进系统（/api/admin/stats 业务库直算：转人工率/首轮解决率/满意度/平均轮次/domain 分布 + 看板）
+**M9-ZJUT 知识管理闭环（📋 已规划未开工）**：知识条目增改删 + 管理页 UI（+ Qdrant 增量同步钩子，依赖 M10 vector_store 接口）
+**M10-ZJUT 检索工具化（✅ 2026-08-24）**：Qdrant 混合检索（稠密 bge ‖ 稀疏 BM25 jieba 注入 → prefetch + RRF）+ 三档降级（Qdrant→MySQL稠密→关键词）+ retrieve 第 14 工具；本地磁盘 Qdrant 实跑 + S5 评测（Recall@3 混合 91.2% = 稠密 91.2% ≫ 关键词 67.6%）；生产默认 Tier2、Qdrant 选配
+**以后再说**：真·多意图拆解 / MCP 暴露 / 渠道扩展 / LLM 摘要画像 / SSE 流式
 **DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；M7-ZJUT 302 passed + MySQL 冒烟（画像落库/role 门控/同进程第二问注入）；当前 pytest 302 passed
 
 ## 7. 当前状态
@@ -88,6 +91,7 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **种子/测试**：36 条通用种子会破坏检索测试假设（测试显式清空或断言具体命中条目）；规则抽取与真 LLM 行为差异（turns 按真 LLM 设计，规则版只做机制验证）；orchestrator hits 是 int 列表（API 展示需回查 DB）；真 LLM 意图方差影响运行态验收（sources 断言放宽，由 pytest Fake 图稳定覆盖）；**权限顺序断言（M6）**：查库版按 permission_id 字母序（chat<cs_workbench<kb_review<user_mgmt<view_logs<view_stats），与硬编码 ROLE_PERMS 顺序不同——test_admin_m4.py 的 _ALL_PERMS 已按字母序更新，别改回硬编码序
 **前端/进程（Windows）**：npm run dev 后台停端口仍被占（改前端后验证端口 + fetch App.vue 确认新代码）；localStorage 非响应式（computed 加 `void route.path` 依赖；换账号必须 reload）
 **多 agent worktree**：worktree 创建时 baseRef 默认取 origin/main（落后本地）→ 子任务开工先 `git log` 核基线；worktree 的 .venv 可能指向主仓 src → 跑脚本加 PYTHONPATH=src
+**M10 检索（Qdrant 混合）**：中文 BM25 稀疏必须 jieba 切词注入（fastembed BM25 按空白切、无中文分词→整段成单一 token、召回≈0）；fastembed 0.8 `SparseEmbedding` 用 `as_dict()` 非 `to_dict()`（单测用假向量未覆盖，真实跑才暴露）；HF 主源不可达时模型走 `specific_model_path` 本地路径（bge 从 GCS 手动拉、bm25 从 HF 直连拉快照）；Qdrant 本地 upsert 只覆盖不删 → rebuild 前 `rm -rf` 本地目录保评测干净
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |

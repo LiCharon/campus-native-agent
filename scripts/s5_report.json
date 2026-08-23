@@ -1,0 +1,1116 @@
+{
+ "summary": {
+  "Tier1_Qdrant混合": {
+   "total": 34,
+   "hit": 31,
+   "lat": [
+    777.984500004095,
+    7.8172999928938225,
+    8.054700010688975,
+    8.4843000076944,
+    7.911599997896701,
+    7.980700000189245,
+    8.04960000095889,
+    8.397600002354011,
+    7.037500006845221,
+    7.605799997691065,
+    8.208799990825355,
+    7.5772999989567325,
+    8.071800009929575,
+    8.877599990228191,
+    8.922099994379096,
+    7.947099991724826,
+    8.228400009102188,
+    7.932300009997562,
+    7.532599993282929,
+    8.600100001785904,
+    9.056099996087141,
+    8.686600005603395,
+    8.395800003199838,
+    8.469899999909103,
+    8.491000000503846,
+    8.124100000713952,
+    8.851899998262525,
+    7.334800000535324,
+    8.236399997258559,
+    7.427499993355013,
+    7.461899993359111,
+    7.782799992128275,
+    9.903900005156174,
+    8.199299991247244
+   ]
+  },
+  "Tier2_MySQL稠密": {
+   "total": 34,
+   "hit": 31,
+   "lat": [
+    186.07840000186116,
+    78.58690001012292,
+    80.54509999055881,
+    82.19429999007843,
+    74.04009999299888,
+    73.12400000228081,
+    76.68169999669772,
+    73.4768999973312,
+    72.73450000502635,
+    71.05759999831207,
+    70.23060000210535,
+    69.64880001032725,
+    88.32660000189207,
+    84.55010000034235,
+    88.69160000176635,
+    67.03579999157228,
+    69.56279999576509,
+    66.15099999180529,
+    70.71939999877941,
+    79.25139999133535,
+    88.79219999653287,
+    67.52359999518376,
+    69.1744999930961,
+    69.28410001273733,
+    74.47330000286456,
+    80.13740000023972,
+    85.44670000264887,
+    80.43450000695884,
+    77.23290000285488,
+    70.8889000088675,
+    81.07219998782966,
+    71.48539999616332,
+    97.54589998919982,
+    71.2754000123823
+   ]
+  },
+  "Tier3_关键词": {
+   "total": 34,
+   "hit": 23,
+   "lat": [
+    13.828399998601526,
+    12.865099997725338,
+    13.827199989464134,
+    13.914199997088872,
+    12.047700001858175,
+    14.281299998401664,
+    13.105300007737242,
+    28.386300007696263,
+    36.324600005173124,
+    12.15369999408722,
+    27.68520000972785,
+    13.789500007987954,
+    14.281399999163114,
+    14.467500004684553,
+    13.760000001639128,
+    13.300999999046326,
+    12.404299995978363,
+    10.901999994530343,
+    12.225300000864081,
+    13.262299995403737,
+    42.222900010528974,
+    12.344200004008599,
+    24.498400001903065,
+    16.076400002930313,
+    12.449800007743761,
+    13.853600001311861,
+    11.81279998854734,
+    15.229000011458993,
+    12.224999998579733,
+    25.45990000362508,
+    25.09039999858942,
+    13.941200013505295,
+    11.778300002333708,
+    15.220099987345748
+   ]
+  }
+ },
+ "by_category": {
+  "keyword": {
+   "Tier1_Qdrant混合": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "Tier2_MySQL稠密": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "Tier3_关键词": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  "semantic": {
+   "Tier1_Qdrant混合": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "Tier2_MySQL稠密": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "Tier3_关键词": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    false
+   ]
+  },
+  "cross_domain": {
+   "Tier1_Qdrant混合": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "Tier2_MySQL稠密": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "Tier3_关键词": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "per_case": [
+  {
+   "query": "寒假从几号开始放",
+   "expected_id": 4,
+   "category": "keyword",
+   "tier1_ids": [
+    4,
+    17,
+    273
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 778.0,
+   "tier2_ids": [
+    4,
+    17,
+    273
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 186.1,
+   "tier3_ids": [
+    4
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.8
+  },
+  {
+   "query": "选课和退课在哪里操作",
+   "expected_id": 5,
+   "category": "keyword",
+   "tier1_ids": [
+    5,
+    79,
+    41
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.8,
+   "tier2_ids": [
+    5,
+    79,
+    41
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 78.6,
+   "tier3_ids": [
+    5,
+    40,
+    41
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.9
+  },
+  {
+   "query": "宿舍物品损坏怎么报修",
+   "expected_id": 10,
+   "category": "keyword",
+   "tier1_ids": [
+    60,
+    10,
+    222
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.1,
+   "tier2_ids": [
+    60,
+    10,
+    114
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 80.5,
+   "tier3_ids": [
+    10,
+    60,
+    61
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.8
+  },
+  {
+   "query": "图书馆开放时间是几点",
+   "expected_id": 17,
+   "category": "keyword",
+   "tier1_ids": [
+    17,
+    50,
+    281
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.5,
+   "tier2_ids": [
+    17,
+    50,
+    12
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 82.2,
+   "tier3_ids": [
+    17,
+    50,
+    72
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.9
+  },
+  {
+   "query": "图书馆座位怎么提前预约",
+   "expected_id": 18,
+   "category": "keyword",
+   "tier1_ids": [
+    18,
+    84,
+    127
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.9,
+   "tier2_ids": [
+    18,
+    84,
+    88
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 74.0,
+   "tier3_ids": [
+    18,
+    63,
+    84
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.0
+  },
+  {
+   "query": "校园网连接上网怎么弄",
+   "expected_id": 22,
+   "category": "keyword",
+   "tier1_ids": [
+    22,
+    55,
+    190
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.0,
+   "tier2_ids": [
+    22,
+    55,
+    219
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 73.1,
+   "tier3_ids": [
+    22,
+    190,
+    55
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 14.3
+  },
+  {
+   "query": "一卡通丢失了如何补办",
+   "expected_id": 28,
+   "category": "keyword",
+   "tier1_ids": [
+    28,
+    52,
+    261
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.0,
+   "tier2_ids": [
+    28,
+    52,
+    31
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 76.7,
+   "tier3_ids": [
+    28,
+    29,
+    30
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.1
+  },
+  {
+   "query": "我的校园卡找不到了怎么挂失",
+   "expected_id": 31,
+   "category": "keyword",
+   "tier1_ids": [
+    52,
+    31,
+    101
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.4,
+   "tier2_ids": [
+    52,
+    31,
+    103
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 73.5,
+   "tier3_ids": [
+    31,
+    52,
+    51
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 28.4
+  },
+  {
+   "query": "医保费用怎么报销",
+   "expected_id": 35,
+   "category": "keyword",
+   "tier1_ids": [
+    35,
+    144,
+    133
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.0,
+   "tier2_ids": [
+    35,
+    144,
+    133
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 72.7,
+   "tier3_ids": [
+    35,
+    131,
+    239
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 36.3
+  },
+  {
+   "query": "助学贷款申请条件是什么",
+   "expected_id": 119,
+   "category": "keyword",
+   "tier1_ids": [
+    119,
+    229,
+    76
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.6,
+   "tier2_ids": [
+    119,
+    229,
+    122
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 71.1,
+   "tier3_ids": [
+    76,
+    119,
+    46
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.2
+  },
+  {
+   "query": "就业信息网入口和联系方式",
+   "expected_id": 160,
+   "category": "keyword",
+   "tier1_ids": [
+    160,
+    166,
+    251
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.2,
+   "tier2_ids": [
+    160,
+    161,
+    166
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 70.2,
+   "tier3_ids": [
+    160,
+    59,
+    263
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 27.7
+  },
+  {
+   "query": "保卫处报警电话是多少",
+   "expected_id": 172,
+   "category": "keyword",
+   "tier1_ids": [
+    172,
+    255,
+    179
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.6,
+   "tier2_ids": [
+    172,
+    179,
+    255
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 69.6,
+   "tier3_ids": [
+    172,
+    255,
+    63
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.8
+  },
+  {
+   "query": "在哪能看到我每学期的分数",
+   "expected_id": 6,
+   "category": "semantic",
+   "tier1_ids": [
+    6,
+    49,
+    44
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.1,
+   "tier2_ids": [
+    6,
+    44,
+    41
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 88.3,
+   "tier3_ids": [],
+   "tier3_hit": false,
+   "tier3_lat_ms": 14.3
+  },
+  {
+   "query": "想暂停学业一段时间怎么办理",
+   "expected_id": 8,
+   "category": "semantic",
+   "tier1_ids": [
+    8,
+    286,
+    77
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.9,
+   "tier2_ids": [
+    8,
+    286,
+    285
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 84.6,
+   "tier3_ids": [
+    72,
+    102,
+    142
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 14.5
+  },
+  {
+   "query": "就餐区域早晨几点开放",
+   "expected_id": 12,
+   "category": "semantic",
+   "tier1_ids": [
+    17,
+    12,
+    50
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.9,
+   "tier2_ids": [
+    12,
+    17,
+    34
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 88.7,
+   "tier3_ids": [
+    92
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 13.8
+  },
+  {
+   "query": "网购的包裹在学校哪个点位领取",
+   "expected_id": 13,
+   "category": "semantic",
+   "tier1_ids": [
+    264,
+    86,
+    59
+   ],
+   "tier1_hit": false,
+   "tier1_lat_ms": 7.9,
+   "tier2_ids": [
+    264,
+    188,
+    266
+   ],
+   "tier2_hit": false,
+   "tier2_lat_ms": 67.0,
+   "tier3_ids": [],
+   "tier3_hit": false,
+   "tier3_lat_ms": 13.3
+  },
+  {
+   "query": "怎么从阅览室把书带出去到期再送回",
+   "expected_id": 16,
+   "category": "semantic",
+   "tier1_ids": [
+    164,
+    88,
+    49
+   ],
+   "tier1_hit": false,
+   "tier1_lat_ms": 8.2,
+   "tier2_ids": [
+    88,
+    49,
+    16
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 69.6,
+   "tier3_ids": [
+    210
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 12.4
+  },
+  {
+   "query": "去哪能获取到学术期刊文章",
+   "expected_id": 19,
+   "category": "semantic",
+   "tier1_ids": [
+    86,
+    185,
+    19
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.9,
+   "tier2_ids": [
+    86,
+    19,
+    87
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 66.2,
+   "tier3_ids": [
+    146,
+    275
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 10.9
+  },
+  {
+   "query": "进系统的口令忘掉了怎么重新设",
+   "expected_id": 23,
+   "category": "semantic",
+   "tier1_ids": [
+    23,
+    59,
+    222
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.5,
+   "tier2_ids": [
+    23,
+    47,
+    60
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 70.7,
+   "tier3_ids": [
+    151
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 12.2
+  },
+  {
+   "query": "怎么给饭卡里充钱",
+   "expected_id": 29,
+   "category": "semantic",
+   "tier1_ids": [
+    51,
+    29,
+    112
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.6,
+   "tier2_ids": [
+    51,
+    112,
+    29
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 79.3,
+   "tier3_ids": [
+    51
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 13.3
+  },
+  {
+   "query": "开学要交的那个在校读书的证明怎么开",
+   "expected_id": 32,
+   "category": "semantic",
+   "tier1_ids": [
+    32,
+    280,
+    279
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 9.1,
+   "tier2_ids": [
+    32,
+    280,
+    90
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 88.8,
+   "tier3_ids": [
+    256,
+    273,
+    286
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 42.2
+  },
+  {
+   "query": "学校有合作的精神科专家门诊吗",
+   "expected_id": 125,
+   "category": "semantic",
+   "tier1_ids": [
+    125,
+    142,
+    214
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.7,
+   "tier2_ids": [
+    125,
+    142,
+    240
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 67.5,
+   "tier3_ids": [
+    125,
+    142,
+    144
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.3
+  },
+  {
+   "query": "大学生创新创业项目怎么立项",
+   "expected_id": 158,
+   "category": "semantic",
+   "tier1_ids": [
+    158,
+    136,
+    159
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.4,
+   "tier2_ids": [
+    158,
+    159,
+    245
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 69.2,
+   "tier3_ids": [
+    158,
+    159,
+    238
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 24.5
+  },
+  {
+   "query": "怎么辨别冒充客服的骗局",
+   "expected_id": 175,
+   "category": "semantic",
+   "tier1_ids": [
+    258,
+    175,
+    222
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.5,
+   "tier2_ids": [
+    258,
+    175,
+    95
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 69.3,
+   "tier3_ids": [
+    258
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 16.1
+  },
+  {
+   "query": "图书馆座位预约和食堂营业时间分别是多少",
+   "expected_id": 18,
+   "category": "cross_domain",
+   "tier1_ids": [
+    18,
+    12,
+    210
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.5,
+   "tier2_ids": [
+    18,
+    12,
+    17
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 74.5,
+   "tier3_ids": [
+    12,
+    18,
+    63
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.4
+  },
+  {
+   "query": "一卡通和学生证都丢了先补办哪个",
+   "expected_id": 28,
+   "category": "cross_domain",
+   "tier1_ids": [
+    28,
+    261,
+    52
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.1,
+   "tier2_ids": [
+    28,
+    261,
+    52
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 80.1,
+   "tier3_ids": [
+    28,
+    30,
+    261
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.9
+  },
+  {
+   "query": "校医院在哪开门医疗费怎么报销",
+   "expected_id": 34,
+   "category": "cross_domain",
+   "tier1_ids": [
+    35,
+    144,
+    34
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.9,
+   "tier2_ids": [
+    144,
+    35,
+    34
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 85.4,
+   "tier3_ids": [
+    34,
+    35,
+    131
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 11.8
+  },
+  {
+   "query": "图书馆和自习室分别几点能进",
+   "expected_id": 17,
+   "category": "cross_domain",
+   "tier1_ids": [
+    17,
+    21,
+    209
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.3,
+   "tier2_ids": [
+    21,
+    17,
+    50
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 80.4,
+   "tier3_ids": [
+    21,
+    209
+   ],
+   "tier3_hit": false,
+   "tier3_lat_ms": 15.2
+  },
+  {
+   "query": "校园网连不上学生邮箱也登不进",
+   "expected_id": 22,
+   "category": "cross_domain",
+   "tier1_ids": [
+    22,
+    24,
+    92
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.2,
+   "tier2_ids": [
+    22,
+    92,
+    103
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 77.2,
+   "tier3_ids": [
+    24,
+    22,
+    55
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 12.2
+  },
+  {
+   "query": "就业信息网入口和创业支持政策",
+   "expected_id": 160,
+   "category": "cross_domain",
+   "tier1_ids": [
+    160,
+    246,
+    159
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.4,
+   "tier2_ids": [
+    160,
+    246,
+    159
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 70.9,
+   "tier3_ids": [
+    159,
+    160,
+    59
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 25.5
+  },
+  {
+   "query": "保卫处电话和防电信诈骗找谁",
+   "expected_id": 172,
+   "category": "cross_domain",
+   "tier1_ids": [
+    172,
+    175,
+    220
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.5,
+   "tier2_ids": [
+    172,
+    175,
+    258
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 81.1,
+   "tier3_ids": [
+    172,
+    255,
+    63
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 25.1
+  },
+  {
+   "query": "助学贷款和国家助学金怎么同时申请",
+   "expected_id": 119,
+   "category": "cross_domain",
+   "tier1_ids": [
+    119,
+    229,
+    124
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 7.8,
+   "tier2_ids": [
+    119,
+    229,
+    122
+   ],
+   "tier2_hit": true,
+   "tier2_lat_ms": 71.5,
+   "tier3_ids": [
+    119,
+    122,
+    230
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 13.9
+  },
+  {
+   "query": "快递点在哪宿舍东西坏了找谁",
+   "expected_id": 13,
+   "category": "cross_domain",
+   "tier1_ids": [
+    10,
+    185,
+    171
+   ],
+   "tier1_hit": false,
+   "tier1_lat_ms": 9.9,
+   "tier2_ids": [
+    10,
+    171,
+    36
+   ],
+   "tier2_hit": false,
+   "tier2_lat_ms": 97.5,
+   "tier3_ids": [
+    10,
+    13,
+    60
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 11.8
+  },
+  {
+   "query": "心理中心在哪预约入学体检怎么安排",
+   "expected_id": 63,
+   "category": "cross_domain",
+   "tier1_ids": [
+    127,
+    132,
+    63
+   ],
+   "tier1_hit": true,
+   "tier1_lat_ms": 8.2,
+   "tier2_ids": [
+    127,
+    132,
+    237
+   ],
+   "tier2_hit": false,
+   "tier2_lat_ms": 71.3,
+   "tier3_ids": [
+    63,
+    127,
+    132
+   ],
+   "tier3_hit": true,
+   "tier3_lat_ms": 15.2
+  }
+ ]
+}
