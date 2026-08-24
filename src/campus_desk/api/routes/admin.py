@@ -11,6 +11,7 @@
 审计：adopt/dismiss/users 操作写 audit_logs（旁路）。
 """
 
+import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +20,7 @@ from sqlalchemy import func, select
 from campus_desk.api.deps import AuthUser, get_session_factory, require_perm
 from campus_desk.api.schemas import (
     AdoptRequest,
+    BusinessStats,
     KnowledgeCreateRequest,
     KnowledgeItem,
     KnowledgeListResponse,
@@ -34,6 +36,7 @@ from campus_desk.api.schemas import (
     ReviewListResponse,
     RoleItem,
     RoleListResponse,
+    SourceItem,
     StatsResponse,
     UserCreateRequest,
     UserListItem,
@@ -44,7 +47,9 @@ from campus_desk.audit import write_audit
 from campus_desk.db.models import (
     AuditLog,
     BadCase,
+    Conversation,
     KnowledgeEntry,
+    Message,
     Permission,
     Role,
     Suggestion,
@@ -53,6 +58,7 @@ from campus_desk.db.models import (
 from campus_desk.db.session import SessionFactory
 from campus_desk.knowledge import vector_store
 from campus_desk.knowledge.suggest import suggest_keywords
+from campus_desk.profile.extract import extract_domains
 from campus_desk.security import hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -409,6 +415,68 @@ def get_stats(
             .scalars()
             .all()
         )
+        # M8 业务指标：会话/消息/bad_cases 聚合（口径见 docs/plans/M8_PLAN.md §3）
+        conv_total = session.execute(select(func.count(Conversation.id))).scalar_one()
+        transfer_total = session.execute(
+            select(func.count(Conversation.id)).where(Conversation.handoff == "human")
+        ).scalar_one()
+        user_total = session.execute(
+            select(func.count(Message.id)).where(Message.role == "user")
+        ).scalar_one()
+        # 手动"没解决"通道（reply 非空；转人工自动沉淀 reply 为空天然排除），按 thread_id 去重
+        manual_bad_conv = session.execute(
+            select(func.count(func.distinct(BadCase.thread_id))).where(BadCase.reply != "")
+        ).scalar_one()
+        # 每会话首条/末条 assistant 消息（created_at+id 升序，分组取首末）
+        assistant_rows = session.execute(
+            select(Message.conversation_id, Message.outcome, Message.pending_question)
+            .where(Message.role == "assistant")
+            .order_by(Message.conversation_id, Message.created_at, Message.id)
+        ).all()
+        source_rows = (
+            session.execute(select(Message.sources).where(Message.role == "assistant"))
+            .scalars()
+            .all()
+        )
+    # ---- M8 业务指标组装（除零保护：0 会话 → 全 0.0） ----
+    first_by_conv: dict[str, tuple] = {}
+    last_by_conv: dict[str, tuple] = {}
+    for cid, outcome, pending in assistant_rows:
+        first_by_conv.setdefault(cid, (outcome, pending))
+        last_by_conv[cid] = (outcome, pending)
+    first_turn_answer = sum(
+        1 for outcome, pending in first_by_conv.values() if outcome == "answer" and not pending
+    )
+    completion = sum(1 for outcome, _ in last_by_conv.values() if outcome == "answer")
+    # domain 分布：sources JSON → SourceItem → extract_domains（复用 M7 画像解析，脏数据跳过）
+    domain_dist: dict[str, int] = {}
+    for raw in source_rows:
+        try:
+            items = [SourceItem(**x) for x in json.loads(raw or "[]")]
+        except (TypeError, ValueError):
+            continue
+        for d in extract_domains(items):
+            domain_dist[d] = domain_dist.get(d, 0) + 1
+    if conv_total == 0:
+        business = BusinessStats(
+            conversation_count=0,
+            transfer_rate=0.0,
+            first_turn_answer_rate=0.0,
+            completion_rate=0.0,
+            negative_feedback_rate=0.0,
+            avg_turns=0.0,
+            domain_dist={},
+        )
+    else:
+        business = BusinessStats(
+            conversation_count=conv_total,
+            transfer_rate=transfer_total / conv_total,
+            first_turn_answer_rate=first_turn_answer / conv_total,
+            completion_rate=completion / conv_total,
+            negative_feedback_rate=manual_bad_conv / conv_total,
+            avg_turns=user_total / conv_total,
+            domain_dist=domain_dist,
+        )
     type_dist = {t: c for t, c in type_rows}
     # 近 14 天按日期补零
     by_day: dict[str, dict] = {}
@@ -431,6 +499,7 @@ def get_stats(
         resolved=resolved,
         feedback_by_day=[{"date": d, **v} for d, v in by_day.items()],
         type_dist=type_dist,
+        business=business,
     )
 
 

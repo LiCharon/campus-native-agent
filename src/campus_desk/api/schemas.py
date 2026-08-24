@@ -257,6 +257,23 @@ class KnowledgeListResponse(BaseModel):
     items: list[KnowledgeItem]
 
 
+class BusinessStats(BaseModel):
+    """M8 业务质量指标：M5 会话/消息数据聚合（口径见 docs/plans/M8_PLAN.md §3）。
+
+    分母统一为总会话数（除零保护返回 0.0）；命名诚实——"解决率"无运行时答案
+    质量校验支撑，故用"首轮即答/会话完成"替代；满意度无采集点，由
+    transfer_rate + negative_feedback_rate 两个负向 proxy 替代。
+    """
+
+    conversation_count: int
+    transfer_rate: float  # handoff=human 会话 / 总会话
+    first_turn_answer_rate: float  # 首条 assistant=answer 且无追问 / 总会话
+    completion_rate: float  # 最后一条 assistant=answer / 总会话
+    negative_feedback_rate: float  # 手动 bad_case（reply 非空）thread_id 去重 / 总会话
+    avg_turns: float  # user 消息数 / 总会话
+    domain_dist: dict[str, int]  # 领域命中分布（kb 域 + "工具查询"）
+
+
 class StatsResponse(BaseModel):
     user_count: int
     knowledge_count: int
@@ -267,6 +284,7 @@ class StatsResponse(BaseModel):
     resolved: int  # bad_cases RESOLVED 总数（审查 + 客服两路径）
     feedback_by_day: list[dict]  # [{date, bad_case, suggestion}] 近 14 天
     type_dist: dict  # {info: n, process: n, index: n}
+    business: BusinessStats  # M8：业务质量指标
 
 
 class LogItem(BaseModel):

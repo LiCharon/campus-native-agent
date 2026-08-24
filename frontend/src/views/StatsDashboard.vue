@@ -3,7 +3,7 @@
     <div class="cd-ph">
       <div>
         <h2>数据看板</h2>
-        <p>服务运行指标 · 近 14 天反馈趋势</p>
+        <p>业务质量指标 · 服务运行计数 · 近 14 天反馈趋势</p>
       </div>
       <button class="cd-btn ghost" @click="load">
         <svg viewBox="0 0 24 24" class="ic"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M4 10a8 8 0 0 1 14-3M20 14a8 8 0 0 1-14 3"/></svg>
@@ -13,6 +13,16 @@
     <div class="content">
       <div v-if="!loaded" class="cd-empty">数据接入中…</div>
       <template v-else>
+        <div class="sec-label">业务质量指标</div>
+        <div class="cards">
+          <div class="card"><div class="k">会话总数</div><div class="v">{{ num(stats.business?.conversation_count) }}</div></div>
+          <div class="card"><div class="k">转人工率</div><div class="v">{{ pct(stats.business?.transfer_rate) }}</div></div>
+          <div class="card"><div class="k">首轮即答率</div><div class="v">{{ pct(stats.business?.first_turn_answer_rate) }}</div></div>
+          <div class="card"><div class="k">会话完成率</div><div class="v">{{ pct(stats.business?.completion_rate) }}</div></div>
+          <div class="card"><div class="k">手动负反馈率</div><div class="v">{{ pct(stats.business?.negative_feedback_rate) }}</div></div>
+          <div class="card"><div class="k">平均轮次</div><div class="v">{{ turns(stats.business?.avg_turns) }}</div></div>
+        </div>
+        <div class="sec-label">服务运行计数</div>
         <div class="cards">
           <div class="card"><div class="k">用户数</div><div class="v">{{ stats.user_count }}</div></div>
           <div class="card"><div class="k">知识条目</div><div class="v">{{ stats.knowledge_count }}</div></div>
@@ -25,13 +35,18 @@
           <div class="panel"><h3>近 14 天 反馈 / 采纳趋势</h3><div ref="trendRef" class="chart"></div></div>
           <div class="panel"><h3>知识条目类型分布</h3><div ref="donutRef" class="chart"></div></div>
         </div>
+        <div class="panel">
+          <h3>知识领域命中分布</h3>
+          <div v-if="domainEmpty" class="cd-empty">暂无会话数据</div>
+          <div v-else ref="domainRef" class="chart"></div>
+        </div>
       </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { fetchStats } from '../api/admin'
@@ -40,10 +55,29 @@ const stats = ref({})
 const loaded = ref(false)
 const trendRef = ref(null)
 const donutRef = ref(null)
+const domainRef = ref(null)
 let trendChart = null
 let donutChart = null
+let domainChart = null
 
 const TYPE_LABEL = { info: 'info 知识型', process: 'process 流程型', index: 'index 索引型' }
+
+const domainEmpty = computed(() => {
+  const dist = stats.value.business?.domain_dist || {}
+  return Object.keys(dist).length === 0
+})
+
+function num(v) {
+  return v == null ? '—' : v
+}
+
+function pct(v) {
+  return v == null ? '—' : (v * 100).toFixed(1) + '%'
+}
+
+function turns(v) {
+  return v == null ? '—' : v.toFixed(1)
+}
 
 async function load() {
   try {
@@ -86,6 +120,22 @@ function renderCharts() {
       }]
     })
   }
+  if (domainRef.value) {
+    domainChart = domainChart || echarts.init(domainRef.value)
+    const dist = stats.value.business?.domain_dist || {}
+    domainChart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 70, right: 20, top: 20, bottom: 40 },
+      xAxis: { type: 'category', data: Object.keys(dist), axisLabel: { fontSize: 10, rotate: 30 } },
+      yAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 10 } },
+      series: [{
+        type: 'bar',
+        data: Object.values(dist),
+        itemStyle: { color: '#1f6fc4', borderRadius: [4, 4, 0, 0] },
+        barMaxWidth: 34
+      }]
+    })
+  }
 }
 
 onMounted(load)
@@ -104,6 +154,20 @@ onMounted(load)
   padding: 24px 28px;
   overflow-y: auto;
   flex: 1;
+}
+
+.sec-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cd-text-2);
+  margin: 0 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--cd-primary, #14549c);
+  line-height: 1.2;
+}
+
+.sec-label + .cards {
+  margin-bottom: 22px;
 }
 
 .cards {
@@ -152,6 +216,7 @@ onMounted(load)
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 18px;
+  margin-bottom: 18px;
 }
 
 .panel {
@@ -160,6 +225,7 @@ onMounted(load)
   border-radius: var(--cd-radius-card);
   padding: 20px 22px;
   box-shadow: var(--cd-shadow-sm);
+  margin-bottom: 18px;
 }
 
 .panel h3 {
