@@ -199,3 +199,118 @@ def test_domain_dist_mixed(api_client, db_session_factory):
 
     b = _business(api_client)
     assert b["domain_dist"] == {"教务": 1, "住宿后勤": 1, "工具查询": 1}
+
+
+# ---------- 边界补充（2026-08-24 收尾） ----------
+
+
+def test_transferring_not_counted(api_client, db_session_factory):
+    """handoff=transferring 是中间态，不算转人工；仅 human 计。"""
+    _conv(db_session_factory, "c1", "t-1", handoff="transferring")
+    _msg(db_session_factory, "c1", "user", "问题A", seq=0)
+    _msg(db_session_factory, "c1", "assistant", "转接中", outcome="ask", seq=1)
+
+    _conv(db_session_factory, "c2", "t-2", handoff="human")
+    _msg(db_session_factory, "c2", "user", "问题B", seq=0)
+    _msg(db_session_factory, "c2", "assistant", "转人工", outcome="handoff", seq=1)
+
+    b = _business(api_client)
+    assert b["transfer_rate"] == 0.5  # 仅 c2 计入
+    assert b["conversation_count"] == 2
+
+
+def test_conversation_without_assistant(api_client, db_session_factory):
+    """只有 user 消息的会话：不贡献首轮即答/完成，但分母（总会话数）含它。"""
+    _conv(db_session_factory, "c1", "t-1")
+    _msg(db_session_factory, "c1", "user", "只发了消息没收到回复", seq=0)
+
+    _conv(db_session_factory, "c2", "t-2")
+    _msg(db_session_factory, "c2", "user", "寒假什么时候？", seq=0)
+    _msg(db_session_factory, "c2", "assistant", "1 月中旬", outcome="answer", seq=1)
+
+    b = _business(api_client)
+    assert b["conversation_count"] == 2
+    assert b["first_turn_answer_rate"] == 0.5  # 1/2：c1 无 assistant 不算
+    assert b["completion_rate"] == 0.5
+    assert b["avg_turns"] == 1.0  # 2 条 user / 2 会话
+
+
+def test_bad_sources_json_skipped(api_client, db_session_factory):
+    """sources 存了非法 JSON（脏数据）不阻断看板，domain 分布只计合法条目。"""
+    _conv(db_session_factory, "c1", "t-1")
+    _msg(db_session_factory, "c1", "user", "问题", seq=0)
+    with db_session_factory() as s, s.begin():
+        s.add(
+            Message(
+                conversation_id="c1",
+                role="assistant",
+                content="坏来源",
+                outcome="answer",
+                sources="not-json{{{",
+                created_at=datetime.now(UTC) + timedelta(seconds=1),
+            )
+        )
+    _msg(
+        db_session_factory,
+        "c1",
+        "assistant",
+        "好来源",
+        outcome="answer",
+        sources=[{"type": "kb", "label": "知识库", "detail": "info型 · 教务"}],
+        seq=2,
+    )
+    b = _business(api_client)
+    assert b["domain_dist"] == {"教务": 1}
+    assert b["first_turn_answer_rate"] == 1.0  # 非法 JSON 不影响 outcome 统计
+
+
+def test_stats_old_fields_preserved(api_client):
+    """旧字段不被 M8 扩展破坏：种子库计数 + 14 天补零 + type 分布，business 空库为 0。"""
+    admin = _login(api_client)
+    r = api_client.get("/api/admin/stats", headers=admin)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["user_count"] == 5  # 种子 5 账号
+    assert data["knowledge_count"] == 36  # 种子 36 条
+    assert sum(data["type_dist"].values()) == 36
+    assert len(data["feedback_by_day"]) == 14  # 近 14 天补零
+    assert data["business"]["conversation_count"] == 0
+    assert data["business"]["domain_dist"] == {}
+
+
+def test_mixed_scenario(api_client, db_session_factory):
+    """综合场景精确断言：首轮即答 / 追问完成 / 转人工 / 无 assistant 四类混排。"""
+    # c1: 首轮即答
+    _conv(db_session_factory, "c1", "t-1")
+    _msg(db_session_factory, "c1", "user", "寒假什么时候？", seq=0)
+    _msg(db_session_factory, "c1", "assistant", "1 月中旬", outcome="answer", seq=1)
+    # c2: 追问完成（2 轮）
+    _conv(db_session_factory, "c2", "t-2")
+    _msg(db_session_factory, "c2", "user", "有空教室吗？", seq=0)
+    _msg(db_session_factory, "c2", "assistant", "哪个楼栋？", outcome="ask", pending_question="哪个楼栋？", seq=1)
+    _msg(db_session_factory, "c2", "user", "3号楼", seq=2)
+    _msg(
+        db_session_factory,
+        "c2",
+        "assistant",
+        "3号楼下午有空教室",
+        outcome="answer",
+        sources=[{"type": "tool", "label": "工具查询", "detail": "query_empty_rooms"}],
+        seq=3,
+    )
+    # c3: 转人工
+    _conv(db_session_factory, "c3", "t-3", handoff="human")
+    _msg(db_session_factory, "c3", "user", "帮我校医院挂号", seq=0)
+    _msg(db_session_factory, "c3", "assistant", "转人工", outcome="handoff", seq=1)
+    # c4: 只有 user 消息
+    _conv(db_session_factory, "c4", "t-4")
+    _msg(db_session_factory, "c4", "user", "只发没回", seq=0)
+
+    b = _business(api_client)
+    assert b["conversation_count"] == 4
+    assert b["transfer_rate"] == 0.25  # 1/4
+    assert b["first_turn_answer_rate"] == 0.25  # c1
+    assert b["completion_rate"] == 0.5  # c1 + c2
+    assert b["negative_feedback_rate"] == 0.0
+    assert b["avg_turns"] == 1.25  # (1+2+1+1) / 4
+    assert b["domain_dist"] == {"工具查询": 1}
