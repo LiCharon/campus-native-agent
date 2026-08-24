@@ -248,7 +248,7 @@ def sync_entry(session_factory, entry: dict) -> None:
                     )
                 ],
             )
-        except Exception:  # noqa: BLE001 — Qdrant 异常降级，不向外抛
+        except Exception:  # noqa: BLE001, S110 — Qdrant 异常降级，不向外抛
             pass
 
 
@@ -264,5 +264,5 @@ def delete_entry_vector(session_factory, entry_id: int) -> None:
         try:
             client = _get_client()
             client.delete(collection_name=_COLLECTION, points_selector=[entry_id])
-        except Exception:  # noqa: BLE001 — Qdrant 异常降级，不向外抛
+        except Exception:  # noqa: BLE001, S110 — Qdrant 异常降级，不向外抛
             pass
