@@ -7,6 +7,19 @@ export function fetchKnowledge(params) {
   return client.get('/admin/knowledge', { params })
 }
 
+// M9 知识条目增改删（kb_review）
+export function createKnowledge(payload) {
+  return client.post('/admin/knowledge', payload)
+}
+
+export function updateKnowledge(id, payload) {
+  return client.put(`/admin/knowledge/${id}`, payload)
+}
+
+export function deleteKnowledge(id) {
+  return client.delete(`/admin/knowledge/${id}`)
+}
+
 export function fetchStats() {
   return client.get('/admin/stats')
 }

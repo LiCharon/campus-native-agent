@@ -200,3 +200,69 @@ def rebuild_all(session_factory) -> dict:
         client.upsert(collection_name=_COLLECTION, points=points)
         q_ok = True
     return {"upserted": len(entries), "qdrant": q_ok}
+
+
+def sync_entry(session_factory, entry: dict) -> None:
+    """单条同步（M9）：写 MySQL dense_vector 列（始终）+ upsert Qdrant 点（可用时）。
+
+    entry 需含 id/domain/keywords/question/type/answer（同 rebuild_all payload）。
+    Qdrant 不可用 / 异常时降级跳过，绝不向外抛，保证知识管理功能不被检索层拖垮
+    （对齐 M9「部署可用性硬约束」决策）。
+    """
+    from qdrant_client.models import PointStruct, SparseVector
+
+    from campus_desk.db.models import KnowledgeEntry
+    from campus_desk.knowledge import embeddings
+
+    text = f"{entry['question']} {' '.join(entry['keywords'].split(','))}"
+    # 嵌入不可用（离线/未装 fastembed）时降级跳过稠密向量写入，CRUD 不阻断（对齐部署可用性约束）
+    try:
+        dense = embeddings.embed_dense([text])[0]
+    except Exception:  # noqa: BLE001 — EmbeddingUnavailable/其他嵌入失败一律降级
+        dense = None
+    if dense is not None:
+        # 写 MySQL 稠密向量（Tier2 兜底语义检索，不依赖 Qdrant）
+        with session_factory() as session, session.begin():
+            row = session.get(KnowledgeEntry, entry["id"])
+            if row is not None:
+                row.dense_vector = embeddings.dense_to_json(dense)
+    # Qdrant 可用时 upsert 点
+    if is_available():
+        try:
+            ensure_collection()
+            client = _get_client()
+            sparse = embeddings.embed_sparse([text])[0]
+            client.upsert(
+                collection_name=_COLLECTION,
+                points=[
+                    PointStruct(
+                        id=entry["id"],
+                        vector={
+                            "dense": dense.tolist(),
+                            _SPARSE_NAME: SparseVector(
+                                indices=list(sparse.keys()),
+                                values=list(sparse.values()),
+                            ),
+                        },
+                        payload=entry,
+                    )
+                ],
+            )
+        except Exception:  # noqa: BLE001 — Qdrant 异常降级，不向外抛
+            pass
+
+
+def delete_entry_vector(session_factory, entry_id: int) -> None:
+    """单条删除（M9）：清 MySQL dense_vector 列（硬删无残留）+ 删 Qdrant 点（可用时）。"""
+    from campus_desk.db.models import KnowledgeEntry
+
+    with session_factory() as session, session.begin():
+        row = session.get(KnowledgeEntry, entry_id)
+        if row is not None:
+            row.dense_vector = None
+    if is_available():
+        try:
+            client = _get_client()
+            client.delete(collection_name=_COLLECTION, points_selector=[entry_id])
+        except Exception:  # noqa: BLE001 — Qdrant 异常降级，不向外抛
+            pass

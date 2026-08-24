@@ -61,11 +61,12 @@
         </select>
         <input v-model="kfQ" placeholder="搜索问题 / 关键词…" @keydown.enter="loadKnowledge" />
         <button class="cd-btn sm" @click="loadKnowledge">搜索</button>
+        <button class="cd-btn sm" @click="openCreate">新建</button>
       </div>
       <div class="cd-table-card">
         <table>
           <thead>
-            <tr><th style="width:30%">问题</th><th>领域</th><th>类型</th><th>答案摘要</th></tr>
+            <tr><th style="width:28%">问题</th><th>领域</th><th>类型</th><th>答案摘要</th><th style="width:140px">操作</th></tr>
           </thead>
           <tbody>
             <tr v-for="k in knowledge" :key="k.id">
@@ -73,8 +74,14 @@
               <td>{{ k.domain }}</td>
               <td><span class="cd-tag" :class="typeTag(k.type)">{{ k.type }}</span></td>
               <td class="answer">{{ k.answer }}</td>
+              <td>
+                <div class="kb-act">
+                  <button class="cd-btn sm" @click="openEdit(k)">编辑</button>
+                  <button class="cd-btn ghost sm" @click="handleDelete(k)">删除</button>
+                </div>
+              </td>
             </tr>
-            <tr v-if="!knowledge.length"><td colspan="4"><div class="cd-empty">暂无知识条目</div></td></tr>
+            <tr v-if="!knowledge.length"><td colspan="5"><div class="cd-empty">暂无知识条目</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -83,11 +90,12 @@
     <!-- 补入弹窗 -->
     <div class="overlay" :class="{ open: dialogVisible }" @click.self="dialogVisible = false">
       <div class="modal-box">
-        <div class="mh">补入知识库</div>
+        <div class="mh">{{ dialogMode === 'adopt' ? '补入知识库' : dialogMode === 'edit' ? '编辑知识条目' : '新建知识条目' }}</div>
         <div class="mb">
           <div>
             <label>问题</label>
-            <input :value="form.question" disabled />
+            <input v-if="dialogMode === 'adopt'" :value="form.question" disabled />
+            <input v-else v-model="form.question" placeholder="填写问题" />
           </div>
           <div>
             <label>领域</label>
@@ -115,7 +123,7 @@
         </div>
         <div class="mf">
           <button class="cd-btn ghost" @click="dialogVisible = false">取消</button>
-          <button class="cd-btn" :disabled="submitting" @click="handleAdopt">确认补入</button>
+          <button class="cd-btn" :disabled="submitting" @click="handleSubmit">{{ dialogMode === 'adopt' ? '确认补入' : dialogMode === 'edit' ? '保存修改' : '创建条目' }}</button>
         </div>
       </div>
     </div>
@@ -125,7 +133,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchKnowledge } from '../api/admin'
+import { createKnowledge, deleteKnowledge, fetchKnowledge, updateKnowledge } from '../api/admin'
 import { adoptReview, dismissReview, fetchReviews } from '../api/reviews'
 
 const DOMAINS = ['教务', '图书馆', '网络与IT', '校园卡与证件', '住宿后勤', '奖助', '医疗健康', '社团与活动', '就业与职业发展', '安全与保卫', '生活服务']
@@ -137,6 +145,7 @@ const kfDomain = ref('')
 const kfType = ref('')
 const kfQ = ref('')
 const dialogVisible = ref(false)
+const dialogMode = ref('adopt') // adopt 补入 / create 新建 / edit 编辑
 const submitting = ref(false)
 const currentRow = ref(null)
 const form = reactive({ question: '', domain: '', type: 'info', keywords: '', answer: '' })
@@ -175,6 +184,7 @@ async function loadKnowledge() {
 }
 
 function openAdopt(row) {
+  dialogMode.value = 'adopt'
   currentRow.value = row
   Object.assign(form, {
     question: row.question,
@@ -186,26 +196,81 @@ function openAdopt(row) {
   dialogVisible.value = true
 }
 
-async function handleAdopt() {
-  if (!form.domain || !form.keywords.trim() || !form.answer.trim()) {
-    ElMessage.warning('请完整填写领域、关键词与答案')
+function openCreate() {
+  dialogMode.value = 'create'
+  Object.assign(form, { question: '', domain: '', type: 'info', keywords: '', answer: '' })
+  dialogVisible.value = true
+}
+
+function openEdit(row) {
+  dialogMode.value = 'edit'
+  currentRow.value = row
+  Object.assign(form, {
+    question: row.question,
+    domain: row.domain,
+    type: row.type,
+    keywords: row.keywords,
+    answer: row.answer
+  })
+  dialogVisible.value = true
+}
+
+async function handleSubmit() {
+  if (!form.question.trim() || !form.domain || !form.keywords.trim() || !form.answer.trim()) {
+    ElMessage.warning('请完整填写问题、领域、关键词与答案')
     return
   }
   submitting.value = true
   try {
-    await adoptReview(activeTab.value, currentRow.value.id, {
-      domain: form.domain,
-      type: form.type,
-      keywords: form.keywords.trim(),
-      answer: form.answer.trim()
-    })
-    ElMessage.success('已补入知识库')
+    if (dialogMode.value === 'adopt') {
+      await adoptReview(activeTab.value, currentRow.value.id, {
+        domain: form.domain,
+        type: form.type,
+        keywords: form.keywords.trim(),
+        answer: form.answer.trim()
+      })
+      ElMessage.success('已补入知识库')
+    } else {
+      const payload = {
+        domain: form.domain,
+        type: form.type,
+        question: form.question.trim(),
+        keywords: form.keywords.trim(),
+        answer: form.answer.trim()
+      }
+      if (dialogMode.value === 'edit') {
+        await updateKnowledge(currentRow.value.id, payload)
+        ElMessage.success('已保存修改')
+      } else {
+        await createKnowledge(payload)
+        ElMessage.success('已创建条目')
+      }
+    }
     dialogVisible.value = false
     await loadTab()
   } catch (e) {
-    ElMessage.error((e.response && e.response.data && e.response.data.detail) || '补入失败')
+    ElMessage.error((e.response && e.response.data && e.response.data.detail) || '操作失败')
   } finally {
     submitting.value = false
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确定删除「${row.question}」？删除后不可恢复。`, '删除确认', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteKnowledge(row.id)
+    ElMessage.success('已删除')
+    await loadKnowledge()
+  } catch (e) {
+    ElMessage.error((e.response && e.response.data && e.response.data.detail) || '删除失败')
   }
 }
 

@@ -145,6 +145,34 @@ class AdoptRequest(BaseModel):
     _answer = field_validator("answer")(_strip_nonblank)
 
 
+class KnowledgeCreateRequest(BaseModel):
+    """新建知识条目（M9）：管理员填写，question/keywords/answer 非空硬校验。"""
+
+    domain: KNOWLEDGE_DOMAIN
+    type: KNOWLEDGE_TYPE
+    question: str = Field(min_length=1)
+    keywords: str
+    answer: str = Field(min_length=1)
+
+    _question = field_validator("question")(_strip_nonblank)
+    _keywords = field_validator("keywords")(_strip_nonblank)
+    _answer = field_validator("answer")(_strip_nonblank)
+
+
+class KnowledgeUpdateRequest(BaseModel):
+    """编辑知识条目（M9）：同新建，全字段覆盖。"""
+
+    domain: KNOWLEDGE_DOMAIN
+    type: KNOWLEDGE_TYPE
+    question: str = Field(min_length=1)
+    keywords: str
+    answer: str = Field(min_length=1)
+
+    _question = field_validator("question")(_strip_nonblank)
+    _keywords = field_validator("keywords")(_strip_nonblank)
+    _answer = field_validator("answer")(_strip_nonblank)
+
+
 class ReviewActionResponse(BaseModel):
     id: int
     status: str

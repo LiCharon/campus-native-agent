@@ -19,8 +19,10 @@ from sqlalchemy import func, select
 from campus_desk.api.deps import AuthUser, get_session_factory, require_perm
 from campus_desk.api.schemas import (
     AdoptRequest,
+    KnowledgeCreateRequest,
     KnowledgeItem,
     KnowledgeListResponse,
+    KnowledgeUpdateRequest,
     LogItem,
     LogListResponse,
     PermissionItem,
@@ -49,6 +51,7 @@ from campus_desk.db.models import (
     User,
 )
 from campus_desk.db.session import SessionFactory
+from campus_desk.knowledge import vector_store
 from campus_desk.knowledge.suggest import suggest_keywords
 from campus_desk.security import hash_password
 
@@ -138,18 +141,30 @@ def adopt_review(
     row = _fetch_pending(kind, rid, session_factory)
     question = row.question
     with session_factory() as session, session.begin():
-        session.add(
-            KnowledgeEntry(
-                domain=payload.domain,
-                keywords=payload.keywords,
-                question=question,
-                type=payload.type,
-                answer=payload.answer,
-            )
+        new_entry = KnowledgeEntry(
+            domain=payload.domain,
+            keywords=payload.keywords,
+            question=question,
+            type=payload.type,
+            answer=payload.answer,
         )
+        session.add(new_entry)
+        session.flush()
+        new_id = new_entry.id
         row = session.get(_SOURCE_MODEL[kind], rid)
         row.status = _SOURCE_ACTION_STATUS[kind]["adopt"]
         new_status = row.status
+    vector_store.sync_entry(
+        session_factory,
+        {
+            "id": new_id,
+            "domain": payload.domain,
+            "keywords": payload.keywords,
+            "question": question,
+            "type": payload.type,
+            "answer": payload.answer,
+        },
+    )
     write_audit(
         session_factory,
         user_id=user.id,
@@ -223,6 +238,134 @@ def list_knowledge(
             for r in rows
         ]
     )
+
+
+# ---------- M9 知识条目增改删（kb_review） ----------
+
+
+@router.post("/knowledge", response_model=KnowledgeItem)
+def create_knowledge(
+    payload: KnowledgeCreateRequest,
+    user: AuthUser = Depends(require_perm("kb_review")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    """新建知识条目：建行 → flush 取 id → 同步向量（MySQL 稠密 + Qdrant 点）→ 审计。"""
+    with session_factory() as session, session.begin():
+        entry = KnowledgeEntry(
+            domain=payload.domain,
+            keywords=payload.keywords,
+            question=payload.question,
+            type=payload.type,
+            answer=payload.answer,
+        )
+        session.add(entry)
+        session.flush()
+        new_id = entry.id
+    vector_store.sync_entry(
+        session_factory,
+        {
+            "id": new_id,
+            "domain": payload.domain,
+            "keywords": payload.keywords,
+            "question": payload.question,
+            "type": payload.type,
+            "answer": payload.answer,
+        },
+    )
+    write_audit(
+        session_factory,
+        user_id=user.id,
+        action="kb_create",
+        object_type="knowledge",
+        object_id=new_id,
+        detail=payload.question[:60],
+    )
+    return KnowledgeItem(
+        id=new_id,
+        domain=payload.domain,
+        keywords=payload.keywords,
+        question=payload.question,
+        type=payload.type,
+        answer=payload.answer,
+    )
+
+
+@router.put("/knowledge/{kid}", response_model=KnowledgeItem)
+def update_knowledge(
+    kid: int,
+    payload: KnowledgeUpdateRequest,
+    user: AuthUser = Depends(require_perm("kb_review")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    """编辑知识条目：取行（404）→ 更新字段 → 同步向量 → 审计。"""
+    with session_factory() as session, session.begin():
+        row = session.get(KnowledgeEntry, kid)
+        if row is None:
+            raise HTTPException(status_code=404, detail="知识条目不存在")
+        row.domain = payload.domain
+        row.keywords = payload.keywords
+        row.question = payload.question
+        row.type = payload.type
+        row.answer = payload.answer
+    vector_store.sync_entry(
+        session_factory,
+        {
+            "id": kid,
+            "domain": payload.domain,
+            "keywords": payload.keywords,
+            "question": payload.question,
+            "type": payload.type,
+            "answer": payload.answer,
+        },
+    )
+    write_audit(
+        session_factory,
+        user_id=user.id,
+        action="kb_update",
+        object_type="knowledge",
+        object_id=kid,
+        detail=payload.question[:60],
+    )
+    return KnowledgeItem(
+        id=kid,
+        domain=payload.domain,
+        keywords=payload.keywords,
+        question=payload.question,
+        type=payload.type,
+        answer=payload.answer,
+    )
+
+
+@router.delete("/knowledge/{kid}", response_model=KnowledgeItem)
+def delete_knowledge(
+    kid: int,
+    user: AuthUser = Depends(require_perm("kb_review")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    """删除知识条目（硬删）：取行（404）→ 删行 → 清向量 → 审计。"""
+    with session_factory() as session, session.begin():
+        row = session.get(KnowledgeEntry, kid)
+        if row is None:
+            raise HTTPException(status_code=404, detail="知识条目不存在")
+        deleted = KnowledgeItem(
+            id=row.id,
+            domain=row.domain,
+            keywords=row.keywords,
+            question=row.question,
+            type=row.type,
+            answer=row.answer,
+        )
+        session.delete(row)
+    vector_store.delete_entry_vector(session_factory, kid)
+    write_audit(
+        session_factory,
+        user_id=user.id,
+        action="kb_delete",
+        object_type="knowledge",
+        object_id=kid,
+        detail=deleted.question[:60],
+    )
+    return deleted
 
 
 # ---------- M4 数据看板（view_stats） ----------
