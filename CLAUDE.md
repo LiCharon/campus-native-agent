@@ -37,7 +37,7 @@
 - 目标岗位：Agent / LLM 应用开发；本地化场景做差异化特色（信息聚合 + 办事引导 + 索引）
 
 ## 2. 技术栈（已拍板）
-Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（自托管 localhost:3001）· DeepSeek（deepseek-v4-flash）· Vue3 最小闭环 · pytest + ruff + httpx · MCP（扩展期演示加分）
+Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChain · FastAPI + Pydantic v2 · MySQL 8 + SQLAlchemy 2.0 · Langfuse（自托管 localhost:3001）· DeepSeek（deepseek-v4-flash-vision-exp）· Vue3 最小闭环 · pytest + ruff + httpx · MCP（扩展期演示加分）
 **真 FC 已探测可用（M1-T12）**：deepseek-v4-flash bind_tools 返回真实 tool_calls（FC_SUPPORTED=True）；但 build_llm 写死 response_format=json_object，工具调用 prompt 必须含 "json" 字样否则 400——M2 工具管道按此设计（详见 env_check.py 注释 + docs/journal/DEV_JOURNAL.md）
 **以后再说**：Redis 缓存（当前知识遍历毫秒级不是瓶颈，规模上去再评估 cache-aside）；MCP 暴露
 

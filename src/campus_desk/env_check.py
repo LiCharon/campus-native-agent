@@ -135,7 +135,7 @@ _FC_PROBE_TOOL = {
 def check_fc_support() -> CheckResult:
     """真 FC 探测：build_llm().bind_tools() 一次调用，返回 tool_calls → FC_SUPPORTED=True。
 
-    实测结论（2026-08-15，deepseek-v4-flash）：**FC 可用**——bind_tools 返回
+    实测结论（2026-08-15，deepseek-v4-flash-vision-exp）：**FC 可用**——bind_tools 返回
     真实 tool_calls；但 build_llm 构造期写死 response_format=json_object，
     要求 prompt 含 "json" 字样，否则 400 "Prompt must contain the word 'json'"
     （探测 prompt 因此必须带 json；M2 工具管道同样受此约束：要么 prompt 带

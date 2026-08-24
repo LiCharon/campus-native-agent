@@ -3,7 +3,7 @@
 三层防线：
 1. 主路径：自写 prompt（含 json 字样）+ response_format=json_object + pydantic 校验
    —— 不走 langchain with_structured_output（实测 2026-08-04：
-   deepseek-v4-flash thinking 模式与三种 method 全不兼容：json_schema 400
+   deepseek-v4-flash-vision-exp thinking 模式与三种 method 全不兼容：json_schema 400
    "response_format type unavailable"、json_mode 400 "prompt must contain json"、
    function_calling 400 "thinking mode does not support tool_choice"）。
 2. 解析失败 / LLM 异常 → 重试 1 次（max_attempts 可配，默认 2 次调用）
