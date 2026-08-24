@@ -74,10 +74,10 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **M6-ZJUT 权限模型升级（✅ 2026-08-20）**：RBAC 三表（roles/permissions/role_permissions）+ perms.py 查库化（login 查库算并集写 JWT）+ 只读接口 /api/admin/roles、/api/admin/permissions + UserManage.vue 下拉查库
 **M7-ZJUT 用户长期记忆（✅ 2026-08-20）**：user_profiles 每轮增量抽取（student 门控、纯确定性——building 正则 + 知识命中 domain 计数）+ 注入 ClarifyDecider 追问判定与 QueryGraph FC prompt + GraphRegistry bundle 画像版本失效（第二问即生效）
 **M8-ZJUT 数据与洞察（📋 已规划未开工）**：聚合报表进系统（/api/admin/stats 业务库直算：转人工率/首轮解决率/满意度/平均轮次/domain 分布 + 看板）
-**M9-ZJUT 知识管理闭环（📋 已规划未开工）**：知识条目增改删 + 管理页 UI（+ Qdrant 增量同步钩子，依赖 M10 vector_store 接口）
+**M9-ZJUT 知识管理闭环（✅ 2026-08-24）**：知识条目增/改/删 端点（kb_review + 审计 kb_create/kb_update/kb_delete）+ 管理页三态表单（新建/编辑/删除）+ Qdrant 增量同步钩子（sync_entry/delete_entry_vector）+ adopt 补入接同步；零 schema 变更（无迁移、不加权限位）
 **M10-ZJUT 检索工具化（✅ 2026-08-24）**：Qdrant 混合检索（稠密 bge ‖ 稀疏 BM25 jieba 注入 → prefetch + RRF）+ 三档降级（Qdrant→MySQL稠密→关键词）+ retrieve 第 14 工具；本地磁盘 Qdrant 实跑 + S5 评测（Recall@3 混合 91.2% = 稠密 91.2% ≫ 关键词 67.6%）；生产默认 Tier2、Qdrant 选配
 **以后再说**：真·多意图拆解 / MCP 暴露 / 渠道扩展 / LLM 摘要画像 / SSE 流式
-**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；M7-ZJUT 302 passed + MySQL 冒烟（画像落库/role 门控/同进程第二问注入）；当前 pytest 302 passed
+**DoD（完成标准，模式：核心链路测试绿 + 环境验证 + 收尾三件套同步）**：M1-ZJUT 96 passed；M3-ZJUT 166 passed + accept_m3 7/7；M4-ZJUT 180 passed + 运行态 8/8；M5-ZJUT 261 passed + 真实链路冒烟 11/11；M6-ZJUT 273 passed + MySQL 冒烟（三表种子/login JWT 查库/只读接口 401-403-200）；M7-ZJUT 302 passed + MySQL 冒烟（画像落库/role 门控/同进程第二问注入）；M10-ZJUT 313 passed + S5 评测；M9-ZJUT 319 passed + agent-browser 端到端验证（登录→新建→编辑→删除全 200）；当前 pytest 319 passed
 
 ## 7. 当前状态
 进度/下一步/基线数据 → docs/journal/STATUS.md（随里程碑和收尾更新；本规范文件不含状态）
@@ -92,6 +92,7 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 **前端/进程（Windows）**：npm run dev 后台停端口仍被占（改前端后验证端口 + fetch App.vue 确认新代码）；localStorage 非响应式（computed 加 `void route.path` 依赖；换账号必须 reload）
 **多 agent worktree**：worktree 创建时 baseRef 默认取 origin/main（落后本地）→ 子任务开工先 `git log` 核基线；worktree 的 .venv 可能指向主仓 src → 跑脚本加 PYTHONPATH=src
 **M10 检索（Qdrant 混合）**：中文 BM25 稀疏必须 jieba 切词注入（fastembed BM25 按空白切、无中文分词→整段成单一 token、召回≈0）；fastembed 0.8 `SparseEmbedding` 用 `as_dict()` 非 `to_dict()`（单测用假向量未覆盖，真实跑才暴露）；HF 主源不可达时模型走 `specific_model_path` 本地路径（bge 从 GCS 手动拉、bm25 从 HF 直连拉快照）；Qdrant 本地 upsert 只覆盖不删 → rebuild 前 `rm -rf` 本地目录保评测干净
+**M9 知识 CRUD / 本机环境**：知识条目任何写路径（增/改/删 + adopt 补入）必须接 `vector_store.sync_entry/delete_entry_vector`，否则新条目对语义检索隐形；`sync_entry` 内嵌入不可用必须降级（dense 留空走 Tier3 关键词兜底，不阻断 CRUD）；**本机 git 对含 `/` 的分支名（feat/xxx）有 bug**（checkout -b/-B/update-ref/reset 破坏成 unborn）→ 分支一律顶层 `feature-xxx`；**本机前端 dev 必须 `NODE_OPTIONS= npm run dev`**（WorkBuddy safe-delete shim 经 NODE_OPTIONS 注入、拦截 fs.rm 成 trash 失败 → vite 崩）
 
 ## 9. 环境与运行（M1 已拍板，2026-08-04）
 | 项 | 拍板结果 |
@@ -99,6 +100,6 @@ Python 3.14 · LangGraph（checkpointer: SQLite 官方 SqliteSaver）· LangChai
 | Python | **3.14**（本机 py launcher，核心依赖全兼容）|
 | venv 与依赖 | `py -3.14 -m venv .venv`；pyproject.toml 直接依赖（含 [dev]），requirements.txt = pip freeze 快照；镜像清华源 |
 | .env 变量 | `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` / `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` / `DATABASE_URL` / `JWT_SECRET` / `JWT_EXPIRE_MINUTES` |
-| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `-m ruff check/format`；环境验证 `scripts/verify_env.py`；种子 `scripts/seed_db.py`；本地真实数据 `scripts/seed_zjut_local.py`（config/zjut_local_data.json 私有）；评测 `-m campus_desk.eval.runner / chain_runner --out docs/eval/...`；验收 `scripts/accept_m2.py / accept_m3.py`；API `-m uvicorn campus_desk.api.app:create_app --factory --port 8000 --workers 1`（**--workers 1 硬约束**）；前端 `cd frontend && npm run dev`（5173）；演示账号 student-001/cs-001/admin-001（密码 123456）；依赖只装 .venv；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
+| 命令 | 测试 `.venv/Scripts/python -m pytest`；lint `-m ruff check/format`；环境验证 `scripts/verify_env.py`；种子 `scripts/seed_db.py`；本地真实数据 `scripts/seed_zjut_local.py`（config/zjut_local_data.json 私有）；评测 `-m campus_desk.eval.runner / chain_runner --out docs/eval/...`；验收 `scripts/accept_m2.py / accept_m3.py`；API `-m uvicorn campus_desk.api.app:create_app --factory --port 8000 --workers 1`（**--workers 1 硬约束**）；前端 `cd frontend && NODE_OPTIONS= npm run dev`（5173，本机必须清 NODE_OPTIONS——WorkBuddy safe-delete shim 拦截 fs.rm 致 vite 崩，见 §8）；演示账号 student-001/cs-001/admin-001（密码 123456）；依赖只装 .venv；Windows 控制台 GBK 需 `PYTHONIOENCODING=utf-8` |
 | 测试数据库 | 业务单测/图测试 **SQLite 内存库**（conftest StaticPool）；集成冒烟连本机 MySQL 8.0.45（root 密码 .env DATABASE_URL，%40 编码）|
 | 环境验证 | `scripts/verify_env.py` 3 项（LangGraph / DeepSeek 结构化 / 真 FC），无 key 自动 SKIP 不进 CI；FC_SUPPORTED=True（2026-08-15 实测）|
