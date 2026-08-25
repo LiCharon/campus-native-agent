@@ -1,51 +1,611 @@
 {
-  "meta": {
-    "name": "M10 S5 检索评测集",
-    "built_at": "2026-08-24",
-    "source": "从 knowledge_entries 现有 262 条中抽代表性样本，query 人工构造",
-    "categories": {
-      "keyword": "query 复用条目关键词（词法重叠），测 jieba-BM25 稀疏腿召回",
-      "semantic": "query 用同义改写、刻意避开原关键词，测 bge 稠密腿语义召回",
-      "cross_domain": "query 跨多域，验证主域条目在 top3 不被干扰域挤出"
-    },
-    "metric": "Recall@3（expected_id 是否进入各档检索 top3）+ 延迟(ms)"
+ "meta": {
+  "version": 2,
+  "note": "70 条：34 旧用例重标多 gold + 36 新增（面向 834 库）；gold_ids 多值 1-3 个",
+  "n": 70
+ },
+ "cases": [
+  {
+   "query": "寒假从几号开始放",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    4
+   ]
   },
-  "cases": [
-    {"expected_id": 4, "domain": "教务", "category": "keyword", "query": "寒假从几号开始放"},
-    {"expected_id": 5, "domain": "教务", "category": "keyword", "query": "选课和退课在哪里操作"},
-    {"expected_id": 10, "domain": "住宿后勤", "category": "keyword", "query": "宿舍物品损坏怎么报修"},
-    {"expected_id": 17, "domain": "图书馆", "category": "keyword", "query": "图书馆开放时间是几点"},
-    {"expected_id": 18, "domain": "图书馆", "category": "keyword", "query": "图书馆座位怎么提前预约"},
-    {"expected_id": 22, "domain": "网络与IT", "category": "keyword", "query": "校园网连接上网怎么弄"},
-    {"expected_id": 28, "domain": "校园卡与证件", "category": "keyword", "query": "一卡通丢失了如何补办"},
-    {"expected_id": 31, "domain": "校园卡与证件", "category": "keyword", "query": "我的校园卡找不到了怎么挂失"},
-    {"expected_id": 35, "domain": "生活服务", "category": "keyword", "query": "医保费用怎么报销"},
-    {"expected_id": 119, "domain": "奖助", "category": "keyword", "query": "助学贷款申请条件是什么"},
-    {"expected_id": 160, "domain": "就业与职业发展", "category": "keyword", "query": "就业信息网入口和联系方式"},
-    {"expected_id": 172, "domain": "安全与保卫", "category": "keyword", "query": "保卫处报警电话是多少"},
-
-    {"expected_id": 6, "domain": "教务", "category": "semantic", "query": "在哪能看到我每学期的分数"},
-    {"expected_id": 8, "domain": "教务", "category": "semantic", "query": "想暂停学业一段时间怎么办理"},
-    {"expected_id": 12, "domain": "住宿后勤", "category": "semantic", "query": "就餐区域早晨几点开放"},
-    {"expected_id": 13, "domain": "住宿后勤", "category": "semantic", "query": "网购的包裹在学校哪个点位领取"},
-    {"expected_id": 16, "domain": "图书馆", "category": "semantic", "query": "怎么从阅览室把书带出去到期再送回"},
-    {"expected_id": 19, "domain": "图书馆", "category": "semantic", "query": "去哪能获取到学术期刊文章"},
-    {"expected_id": 23, "domain": "网络与IT", "category": "semantic", "query": "进系统的口令忘掉了怎么重新设"},
-    {"expected_id": 29, "domain": "校园卡与证件", "category": "semantic", "query": "怎么给饭卡里充钱"},
-    {"expected_id": 32, "domain": "校园卡与证件", "category": "semantic", "query": "开学要交的那个在校读书的证明怎么开"},
-    {"expected_id": 125, "domain": "医疗健康", "category": "semantic", "query": "学校有合作的精神科专家门诊吗"},
-    {"expected_id": 158, "domain": "就业", "category": "semantic", "query": "大学生创新创业项目怎么立项"},
-    {"expected_id": 175, "domain": "安全与保卫", "category": "semantic", "query": "怎么辨别冒充客服的骗局"},
-
-    {"expected_id": 18, "domain": "图书馆", "category": "cross_domain", "query": "图书馆座位预约和食堂营业时间分别是多少"},
-    {"expected_id": 28, "domain": "校园卡与证件", "category": "cross_domain", "query": "一卡通和学生证都丢了先补办哪个"},
-    {"expected_id": 34, "domain": "生活服务", "category": "cross_domain", "query": "校医院在哪开门医疗费怎么报销"},
-    {"expected_id": 17, "domain": "图书馆", "category": "cross_domain", "query": "图书馆和自习室分别几点能进"},
-    {"expected_id": 22, "domain": "网络与IT", "category": "cross_domain", "query": "校园网连不上学生邮箱也登不进"},
-    {"expected_id": 160, "domain": "就业与职业发展", "category": "cross_domain", "query": "就业信息网入口和创业支持政策"},
-    {"expected_id": 172, "domain": "安全与保卫", "category": "cross_domain", "query": "保卫处电话和防电信诈骗找谁"},
-    {"expected_id": 119, "domain": "奖助", "category": "cross_domain", "query": "助学贷款和国家助学金怎么同时申请"},
-    {"expected_id": 13, "domain": "住宿后勤", "category": "cross_domain", "query": "快递点在哪宿舍东西坏了找谁"},
-    {"expected_id": 63, "domain": "医疗健康", "category": "cross_domain", "query": "心理中心在哪预约入学体检怎么安排"}
-  ]
+  {
+   "query": "选课和退课在哪里操作",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    5,
+    79,
+    41
+   ]
+  },
+  {
+   "query": "宿舍物品损坏怎么报修",
+   "domain": "住宿后勤",
+   "category": "keyword",
+   "gold_ids": [
+    10,
+    60,
+    1196
+   ]
+  },
+  {
+   "query": "图书馆开放时间是几点",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    17,
+    50
+   ]
+  },
+  {
+   "query": "图书馆座位怎么提前预约",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    18
+   ]
+  },
+  {
+   "query": "校园网连接上网怎么弄",
+   "domain": "网络与IT",
+   "category": "keyword",
+   "gold_ids": [
+    22,
+    55
+   ]
+  },
+  {
+   "query": "一卡通丢失了如何补办",
+   "domain": "校园卡与证件",
+   "category": "keyword",
+   "gold_ids": [
+    28,
+    52,
+    31
+   ]
+  },
+  {
+   "query": "我的校园卡找不到了怎么挂失",
+   "domain": "校园卡与证件",
+   "category": "keyword",
+   "gold_ids": [
+    31,
+    52,
+    1140
+   ]
+  },
+  {
+   "query": "医保费用怎么报销",
+   "domain": "医疗健康",
+   "category": "keyword",
+   "gold_ids": [
+    35,
+    144,
+    133
+   ]
+  },
+  {
+   "query": "助学贷款申请条件是什么",
+   "domain": "奖助",
+   "category": "keyword",
+   "gold_ids": [
+    119,
+    1220,
+    1245
+   ]
+  },
+  {
+   "query": "就业信息网入口和联系方式",
+   "domain": "就业与职业发展",
+   "category": "keyword",
+   "gold_ids": [
+    160,
+    161
+   ]
+  },
+  {
+   "query": "保卫处报警电话是多少",
+   "domain": "安全与保卫",
+   "category": "keyword",
+   "gold_ids": [
+    172,
+    179
+   ]
+  },
+  {
+   "query": "在哪能看到我每学期的分数",
+   "domain": "教务",
+   "category": "semantic",
+   "gold_ids": [
+    6
+   ]
+  },
+  {
+   "query": "想暂停学业一段时间怎么办理",
+   "domain": "教务",
+   "category": "semantic",
+   "gold_ids": [
+    8,
+    924
+   ]
+  },
+  {
+   "query": "就餐区域早晨几点开放",
+   "domain": "生活服务",
+   "category": "semantic",
+   "gold_ids": [
+    12
+   ]
+  },
+  {
+   "query": "网购的包裹在学校哪个点位领取",
+   "domain": "生活服务",
+   "category": "semantic",
+   "gold_ids": [
+    13,
+    264
+   ]
+  },
+  {
+   "query": "怎么从阅览室把书带出去到期再送回",
+   "domain": "图书馆",
+   "category": "semantic",
+   "gold_ids": [
+    16,
+    1126,
+    1127
+   ]
+  },
+  {
+   "query": "去哪能获取到学术期刊文章",
+   "domain": "图书馆",
+   "category": "semantic",
+   "gold_ids": [
+    19,
+    86,
+    1130
+   ]
+  },
+  {
+   "query": "进系统的口令忘掉了怎么重新设",
+   "domain": "网络与IT",
+   "category": "semantic",
+   "gold_ids": [
+    23
+   ]
+  },
+  {
+   "query": "怎么给饭卡里充钱",
+   "domain": "校园卡与证件",
+   "category": "semantic",
+   "gold_ids": [
+    29,
+    51
+   ]
+  },
+  {
+   "query": "开学要交的那个在校读书的证明怎么开",
+   "domain": "校园卡与证件",
+   "category": "semantic",
+   "gold_ids": [
+    32,
+    280,
+    279
+   ]
+  },
+  {
+   "query": "学校有合作的精神科专家门诊吗",
+   "domain": "医疗健康",
+   "category": "semantic",
+   "gold_ids": [
+    125
+   ]
+  },
+  {
+   "query": "大学生创新创业项目怎么立项",
+   "domain": "社团与活动",
+   "category": "semantic",
+   "gold_ids": [
+    158,
+    1359,
+    1362
+   ]
+  },
+  {
+   "query": "怎么辨别冒充客服的骗局",
+   "domain": "安全与保卫",
+   "category": "semantic",
+   "gold_ids": [
+    175,
+    258
+   ]
+  },
+  {
+   "query": "图书馆座位预约和食堂营业时间分别是多少",
+   "domain": "图书馆",
+   "category": "cross_domain",
+   "gold_ids": [
+    18,
+    12
+   ]
+  },
+  {
+   "query": "一卡通和学生证都丢了先补办哪个",
+   "domain": "校园卡与证件",
+   "category": "cross_domain",
+   "gold_ids": [
+    28,
+    52
+   ]
+  },
+  {
+   "query": "校医院在哪开门医疗费怎么报销",
+   "domain": "医疗健康",
+   "category": "cross_domain",
+   "gold_ids": [
+    34,
+    35,
+    144
+   ]
+  },
+  {
+   "query": "图书馆和自习室分别几点能进",
+   "domain": "图书馆",
+   "category": "cross_domain",
+   "gold_ids": [
+    17,
+    21
+   ]
+  },
+  {
+   "query": "校园网连不上学生邮箱也登不进",
+   "domain": "网络与IT",
+   "category": "cross_domain",
+   "gold_ids": [
+    22,
+    24
+   ]
+  },
+  {
+   "query": "就业信息网入口和创业支持政策",
+   "domain": "就业与职业发展",
+   "category": "cross_domain",
+   "gold_ids": [
+    160,
+    159
+   ]
+  },
+  {
+   "query": "保卫处电话和防电信诈骗找谁",
+   "domain": "安全与保卫",
+   "category": "cross_domain",
+   "gold_ids": [
+    172,
+    175
+   ]
+  },
+  {
+   "query": "助学贷款和国家助学金怎么同时申请",
+   "domain": "奖助",
+   "category": "cross_domain",
+   "gold_ids": [
+    119,
+    1219,
+    1220
+   ]
+  },
+  {
+   "query": "快递点在哪宿舍东西坏了找谁",
+   "domain": "生活服务",
+   "category": "cross_domain",
+   "gold_ids": [
+    13,
+    10,
+    185
+   ]
+  },
+  {
+   "query": "心理中心在哪预约入学体检怎么安排",
+   "domain": "医疗健康",
+   "category": "cross_domain",
+   "gold_ids": [
+    63,
+    127,
+    132
+   ]
+  },
+  {
+   "query": "辅修课程选课后需要缴纳哪些费用？中途退出学费能退吗",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    1071
+   ]
+  },
+  {
+   "query": "提前修完所有课程想早点毕业该怎么办",
+   "domain": "教务",
+   "category": "semantic",
+   "gold_ids": [
+    877
+   ]
+  },
+  {
+   "query": "免听申请怎么提交？需要什么条件",
+   "domain": "教务",
+   "category": "semantic",
+   "gold_ids": [
+    862
+   ]
+  },
+  {
+   "query": "因临时急病不能参加考试需要办什么手续",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    850
+   ]
+  },
+  {
+   "query": "转专业能报几个志愿？有几次机会",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    206
+   ]
+  },
+  {
+   "query": "研究生开题报告什么时候做",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    275
+   ]
+  },
+  {
+   "query": "考试违纪作弊有什么后果",
+   "domain": "教务",
+   "category": "semantic",
+   "gold_ids": [
+    203
+   ]
+  },
+  {
+   "query": "英语四六级什么时候报名考试",
+   "domain": "教务",
+   "category": "keyword",
+   "gold_ids": [
+    278
+   ]
+  },
+  {
+   "query": "图书超期怎么还？有费用吗",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    20
+   ]
+  },
+  {
+   "query": "没办借阅手续把书带出图书馆算违规吗",
+   "domain": "图书馆",
+   "category": "semantic",
+   "gold_ids": [
+    1126
+   ]
+  },
+  {
+   "query": "教职工怎么开通借书权限",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    1137
+   ]
+  },
+  {
+   "query": "图书馆馆舍总面积多大？各校区多少",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    210
+   ]
+  },
+  {
+   "query": "图书到期能续借吗？有什么限制",
+   "domain": "图书馆",
+   "category": "semantic",
+   "gold_ids": [
+    49
+   ]
+  },
+  {
+   "query": "图书馆信息共享空间怎么预约",
+   "domain": "图书馆",
+   "category": "keyword",
+   "gold_ids": [
+    207
+   ]
+  },
+  {
+   "query": "国家励志奖学金能和国家奖学金同时拿吗",
+   "domain": "奖助",
+   "category": "semantic",
+   "gold_ids": [
+    123
+   ]
+  },
+  {
+   "query": "勤工助学工资多少？每周最多几小时",
+   "domain": "奖助",
+   "category": "keyword",
+   "gold_ids": [
+    228
+   ]
+  },
+  {
+   "query": "校内无息借款能借多少？要还吗",
+   "domain": "奖助",
+   "category": "keyword",
+   "gold_ids": [
+    235
+   ]
+  },
+  {
+   "query": "应征入伍学费怎么补偿",
+   "domain": "奖助",
+   "category": "semantic",
+   "gold_ids": [
+    233
+   ]
+  },
+  {
+   "query": "毕业生求职创业补贴有多少钱",
+   "domain": "奖助",
+   "category": "keyword",
+   "gold_ids": [
+    236
+   ]
+  },
+  {
+   "query": "到基层就业学费补偿怎么申请",
+   "domain": "奖助",
+   "category": "keyword",
+   "gold_ids": [
+    231
+   ]
+  },
+  {
+   "query": "第二课堂要修满多少积分才能毕业",
+   "domain": "社团与活动",
+   "category": "keyword",
+   "gold_ids": [
+    155
+   ]
+  },
+  {
+   "query": "志愿工时怎么算？和劳育积分什么关系",
+   "domain": "社团与活动",
+   "category": "semantic",
+   "gold_ids": [
+    67
+   ]
+  },
+  {
+   "query": "学校社团有哪些类型",
+   "domain": "社团与活动",
+   "category": "keyword",
+   "gold_ids": [
+    146
+   ]
+  },
+  {
+   "query": "错过百团大战还能加社团吗",
+   "domain": "社团与活动",
+   "category": "semantic",
+   "gold_ids": [
+    152
+   ]
+  },
+  {
+   "query": "宿舍空调怎么租",
+   "domain": "住宿后勤",
+   "category": "keyword",
+   "gold_ids": [
+    225
+   ]
+  },
+  {
+   "query": "宿舍洗衣机怎么用",
+   "domain": "住宿后勤",
+   "category": "keyword",
+   "gold_ids": [
+    224
+   ]
+  },
+  {
+   "query": "宿舍公寓维修找谁",
+   "domain": "住宿后勤",
+   "category": "keyword",
+   "gold_ids": [
+    1196
+   ]
+  },
+  {
+   "query": "宿舍门禁和访客有什么规定",
+   "domain": "住宿后勤",
+   "category": "semantic",
+   "gold_ids": [
+    115
+   ]
+  },
+  {
+   "query": "新生统一身份认证初始密码是多少",
+   "domain": "网络与IT",
+   "category": "keyword",
+   "gold_ids": [
+    55
+   ]
+  },
+  {
+   "query": "学生公寓上网怎么办理",
+   "domain": "网络与IT",
+   "category": "keyword",
+   "gold_ids": [
+    1153
+   ]
+  },
+  {
+   "query": "宿舍网管理办法对用户有什么禁止要求",
+   "domain": "网络与IT",
+   "category": "semantic",
+   "gold_ids": [
+    1177
+   ]
+  },
+  {
+   "query": "大学生医保门诊起付线多少报多少",
+   "domain": "医疗健康",
+   "category": "keyword",
+   "gold_ids": [
+    239
+   ]
+  },
+  {
+   "query": "校医院急诊电话是多少",
+   "domain": "医疗健康",
+   "category": "keyword",
+   "gold_ids": [
+    139
+   ]
+  },
+  {
+   "query": "电动车能在宿舍充电吗",
+   "domain": "安全与保卫",
+   "category": "keyword",
+   "gold_ids": [
+    254
+   ]
+  },
+  {
+   "query": "户籍业务怎么办理",
+   "domain": "安全与保卫",
+   "category": "keyword",
+   "gold_ids": [
+    172
+   ]
+  },
+  {
+   "query": "学生证火车票优惠卡写卡在哪里办",
+   "domain": "校园卡与证件",
+   "category": "keyword",
+   "gold_ids": [
+    98
+   ]
+  }
+ ]
 }

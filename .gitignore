@@ -32,3 +32,8 @@ docker-compose.override.yml
 
 # 本地真实信息注入数据（T9：不进公开 repo，scripts/seed_zjut_local.py 读取）
 config/zjut_local_data.json
+# M11 采集产物（build_zjut_entries.py 输出，同源本地数据不进公开 repo）
+config/zjut_m11_data.json
+
+# M11 采集原始文档（Tier 1 公开源下载产物，不进公开 repo）
+data/zjut_raw/
