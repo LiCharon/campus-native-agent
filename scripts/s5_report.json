@@ -20,7 +20,9 @@
    "MRR": 0.8631,
    "nD@3": 0.8227,
    "P@3": 0.4524,
-   "lat_ms": 24.7
+   "lat_avg": 25.6,
+   "p50": 13.8,
+   "p99": 266.1
   },
   "Tier2_MySQL稠密": {
    "R@1": 0.5905,
@@ -30,7 +32,9 @@
    "MRR": 0.8643,
    "nD@3": 0.8318,
    "P@3": 0.4524,
-   "lat_ms": 207.3
+   "lat_avg": 203.8,
+   "p50": 201.2,
+   "p99": 268.8
   },
   "Tier3_关键词": {
    "R@1": 0.3262,
@@ -40,7 +44,9 @@
    "MRR": 0.569,
    "nD@3": 0.5362,
    "P@3": 0.3,
-   "lat_ms": 41.8
+   "lat_avg": 42.3,
+   "p50": 36.4,
+   "p99": 88.3
   }
  },
  "by_category": {
@@ -105,7 +111,7 @@
     1051,
     1092
    ],
-   "tier1_lat_ms": 721.3
+   "tier1_lat_ms": 813.7
   },
   {
    "tier2_ids": [
@@ -113,7 +119,7 @@
     989,
     1092
    ],
-   "tier2_lat_ms": 284.7
+   "tier2_lat_ms": 325.4
   },
   {
    "tier3_ids": [
@@ -121,7 +127,7 @@
     989,
     1051
    ],
-   "tier3_lat_ms": 35.2
+   "tier3_lat_ms": 63.9
   },
   {
    "tier1_ids": [
@@ -131,7 +137,7 @@
     1028,
     41
    ],
-   "tier1_lat_ms": 14.5
+   "tier1_lat_ms": 13.1
   },
   {
    "tier2_ids": [
@@ -139,7 +145,7 @@
     79,
     1071
    ],
-   "tier2_lat_ms": 221.6
+   "tier2_lat_ms": 199.3
   },
   {
    "tier3_ids": [
@@ -147,7 +153,7 @@
     40,
     41
    ],
-   "tier3_lat_ms": 47.8
+   "tier3_lat_ms": 33.4
   },
   {
    "tier1_ids": [
@@ -157,7 +163,7 @@
     117,
     1196
    ],
-   "tier1_lat_ms": 13.3
+   "tier1_lat_ms": 12.4
   },
   {
    "tier2_ids": [
@@ -165,7 +171,7 @@
     10,
     1196
    ],
-   "tier2_lat_ms": 178.2
+   "tier2_lat_ms": 207.6
   },
   {
    "tier3_ids": [
@@ -173,7 +179,7 @@
     60,
     27
    ],
-   "tier3_lat_ms": 37.4
+   "tier3_lat_ms": 35.8
   },
   {
    "tier1_ids": [
@@ -183,7 +189,7 @@
     12,
     210
    ],
-   "tier1_lat_ms": 16.3
+   "tier1_lat_ms": 12.5
   },
   {
    "tier2_ids": [
@@ -191,7 +197,7 @@
     50,
     12
    ],
-   "tier2_lat_ms": 211.2
+   "tier2_lat_ms": 207.0
   },
   {
    "tier3_ids": [
@@ -199,7 +205,7 @@
     1104,
     1131
    ],
-   "tier3_lat_ms": 48.7
+   "tier3_lat_ms": 52.9
   },
   {
    "tier1_ids": [
@@ -209,7 +215,7 @@
     798,
     127
    ],
-   "tier1_lat_ms": 11.7
+   "tier1_lat_ms": 12.3
   },
   {
    "tier2_ids": [
@@ -217,7 +223,7 @@
     84,
     1134
    ],
-   "tier2_lat_ms": 214.1
+   "tier2_lat_ms": 209.6
   },
   {
    "tier3_ids": [
@@ -225,7 +231,7 @@
     18,
     1087
    ],
-   "tier3_lat_ms": 35.7
+   "tier3_lat_ms": 36.2
   },
   {
    "tier1_ids": [
@@ -235,7 +241,7 @@
     219,
     1178
    ],
-   "tier1_lat_ms": 12.8
+   "tier1_lat_ms": 11.4
   },
   {
    "tier2_ids": [
@@ -243,7 +249,7 @@
     55,
     219
    ],
-   "tier2_lat_ms": 207.7
+   "tier2_lat_ms": 204.1
   },
   {
    "tier3_ids": [
@@ -251,7 +257,7 @@
     190,
     55
    ],
-   "tier3_lat_ms": 34.3
+   "tier3_lat_ms": 32.9
   },
   {
    "tier1_ids": [
@@ -261,7 +267,7 @@
     1140,
     31
    ],
-   "tier1_lat_ms": 12.9
+   "tier1_lat_ms": 13.9
   },
   {
    "tier2_ids": [
@@ -269,7 +275,7 @@
     52,
     31
    ],
-   "tier2_lat_ms": 206.2
+   "tier2_lat_ms": 211.3
   },
   {
    "tier3_ids": [
@@ -277,7 +283,7 @@
     29,
     30
    ],
-   "tier3_lat_ms": 36.1
+   "tier3_lat_ms": 46.9
   },
   {
    "tier1_ids": [
@@ -287,7 +293,7 @@
     1140,
     872
    ],
-   "tier1_lat_ms": 15.3
+   "tier1_lat_ms": 13.5
   },
   {
    "tier2_ids": [
@@ -295,7 +301,7 @@
     31,
     1140
    ],
-   "tier2_lat_ms": 191.7
+   "tier2_lat_ms": 200.0
   },
   {
    "tier3_ids": [
@@ -303,7 +309,7 @@
     52,
     1140
    ],
-   "tier3_lat_ms": 45.9
+   "tier3_lat_ms": 33.1
   },
   {
    "tier1_ids": [
@@ -313,7 +319,7 @@
     239,
     131
    ],
-   "tier1_lat_ms": 10.8
+   "tier1_lat_ms": 12.0
   },
   {
    "tier2_ids": [
@@ -321,7 +327,7 @@
     144,
     133
    ],
-   "tier2_lat_ms": 192.2
+   "tier2_lat_ms": 202.6
   },
   {
    "tier3_ids": [
@@ -329,7 +335,7 @@
     239,
     35
    ],
-   "tier3_lat_ms": 34.3
+   "tier3_lat_ms": 36.3
   },
   {
    "tier1_ids": [
@@ -339,7 +345,7 @@
     119,
     1245
    ],
-   "tier1_lat_ms": 12.1
+   "tier1_lat_ms": 13.1
   },
   {
    "tier2_ids": [
@@ -347,7 +353,7 @@
     1241,
     1220
    ],
-   "tier2_lat_ms": 177.5
+   "tier2_lat_ms": 206.6
   },
   {
    "tier3_ids": [
@@ -355,7 +361,7 @@
     119,
     1237
    ],
-   "tier3_lat_ms": 35.0
+   "tier3_lat_ms": 34.2
   },
   {
    "tier1_ids": [
@@ -365,7 +371,7 @@
     197,
     1208
    ],
-   "tier1_lat_ms": 13.1
+   "tier1_lat_ms": 12.2
   },
   {
    "tier2_ids": [
@@ -373,7 +379,7 @@
     161,
     166
    ],
-   "tier2_lat_ms": 198.1
+   "tier2_lat_ms": 196.8
   },
   {
    "tier3_ids": [
@@ -381,7 +387,7 @@
     59,
     263
    ],
-   "tier3_lat_ms": 63.6
+   "tier3_lat_ms": 34.9
   },
   {
    "tier1_ids": [
@@ -391,7 +397,7 @@
     139,
     114
    ],
-   "tier1_lat_ms": 14.1
+   "tier1_lat_ms": 11.5
   },
   {
    "tier2_ids": [
@@ -399,7 +405,7 @@
     179,
     255
    ],
-   "tier2_lat_ms": 190.7
+   "tier2_lat_ms": 200.5
   },
   {
    "tier3_ids": [
@@ -407,7 +413,7 @@
     255,
     63
    ],
-   "tier3_lat_ms": 37.4
+   "tier3_lat_ms": 65.4
   },
   {
    "tier1_ids": [
@@ -417,7 +423,7 @@
     1070,
     1029
    ],
-   "tier1_lat_ms": 14.5
+   "tier1_lat_ms": 12.8
   },
   {
    "tier2_ids": [
@@ -425,11 +431,11 @@
     44,
     1029
    ],
-   "tier2_lat_ms": 207.1
+   "tier2_lat_ms": 211.7
   },
   {
    "tier3_ids": [],
-   "tier3_lat_ms": 37.2
+   "tier3_lat_ms": 36.8
   },
   {
    "tier1_ids": [
@@ -439,7 +445,7 @@
     1133,
     877
    ],
-   "tier1_lat_ms": 12.0
+   "tier1_lat_ms": 16.3
   },
   {
    "tier2_ids": [
@@ -447,7 +453,7 @@
     924,
     853
    ],
-   "tier2_lat_ms": 187.2
+   "tier2_lat_ms": 211.3
   },
   {
    "tier3_ids": [
@@ -455,7 +461,7 @@
     102,
     142
    ],
-   "tier3_lat_ms": 32.3
+   "tier3_lat_ms": 36.1
   },
   {
    "tier1_ids": [
@@ -465,7 +471,7 @@
     281,
     34
    ],
-   "tier1_lat_ms": 14.9
+   "tier1_lat_ms": 14.2
   },
   {
    "tier2_ids": [
@@ -473,13 +479,13 @@
     17,
     50
    ],
-   "tier2_lat_ms": 194.3
+   "tier2_lat_ms": 200.3
   },
   {
    "tier3_ids": [
     92
    ],
-   "tier3_lat_ms": 40.8
+   "tier3_lat_ms": 31.2
   },
   {
    "tier1_ids": [
@@ -489,7 +495,7 @@
     1333,
     1178
    ],
-   "tier1_lat_ms": 15.8
+   "tier1_lat_ms": 16.5
   },
   {
    "tier2_ids": [
@@ -497,7 +503,7 @@
     188,
     1178
    ],
-   "tier2_lat_ms": 215.0
+   "tier2_lat_ms": 194.2
   },
   {
    "tier3_ids": [
@@ -505,7 +511,7 @@
     902,
     910
    ],
-   "tier3_lat_ms": 102.5
+   "tier3_lat_ms": 90.0
   },
   {
    "tier1_ids": [
@@ -515,7 +521,7 @@
     164,
     88
    ],
-   "tier1_lat_ms": 15.8
+   "tier1_lat_ms": 18.6
   },
   {
    "tier2_ids": [
@@ -523,7 +529,7 @@
     1127,
     88
    ],
-   "tier2_lat_ms": 210.5
+   "tier2_lat_ms": 182.0
   },
   {
    "tier3_ids": [
@@ -531,7 +537,7 @@
     1088,
     1099
    ],
-   "tier3_lat_ms": 38.0
+   "tier3_lat_ms": 50.8
   },
   {
    "tier1_ids": [
@@ -541,7 +547,7 @@
     222,
     1094
    ],
-   "tier1_lat_ms": 14.7
+   "tier1_lat_ms": 12.8
   },
   {
    "tier2_ids": [
@@ -549,14 +555,14 @@
     86,
     1094
    ],
-   "tier2_lat_ms": 217.6
+   "tier2_lat_ms": 200.8
   },
   {
    "tier3_ids": [
     146,
     275
    ],
-   "tier3_lat_ms": 37.3
+   "tier3_lat_ms": 36.4
   },
   {
    "tier1_ids": [
@@ -566,7 +572,7 @@
     872,
     1156
    ],
-   "tier1_lat_ms": 16.0
+   "tier1_lat_ms": 13.2
   },
   {
    "tier2_ids": [
@@ -574,14 +580,14 @@
     1185,
     1156
    ],
-   "tier2_lat_ms": 228.6
+   "tier2_lat_ms": 207.3
   },
   {
    "tier3_ids": [
     151,
     1083
    ],
-   "tier3_lat_ms": 34.6
+   "tier3_lat_ms": 34.1
   },
   {
    "tier1_ids": [
@@ -591,7 +597,7 @@
     872,
     857
    ],
-   "tier1_lat_ms": 15.0
+   "tier1_lat_ms": 12.6
   },
   {
    "tier2_ids": [
@@ -599,13 +605,13 @@
     112,
     29
    ],
-   "tier2_lat_ms": 215.4
+   "tier2_lat_ms": 204.9
   },
   {
    "tier3_ids": [
     51
    ],
-   "tier3_lat_ms": 46.3
+   "tier3_lat_ms": 36.0
   },
   {
    "tier1_ids": [
@@ -615,7 +621,7 @@
     1137,
     279
    ],
-   "tier1_lat_ms": 15.6
+   "tier1_lat_ms": 20.0
   },
   {
    "tier2_ids": [
@@ -623,7 +629,7 @@
     280,
     1137
    ],
-   "tier2_lat_ms": 187.5
+   "tier2_lat_ms": 216.2
   },
   {
    "tier3_ids": [
@@ -631,7 +637,7 @@
     273,
     286
    ],
-   "tier3_lat_ms": 45.1
+   "tier3_lat_ms": 54.2
   },
   {
    "tier1_ids": [
@@ -641,7 +647,7 @@
     890,
     1193
    ],
-   "tier1_lat_ms": 13.6
+   "tier1_lat_ms": 12.3
   },
   {
    "tier2_ids": [
@@ -649,7 +655,7 @@
     34,
     871
    ],
-   "tier2_lat_ms": 195.1
+   "tier2_lat_ms": 214.1
   },
   {
    "tier3_ids": [
@@ -657,7 +663,7 @@
     142,
     144
    ],
-   "tier3_lat_ms": 36.7
+   "tier3_lat_ms": 66.1
   },
   {
    "tier1_ids": [
@@ -667,7 +673,7 @@
     835,
     1352
    ],
-   "tier1_lat_ms": 14.2
+   "tier1_lat_ms": 14.8
   },
   {
    "tier2_ids": [
@@ -675,7 +681,7 @@
     835,
     1362
    ],
-   "tier2_lat_ms": 210.5
+   "tier2_lat_ms": 199.7
   },
   {
    "tier3_ids": [
@@ -683,7 +689,7 @@
     1362,
     158
    ],
-   "tier3_lat_ms": 37.5
+   "tier3_lat_ms": 34.5
   },
   {
    "tier1_ids": [
@@ -693,7 +699,7 @@
     175,
     829
    ],
-   "tier1_lat_ms": 15.8
+   "tier1_lat_ms": 14.4
   },
   {
    "tier2_ids": [
@@ -701,13 +707,13 @@
     1177,
     175
    ],
-   "tier2_lat_ms": 207.5
+   "tier2_lat_ms": 194.5
   },
   {
    "tier3_ids": [
     258
    ],
-   "tier3_lat_ms": 62.8
+   "tier3_lat_ms": 37.3
   },
   {
    "tier1_ids": [
@@ -717,7 +723,7 @@
     209,
     1134
    ],
-   "tier1_lat_ms": 14.1
+   "tier1_lat_ms": 13.6
   },
   {
    "tier2_ids": [
@@ -725,7 +731,7 @@
     12,
     837
    ],
-   "tier2_lat_ms": 226.5
+   "tier2_lat_ms": 183.8
   },
   {
    "tier3_ids": [
@@ -733,7 +739,7 @@
     12,
     18
    ],
-   "tier3_lat_ms": 35.8
+   "tier3_lat_ms": 32.5
   },
   {
    "tier1_ids": [
@@ -743,7 +749,7 @@
     106,
     52
    ],
-   "tier1_lat_ms": 16.2
+   "tier1_lat_ms": 13.9
   },
   {
    "tier2_ids": [
@@ -751,7 +757,7 @@
     1140,
     261
    ],
-   "tier2_lat_ms": 194.4
+   "tier2_lat_ms": 192.0
   },
   {
    "tier3_ids": [
@@ -759,7 +765,7 @@
     30,
     261
    ],
-   "tier3_lat_ms": 39.3
+   "tier3_lat_ms": 35.5
   },
   {
    "tier1_ids": [
@@ -769,7 +775,7 @@
     142,
     127
    ],
-   "tier1_lat_ms": 15.7
+   "tier1_lat_ms": 12.9
   },
   {
    "tier2_ids": [
@@ -777,7 +783,7 @@
     35,
     34
    ],
-   "tier2_lat_ms": 214.0
+   "tier2_lat_ms": 209.6
   },
   {
    "tier3_ids": [
@@ -785,7 +791,7 @@
     34,
     131
    ],
-   "tier3_lat_ms": 36.6
+   "tier3_lat_ms": 39.3
   },
   {
    "tier1_ids": [
@@ -795,7 +801,7 @@
     50,
     209
    ],
-   "tier1_lat_ms": 15.1
+   "tier1_lat_ms": 15.4
   },
   {
    "tier2_ids": [
@@ -803,7 +809,7 @@
     17,
     50
    ],
-   "tier2_lat_ms": 215.7
+   "tier2_lat_ms": 186.2
   },
   {
    "tier3_ids": [
@@ -811,7 +817,7 @@
     1104,
     1131
    ],
-   "tier3_lat_ms": 38.1
+   "tier3_lat_ms": 37.5
   },
   {
    "tier1_ids": [
@@ -821,7 +827,7 @@
     1200,
     1174
    ],
-   "tier1_lat_ms": 14.4
+   "tier1_lat_ms": 15.5
   },
   {
    "tier2_ids": [
@@ -829,7 +835,7 @@
     92,
     1174
    ],
-   "tier2_lat_ms": 205.1
+   "tier2_lat_ms": 213.5
   },
   {
    "tier3_ids": [
@@ -837,7 +843,7 @@
     22,
     55
    ],
-   "tier3_lat_ms": 36.4
+   "tier3_lat_ms": 32.0
   },
   {
    "tier1_ids": [
@@ -847,7 +853,7 @@
     835,
     236
    ],
-   "tier1_lat_ms": 13.4
+   "tier1_lat_ms": 14.3
   },
   {
    "tier2_ids": [
@@ -855,7 +861,7 @@
     246,
     159
    ],
-   "tier2_lat_ms": 207.6
+   "tier2_lat_ms": 188.8
   },
   {
    "tier3_ids": [
@@ -863,7 +869,7 @@
     160,
     59
    ],
-   "tier3_lat_ms": 37.9
+   "tier3_lat_ms": 56.7
   },
   {
    "tier1_ids": [
@@ -873,7 +879,7 @@
     96,
     258
    ],
-   "tier1_lat_ms": 16.8
+   "tier1_lat_ms": 13.5
   },
   {
    "tier2_ids": [
@@ -881,7 +887,7 @@
     175,
     258
    ],
-   "tier2_lat_ms": 191.6
+   "tier2_lat_ms": 178.3
   },
   {
    "tier3_ids": [
@@ -889,7 +895,7 @@
     255,
     63
    ],
-   "tier3_lat_ms": 37.8
+   "tier3_lat_ms": 36.4
   },
   {
    "tier1_ids": [
@@ -899,7 +905,7 @@
     119,
     1245
    ],
-   "tier1_lat_ms": 13.8
+   "tier1_lat_ms": 16.4
   },
   {
    "tier2_ids": [
@@ -907,7 +913,7 @@
     1220,
     119
    ],
-   "tier2_lat_ms": 213.5
+   "tier2_lat_ms": 205.8
   },
   {
    "tier3_ids": [
@@ -915,7 +921,7 @@
     119,
     122
    ],
-   "tier3_lat_ms": 43.9
+   "tier3_lat_ms": 37.9
   },
   {
    "tier1_ids": [
@@ -925,7 +931,7 @@
     36,
     60
    ],
-   "tier1_lat_ms": 14.1
+   "tier1_lat_ms": 15.2
   },
   {
    "tier2_ids": [
@@ -933,7 +939,7 @@
     171,
     36
    ],
-   "tier2_lat_ms": 209.3
+   "tier2_lat_ms": 184.9
   },
   {
    "tier3_ids": [
@@ -941,7 +947,7 @@
     13,
     60
    ],
-   "tier3_lat_ms": 37.6
+   "tier3_lat_ms": 35.0
   },
   {
    "tier1_ids": [
@@ -951,7 +957,7 @@
     237,
     273
    ],
-   "tier1_lat_ms": 16.2
+   "tier1_lat_ms": 16.0
   },
   {
    "tier2_ids": [
@@ -959,7 +965,7 @@
     132,
     237
    ],
-   "tier2_lat_ms": 222.3
+   "tier2_lat_ms": 184.4
   },
   {
    "tier3_ids": [
@@ -967,7 +973,7 @@
     127,
     132
    ],
-   "tier3_lat_ms": 40.8
+   "tier3_lat_ms": 66.0
   },
   {
    "tier1_ids": [
@@ -977,7 +983,7 @@
     5,
     998
    ],
-   "tier1_lat_ms": 16.6
+   "tier1_lat_ms": 15.7
   },
   {
    "tier2_ids": [
@@ -985,7 +991,7 @@
     5,
     79
    ],
-   "tier2_lat_ms": 216.5
+   "tier2_lat_ms": 205.1
   },
   {
    "tier3_ids": [
@@ -993,7 +999,7 @@
     940,
     947
    ],
-   "tier3_lat_ms": 38.8
+   "tier3_lat_ms": 37.8
   },
   {
    "tier1_ids": [
@@ -1003,7 +1009,7 @@
     863,
     991
    ],
-   "tier1_lat_ms": 14.7
+   "tier1_lat_ms": 16.8
   },
   {
    "tier2_ids": [
@@ -1011,7 +1017,7 @@
     921,
     980
    ],
-   "tier2_lat_ms": 211.1
+   "tier2_lat_ms": 200.9
   },
   {
    "tier3_ids": [
@@ -1019,7 +1025,7 @@
     9,
     104
    ],
-   "tier3_lat_ms": 39.8
+   "tier3_lat_ms": 35.7
   },
   {
    "tier1_ids": [
@@ -1029,7 +1035,7 @@
     896,
     76
    ],
-   "tier1_lat_ms": 13.4
+   "tier1_lat_ms": 11.9
   },
   {
    "tier2_ids": [
@@ -1037,7 +1043,7 @@
     896,
     76
    ],
-   "tier2_lat_ms": 214.5
+   "tier2_lat_ms": 201.9
   },
   {
    "tier3_ids": [
@@ -1045,7 +1051,7 @@
     862,
     46
    ],
-   "tier3_lat_ms": 36.5
+   "tier3_lat_ms": 31.3
   },
   {
    "tier1_ids": [
@@ -1063,7 +1069,7 @@
     46,
     1216
    ],
-   "tier2_lat_ms": 187.2
+   "tier2_lat_ms": 201.4
   },
   {
    "tier3_ids": [
@@ -1071,7 +1077,7 @@
     106,
     203
    ],
-   "tier3_lat_ms": 93.7
+   "tier3_lat_ms": 87.5
   },
   {
    "tier1_ids": [
@@ -1081,7 +1087,7 @@
     201,
     840
    ],
-   "tier1_lat_ms": 15.0
+   "tier1_lat_ms": 12.0
   },
   {
    "tier2_ids": [
@@ -1089,7 +1095,7 @@
     76,
     870
    ],
-   "tier2_lat_ms": 192.2
+   "tier2_lat_ms": 190.5
   },
   {
    "tier3_ids": [
@@ -1097,7 +1103,7 @@
     41,
     76
    ],
-   "tier3_lat_ms": 36.1
+   "tier3_lat_ms": 36.8
   },
   {
    "tier1_ids": [
@@ -1107,7 +1113,7 @@
     271,
     163
    ],
-   "tier1_lat_ms": 12.4
+   "tier1_lat_ms": 13.1
   },
   {
    "tier2_ids": [
@@ -1115,7 +1121,7 @@
     274,
     276
    ],
-   "tier2_lat_ms": 207.7
+   "tier2_lat_ms": 196.5
   },
   {
    "tier3_ids": [
@@ -1123,7 +1129,7 @@
     89,
     265
    ],
-   "tier3_lat_ms": 30.5
+   "tier3_lat_ms": 36.5
   },
   {
    "tier1_ids": [
@@ -1133,7 +1139,7 @@
     845,
     854
    ],
-   "tier1_lat_ms": 14.3
+   "tier1_lat_ms": 14.6
   },
   {
    "tier2_ids": [
@@ -1141,7 +1147,7 @@
     1169,
     1021
    ],
-   "tier2_lat_ms": 195.9
+   "tier2_lat_ms": 200.3
   },
   {
    "tier3_ids": [
@@ -1149,7 +1155,7 @@
     7,
     269
    ],
-   "tier3_lat_ms": 38.8
+   "tier3_lat_ms": 44.3
   },
   {
    "tier1_ids": [
@@ -1159,7 +1165,7 @@
     203,
     1009
    ],
-   "tier1_lat_ms": 13.9
+   "tier1_lat_ms": 11.9
   },
   {
    "tier2_ids": [
@@ -1167,7 +1173,7 @@
     269,
     1064
    ],
-   "tier2_lat_ms": 210.1
+   "tier2_lat_ms": 196.0
   },
   {
    "tier3_ids": [
@@ -1175,7 +1181,7 @@
     269,
     7
    ],
-   "tier3_lat_ms": 48.1
+   "tier3_lat_ms": 33.9
   },
   {
    "tier1_ids": [
@@ -1185,7 +1191,7 @@
     1131,
     45
    ],
-   "tier1_lat_ms": 12.7
+   "tier1_lat_ms": 13.6
   },
   {
    "tier2_ids": [
@@ -1193,7 +1199,7 @@
     16,
     1079
    ],
-   "tier2_lat_ms": 218.3
+   "tier2_lat_ms": 191.1
   },
   {
    "tier3_ids": [
@@ -1201,7 +1207,7 @@
     20,
     190
    ],
-   "tier3_lat_ms": 40.6
+   "tier3_lat_ms": 32.5
   },
   {
    "tier1_ids": [
@@ -1211,7 +1217,7 @@
     1123,
     1133
    ],
-   "tier1_lat_ms": 14.2
+   "tier1_lat_ms": 16.1
   },
   {
    "tier2_ids": [
@@ -1219,7 +1225,7 @@
     1126,
     1101
    ],
-   "tier2_lat_ms": 192.0
+   "tier2_lat_ms": 209.8
   },
   {
    "tier3_ids": [
@@ -1227,7 +1233,7 @@
     1087,
     1104
    ],
-   "tier3_lat_ms": 34.1
+   "tier3_lat_ms": 34.9
   },
   {
    "tier1_ids": [
@@ -1237,7 +1243,7 @@
     1139,
     1121
    ],
-   "tier1_lat_ms": 14.9
+   "tier1_lat_ms": 11.9
   },
   {
    "tier2_ids": [
@@ -1245,7 +1251,7 @@
     1141,
     1139
    ],
-   "tier2_lat_ms": 205.5
+   "tier2_lat_ms": 206.1
   },
   {
    "tier3_ids": [
@@ -1253,7 +1259,7 @@
     1121,
     1128
    ],
-   "tier3_lat_ms": 37.2
+   "tier3_lat_ms": 46.0
   },
   {
    "tier1_ids": [
@@ -1263,7 +1269,7 @@
     1209,
     188
    ],
-   "tier1_lat_ms": 14.9
+   "tier1_lat_ms": 16.2
   },
   {
    "tier2_ids": [
@@ -1271,7 +1277,7 @@
     50,
     209
    ],
-   "tier2_lat_ms": 202.9
+   "tier2_lat_ms": 172.5
   },
   {
    "tier3_ids": [
@@ -1279,7 +1285,7 @@
     1087,
     1104
    ],
-   "tier3_lat_ms": 38.6
+   "tier3_lat_ms": 61.0
   },
   {
    "tier1_ids": [
@@ -1289,7 +1295,7 @@
     196,
     88
    ],
-   "tier1_lat_ms": 14.9
+   "tier1_lat_ms": 13.3
   },
   {
    "tier2_ids": [
@@ -1297,7 +1303,7 @@
     1131,
     49
    ],
-   "tier2_lat_ms": 205.4
+   "tier2_lat_ms": 188.8
   },
   {
    "tier3_ids": [
@@ -1305,7 +1311,7 @@
     1131,
     49
    ],
-   "tier3_lat_ms": 36.0
+   "tier3_lat_ms": 35.9
   },
   {
    "tier1_ids": [
@@ -1315,7 +1321,7 @@
     1134,
     127
    ],
-   "tier1_lat_ms": 15.0
+   "tier1_lat_ms": 12.7
   },
   {
    "tier2_ids": [
@@ -1323,7 +1329,7 @@
     18,
     207
    ],
-   "tier2_lat_ms": 203.2
+   "tier2_lat_ms": 205.5
   },
   {
    "tier3_ids": [
@@ -1331,7 +1337,7 @@
     84,
     207
    ],
-   "tier3_lat_ms": 38.4
+   "tier3_lat_ms": 38.1
   },
   {
    "tier1_ids": [
@@ -1341,7 +1347,7 @@
     892,
     1219
    ],
-   "tier1_lat_ms": 13.8
+   "tier1_lat_ms": 16.0
   },
   {
    "tier2_ids": [
@@ -1349,7 +1355,7 @@
     123,
     892
    ],
-   "tier2_lat_ms": 206.0
+   "tier2_lat_ms": 197.9
   },
   {
    "tier3_ids": [
@@ -1357,7 +1363,7 @@
     1259,
     123
    ],
-   "tier3_lat_ms": 37.8
+   "tier3_lat_ms": 33.2
   },
   {
    "tier1_ids": [
@@ -1367,7 +1373,7 @@
     1345,
     230
    ],
-   "tier1_lat_ms": 16.3
+   "tier1_lat_ms": 12.4
   },
   {
    "tier2_ids": [
@@ -1375,7 +1381,7 @@
     120,
     122
    ],
-   "tier2_lat_ms": 201.0
+   "tier2_lat_ms": 188.1
   },
   {
    "tier3_ids": [
@@ -1383,7 +1389,7 @@
     120,
     970
    ],
-   "tier3_lat_ms": 38.1
+   "tier3_lat_ms": 33.5
   },
   {
    "tier1_ids": [
@@ -1393,7 +1399,7 @@
     1241,
     1261
    ],
-   "tier1_lat_ms": 15.2
+   "tier1_lat_ms": 15.1
   },
   {
    "tier2_ids": [
@@ -1401,7 +1407,7 @@
     1236,
     1241
    ],
-   "tier2_lat_ms": 185.3
+   "tier2_lat_ms": 201.7
   },
   {
    "tier3_ids": [
@@ -1409,7 +1415,7 @@
     235,
     1249
    ],
-   "tier3_lat_ms": 46.1
+   "tier3_lat_ms": 32.8
   },
   {
    "tier1_ids": [
@@ -1419,7 +1425,7 @@
     919,
     285
    ],
-   "tier1_lat_ms": 14.6
+   "tier1_lat_ms": 10.9
   },
   {
    "tier2_ids": [
@@ -1427,7 +1433,7 @@
     919,
     231
    ],
-   "tier2_lat_ms": 205.3
+   "tier2_lat_ms": 200.8
   },
   {
    "tier3_ids": [
@@ -1435,7 +1441,7 @@
     129,
     187
    ],
-   "tier3_lat_ms": 32.3
+   "tier3_lat_ms": 46.0
   },
   {
    "tier1_ids": [
@@ -1445,7 +1451,7 @@
     248,
     247
    ],
-   "tier1_lat_ms": 14.4
+   "tier1_lat_ms": 13.4
   },
   {
    "tier2_ids": [
@@ -1453,7 +1459,7 @@
     245,
     246
    ],
-   "tier2_lat_ms": 197.1
+   "tier2_lat_ms": 204.2
   },
   {
    "tier3_ids": [
@@ -1461,7 +1467,7 @@
     104,
     155
    ],
-   "tier3_lat_ms": 35.0
+   "tier3_lat_ms": 37.1
   },
   {
    "tier1_ids": [
@@ -1471,7 +1477,7 @@
     1235,
     245
    ],
-   "tier1_lat_ms": 14.0
+   "tier1_lat_ms": 14.8
   },
   {
    "tier2_ids": [
@@ -1479,7 +1485,7 @@
     251,
     1235
    ],
-   "tier2_lat_ms": 185.5
+   "tier2_lat_ms": 203.4
   },
   {
    "tier3_ids": [
@@ -1487,7 +1493,7 @@
     46,
     76
    ],
-   "tier3_lat_ms": 38.1
+   "tier3_lat_ms": 37.0
   },
   {
    "tier1_ids": [
@@ -1497,7 +1503,7 @@
     9,
     921
    ],
-   "tier1_lat_ms": 16.1
+   "tier1_lat_ms": 15.0
   },
   {
    "tier2_ids": [
@@ -1505,7 +1511,7 @@
     155,
     980
    ],
-   "tier2_lat_ms": 196.0
+   "tier2_lat_ms": 195.3
   },
   {
    "tier3_ids": [
@@ -1513,7 +1519,7 @@
     243,
     9
    ],
-   "tier3_lat_ms": 34.9
+   "tier3_lat_ms": 36.4
   },
   {
    "tier1_ids": [
@@ -1523,7 +1529,7 @@
     1293,
     151
    ],
-   "tier1_lat_ms": 16.7
+   "tier1_lat_ms": 13.6
   },
   {
    "tier2_ids": [
@@ -1531,7 +1537,7 @@
     1293,
     1300
    ],
-   "tier2_lat_ms": 192.6
+   "tier2_lat_ms": 195.6
   },
   {
    "tier3_ids": [
@@ -1539,7 +1545,7 @@
     242,
     1338
    ],
-   "tier3_lat_ms": 35.1
+   "tier3_lat_ms": 33.1
   },
   {
    "tier1_ids": [
@@ -1549,7 +1555,7 @@
     827,
     1337
    ],
-   "tier1_lat_ms": 15.1
+   "tier1_lat_ms": 12.7
   },
   {
    "tier2_ids": [
@@ -1557,7 +1563,7 @@
     241,
     1332
    ],
-   "tier2_lat_ms": 207.4
+   "tier2_lat_ms": 193.6
   },
   {
    "tier3_ids": [
@@ -1565,7 +1571,7 @@
     37,
     154
    ],
-   "tier3_lat_ms": 38.0
+   "tier3_lat_ms": 36.7
   },
   {
    "tier1_ids": [
@@ -1575,7 +1581,7 @@
     1182,
     1324
    ],
-   "tier1_lat_ms": 13.6
+   "tier1_lat_ms": 15.1
   },
   {
    "tier2_ids": [
@@ -1583,7 +1589,7 @@
     37,
     152
    ],
-   "tier2_lat_ms": 194.2
+   "tier2_lat_ms": 199.6
   },
   {
    "tier3_ids": [
@@ -1591,7 +1597,7 @@
     146,
     152
    ],
-   "tier3_lat_ms": 34.8
+   "tier3_lat_ms": 33.6
   },
   {
    "tier1_ids": [
@@ -1601,7 +1607,7 @@
     222,
     117
    ],
-   "tier1_lat_ms": 14.2
+   "tier1_lat_ms": 14.5
   },
   {
    "tier2_ids": [
@@ -1609,7 +1615,7 @@
     15,
     1189
    ],
-   "tier2_lat_ms": 206.2
+   "tier2_lat_ms": 189.5
   },
   {
    "tier3_ids": [
@@ -1617,7 +1623,7 @@
     225,
     10
    ],
-   "tier3_lat_ms": 42.6
+   "tier3_lat_ms": 35.8
   },
   {
    "tier1_ids": [
@@ -1627,7 +1633,7 @@
     61,
     225
    ],
-   "tier1_lat_ms": 16.8
+   "tier1_lat_ms": 14.0
   },
   {
    "tier2_ids": [
@@ -1635,7 +1641,7 @@
     111,
     61
    ],
-   "tier2_lat_ms": 199.2
+   "tier2_lat_ms": 200.6
   },
   {
    "tier3_ids": [
@@ -1643,7 +1649,7 @@
     10,
     60
    ],
-   "tier3_lat_ms": 97.9
+   "tier3_lat_ms": 83.4
   },
   {
    "tier1_ids": [
@@ -1653,7 +1659,7 @@
     1196,
     114
    ],
-   "tier1_lat_ms": 14.3
+   "tier1_lat_ms": 12.7
   },
   {
    "tier2_ids": [
@@ -1661,7 +1667,7 @@
     223,
     1196
    ],
-   "tier2_lat_ms": 220.6
+   "tier2_lat_ms": 198.0
   },
   {
    "tier3_ids": [
@@ -1669,7 +1675,7 @@
     1168,
     10
    ],
-   "tier3_lat_ms": 40.1
+   "tier3_lat_ms": 33.9
   },
   {
    "tier1_ids": [
@@ -1679,7 +1685,7 @@
     180,
     1186
    ],
-   "tier1_lat_ms": 16.2
+   "tier1_lat_ms": 13.2
   },
   {
    "tier2_ids": [
@@ -1687,7 +1693,7 @@
     1212,
     1186
    ],
-   "tier2_lat_ms": 218.1
+   "tier2_lat_ms": 205.9
   },
   {
    "tier3_ids": [
@@ -1695,7 +1701,7 @@
     115,
     10
    ],
-   "tier3_lat_ms": 40.5
+   "tier3_lat_ms": 50.7
   },
   {
    "tier1_ids": [
@@ -1713,7 +1719,7 @@
     57,
     23
    ],
-   "tier2_lat_ms": 250.5
+   "tier2_lat_ms": 219.4
   },
   {
    "tier3_ids": [
@@ -1721,7 +1727,7 @@
     23,
     55
    ],
-   "tier3_lat_ms": 41.6
+   "tier3_lat_ms": 33.4
   },
   {
    "tier1_ids": [
@@ -1731,7 +1737,7 @@
     1174,
     1181
    ],
-   "tier1_lat_ms": 14.4
+   "tier1_lat_ms": 10.9
   },
   {
    "tier2_ids": [
@@ -1739,7 +1745,7 @@
     1158,
     1174
    ],
-   "tier2_lat_ms": 223.2
+   "tier2_lat_ms": 243.3
   },
   {
    "tier3_ids": [
@@ -1747,7 +1753,7 @@
     1153,
     1158
    ],
-   "tier3_lat_ms": 37.0
+   "tier3_lat_ms": 50.6
   },
   {
    "tier1_ids": [
@@ -1757,7 +1763,7 @@
     1171,
     1170
    ],
-   "tier1_lat_ms": 16.7
+   "tier1_lat_ms": 18.8
   },
   {
    "tier2_ids": [
@@ -1765,7 +1771,7 @@
     1171,
     1172
    ],
-   "tier2_lat_ms": 203.7
+   "tier2_lat_ms": 232.4
   },
   {
    "tier3_ids": [
@@ -1773,7 +1779,7 @@
     9,
     10
    ],
-   "tier3_lat_ms": 41.7
+   "tier3_lat_ms": 50.7
   },
   {
    "tier1_ids": [
@@ -1783,7 +1789,7 @@
     131,
     136
    ],
-   "tier1_lat_ms": 13.7
+   "tier1_lat_ms": 18.1
   },
   {
    "tier2_ids": [
@@ -1791,7 +1797,7 @@
     144,
     238
    ],
-   "tier2_lat_ms": 227.6
+   "tier2_lat_ms": 230.1
   },
   {
    "tier3_ids": [
@@ -1799,7 +1805,7 @@
     238,
     239
    ],
-   "tier3_lat_ms": 39.6
+   "tier3_lat_ms": 31.8
   },
   {
    "tier1_ids": [
@@ -1809,7 +1815,7 @@
     240,
     263
    ],
-   "tier1_lat_ms": 12.7
+   "tier1_lat_ms": 15.3
   },
   {
    "tier2_ids": [
@@ -1817,7 +1823,7 @@
     34,
     240
    ],
-   "tier2_lat_ms": 220.9
+   "tier2_lat_ms": 217.3
   },
   {
    "tier3_ids": [
@@ -1825,7 +1831,7 @@
     34,
     240
    ],
-   "tier3_lat_ms": 39.9
+   "tier3_lat_ms": 68.3
   },
   {
    "tier1_ids": [
@@ -1835,7 +1841,7 @@
     259,
     112
    ],
-   "tier1_lat_ms": 13.5
+   "tier1_lat_ms": 13.0
   },
   {
    "tier2_ids": [
@@ -1843,7 +1849,7 @@
     260,
     254
    ],
-   "tier2_lat_ms": 213.9
+   "tier2_lat_ms": 222.3
   },
   {
    "tier3_ids": [
@@ -1851,7 +1857,7 @@
     259,
     10
    ],
-   "tier3_lat_ms": 40.2
+   "tier3_lat_ms": 35.9
   },
   {
    "tier1_ids": [
@@ -1861,7 +1867,7 @@
     8,
     166
    ],
-   "tier1_lat_ms": 15.3
+   "tier1_lat_ms": 14.0
   },
   {
    "tier2_ids": [
@@ -1869,7 +1875,7 @@
     166,
     173
    ],
-   "tier2_lat_ms": 229.3
+   "tier2_lat_ms": 212.2
   },
   {
    "tier3_ids": [
@@ -1877,7 +1883,7 @@
     177,
     181
    ],
-   "tier3_lat_ms": 43.0
+   "tier3_lat_ms": 39.4
   },
   {
    "tier1_ids": [
@@ -1887,7 +1893,7 @@
     30,
     1081
    ],
-   "tier1_lat_ms": 17.1
+   "tier1_lat_ms": 19.6
   },
   {
    "tier2_ids": [
@@ -1895,7 +1901,7 @@
     54,
     97
    ],
-   "tier2_lat_ms": 216.4
+   "tier2_lat_ms": 211.4
   },
   {
    "tier3_ids": [
@@ -1903,7 +1909,7 @@
     97,
     30
    ],
-   "tier3_lat_ms": 41.3
+   "tier3_lat_ms": 34.9
   }
  ]
 }

@@ -21,6 +21,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
@@ -103,7 +105,7 @@ def main() -> None:
     # 总体
     print("\n=== 总体（全套指标，三档对比） ===")
     header = f"{'tier':18s} " + " ".join(
-        f"{m:>8s}" for m in ("R@1", "R@3", "R@5", "H@1", "MRR", "nD@3", "P@3", "lat_ms")
+        f"{m:>8s}" for m in ("R@1", "R@3", "R@5", "H@1", "MRR", "nD@3", "P@3", "lat_avg", "p50", "p99")
     )
     print(header)
     all_out = {}
@@ -111,15 +113,20 @@ def main() -> None:
         if not s["result"]:
             continue
         sm = summarize(s["result"], k_list=(1, 3, 5))
-        avg_lat = sum(s["lat"]) / len(s["lat"]) if s["lat"] else 0
+        lat = np.asarray(s["lat"]) if s["lat"] else np.zeros(1)
+        lat_stats = {
+            "lat_avg": round(float(lat.mean()), 1),
+            "p50": round(float(np.percentile(lat, 50)), 1),
+            "p99": round(float(np.percentile(lat, 99)), 1),
+        }
         row = {
             "R@1": sm["Recall@1"], "R@3": sm["Recall@3"], "R@5": sm["Recall@5"],
             "H@1": sm["Hit@1"], "MRR": sm["MRR"], "nD@3": sm["nDCG@3"], "P@3": sm["P@3"],
-            "lat_ms": round(avg_lat, 1),
+            **lat_stats,
         }
         all_out[tier] = row
         print(f"{tier:18s} " + " ".join(f"{row[m]:>8}" for m in
-              ("R@1", "R@3", "R@5", "H@1", "MRR", "nD@3", "P@3", "lat_ms")))
+              ("R@1", "R@3", "R@5", "H@1", "MRR", "nD@3", "P@3", "lat_avg", "p50", "p99")))
 
     # 按类别
     print("\n=== 按类别 Recall@3 / Hit@1 / MRR（T1/T2/T3） ===")
