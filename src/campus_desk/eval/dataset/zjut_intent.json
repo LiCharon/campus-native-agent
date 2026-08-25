@@ -202,12 +202,12 @@
   {
     "id": "zjut-intent-021",
     "category": "multi_intent",
-    "student_input": "成绩单怎么打？宿舍什么时候清退？",
+    "student_input": "成绩单怎么打？这周三下午有空教室吗？",
     "intent": "multi_intent",
     "expected_route": "multi_intent",
-    "secondary_intents": ["knowledge", "knowledge"],
+    "secondary_intents": ["knowledge", "tool_query"],
     "turns": [],
-    "note": "一句话两个独立问题：成绩单打印 + 宿舍清退时间"
+    "note": "双意图区分：成绩单打印(knowledge) + 空教室查询(tool_query)"
   },
   {
     "id": "zjut-intent-022",
@@ -468,5 +468,95 @@
     "secondary_intents": ["knowledge"],
     "turns": [],
     "note": "FC 扩展：课表查询为主（tool_query），顺便问开放时间（knowledge）"
+  },
+  {
+    "id": "zjut-intent-048",
+    "category": "knowledge",
+    "student_input": "奖学金怎么申请？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "奖助咨询：奖学金申请流程（补 11 领域覆盖）"
+  },
+  {
+    "id": "zjut-intent-049",
+    "category": "knowledge",
+    "student_input": "校园招聘信息在哪看？",
+    "intent": "knowledge",
+    "expected_route": "knowledge",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "就业咨询：校招信息渠道（补 11 领域覆盖）"
+  },
+  {
+    "id": "zjut-intent-050",
+    "category": "multi_intent",
+    "student_input": "宿舍空调坏了怎么报修？维修一般要多久？",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge", "knowledge"],
+    "turns": [],
+    "note": "报修渠道(knowledge) + 维修时长(knowledge)，双知识意图"
+  },
+  {
+    "id": "zjut-intent-051",
+    "category": "multi_intent",
+    "student_input": "食堂菜太贵了要投诉，另外今天食堂几点关门？",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["other", "knowledge"],
+    "turns": [],
+    "note": "投诉(超范围→other/handoff) + 食堂时间(knowledge)"
+  },
+  {
+    "id": "zjut-intent-052",
+    "category": "multi_intent",
+    "student_input": "查下明天课表，再看看我高数考了多少分",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["tool_query", "tool_query"],
+    "turns": [],
+    "note": "双工具查询：课表 + 成绩"
+  },
+  {
+    "id": "zjut-intent-053",
+    "category": "multi_intent",
+    "student_input": "宿舍什么时候清退？3号楼下午有空教室吗？",
+    "intent": "multi_intent",
+    "expected_route": "multi_intent",
+    "secondary_intents": ["knowledge", "tool_query"],
+    "turns": [],
+    "note": "清退时间(knowledge) + 空教室(tool_query)"
+  },
+  {
+    "id": "zjut-intent-054",
+    "category": "other",
+    "student_input": "帮我写一篇论文",
+    "intent": "other",
+    "expected_route": "human_handoff",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "代写请求：超出校园服务范围转人工"
+  },
+  {
+    "id": "zjut-intent-055",
+    "category": "other",
+    "student_input": "今天天气怎么样",
+    "intent": "other",
+    "expected_route": "human_handoff",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "无关天气查询：超范围转人工"
+  },
+  {
+    "id": "zjut-intent-056",
+    "category": "other",
+    "student_input": "推荐个好吃的餐厅",
+    "intent": "other",
+    "expected_route": "human_handoff",
+    "secondary_intents": [],
+    "turns": [],
+    "note": "生活推荐：超范围转人工"
   }
 ]
