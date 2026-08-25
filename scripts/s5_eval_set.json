@@ -532,7 +532,9 @@
    "domain": "住宿后勤",
    "category": "keyword",
    "gold_ids": [
-    1196
+    1196,
+    10,
+    60
    ]
   },
   {
@@ -564,7 +566,10 @@
    "domain": "网络与IT",
    "category": "semantic",
    "gold_ids": [
-    1177
+    1177,
+    1172,
+    1167,
+    1168
    ]
   },
   {
@@ -596,7 +601,9 @@
    "domain": "安全与保卫",
    "category": "keyword",
    "gold_ids": [
-    172
+    177,
+    255,
+    173
    ]
   },
   {
