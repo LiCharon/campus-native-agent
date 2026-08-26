@@ -86,4 +86,4 @@ campus-desk/
 
 ## 文档说明
 
-项目内部规范：CLAUDE.md 已随主仓库公开（项目级开发规范）；AGENTS.md 与 docs/ 仍为本地/私有，不随主仓库公开——本 README 与代码即公开门面。
+项目内部开发规范与详细设计见 CLAUDE.md / docs/。
