@@ -38,6 +38,5 @@ config/zjut_m11_data.json
 # M11 采集原始文档（Tier 1 公开源下载产物，不进公开 repo）
 data/zjut_raw/
 
-# Agent 开发规范（内部设计，不进公开 repo）
-CLAUDE.md
+# Agent 开发规范（AGENTS.md 内部设计，不进公开 repo；CLAUDE.md 已纳入主仓库）
 AGENTS.md
