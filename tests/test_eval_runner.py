@@ -22,7 +22,7 @@ class PerInputClassifier:
     def __init__(self, cases):
         self.by_input = {c.student_input: c.intent for c in cases}
 
-    def classify(self, user_input):
+    def classify(self, user_input, recent=None):
         intent = self.by_input[user_input]
         return IntentResult(intent=intent, confidence=0.9, secondary_intents=[], reason="fake")
 

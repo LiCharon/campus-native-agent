@@ -96,12 +96,21 @@ def chat(
         )
         if conv is None:
             raise HTTPException(status_code=404, detail="会话不存在")
-        session.add(Message(conversation_id=conv.id, role="user", content=payload.msg))
+        user_msg = Message(conversation_id=conv.id, role="user", content=payload.msg)
+        session.add(user_msg)
+        session.flush()  # 取主键 id，供 _recent_history 排除当前消息（避免重复进窗口）
+        current_message_id = user_msg.id
         _auto_title(conv, payload.msg)
         conv.updated_at = datetime.now(UTC)  # 显式 touch：更新列表排序
 
     # 2. run_turn（锁内，LLM 网络 IO 不占 DB 事务）
-    result = run_turn(registry, user.id, payload.thread_id, payload.msg)
+    result = run_turn(
+        registry,
+        user.id,
+        payload.thread_id,
+        payload.msg,
+        current_message_id=current_message_id,
+    )
     sources = _build_sources(result, session_factory)
 
     # 3. assistant 消息落库（独立事务）

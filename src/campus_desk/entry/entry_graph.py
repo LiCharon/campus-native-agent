@@ -46,10 +46,11 @@ class EntryState(TypedDict):
     intent: IntentResult | None
     route: str
     reply: str
+    recent: list[str] | None  # M12-ZJUT：近期对话（user 文本），注入意图识别理解指代
 
 
 def _recognize(state: EntryState, classifier: IntentClassifier) -> dict:
-    return {"intent": classifier.classify(state["user_input"])}
+    return {"intent": classifier.classify(state["user_input"], recent=state.get("recent"))}
 
 
 def _gate(state: EntryState) -> dict:

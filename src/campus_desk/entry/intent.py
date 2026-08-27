@@ -139,6 +139,20 @@ JSON 格式（严格只输出 JSON，不要任何其他文字）：
 """
 
 
+def _build_human(user_input: str, recent: list[str] | None) -> str:
+    """组装意图识别的 human 消息：recent 非空时先给"近期对话"段理解指代。
+
+    recent 仅作指代消歧上下文，不参与检索打分（检索是关键词/embedding 计分）。
+    """
+    if recent:
+        lines = "\n".join(f"- {m}" for m in recent)
+        return (
+            f"近期对话（仅参考，用于理解指代如'那栋楼/这个'）:\n{lines}\n\n"
+            f"当前问题: {user_input}"
+        )
+    return user_input
+
+
 class IntentClassifier:
     """意图识别器：三层防线，返回 IntentResult。"""
 
@@ -156,18 +170,28 @@ class IntentClassifier:
         # 统一构造（llm.py）：response_format=json_object 构造期声明（DeepSeek 铁律）
         return build_llm()
 
-    def classify(self, user_input: str) -> IntentResult:
-        """三层防线：结构化输出 → 重试 → 规则兜底。保证不抛异常、必有结果。"""
+    def classify(
+        self, user_input: str, recent: list[str] | None = None
+    ) -> IntentResult:
+        """三层防线：结构化输出 → 重试 → 规则兜底。保证不抛异常、必有结果。
+
+        recent（M12-ZJUT）：近期对话 user 文本，注入 human 消息帮助理解指代
+        （如"那栋楼"），不进入检索（检索是关键词/embedding 计分）。
+        """
         for _ in range(self.max_attempts):
-            result = self._invoke_structured(user_input)
+            result = self._invoke_structured(user_input, recent)
             if result is not None:
                 return result
         return self._rule_fallback(user_input)
 
-    def _invoke_structured(self, user_input: str) -> IntentResult | None:
+    def _invoke_structured(
+        self, user_input: str, recent: list[str] | None = None
+    ) -> IntentResult | None:
         """第一/二层：调 LLM 并解析 JSON；失败返回 None（不抛）。"""
         try:
-            raw = self.llm.invoke([("system", _STRUCTURED_PROMPT), ("human", user_input)])
+            raw = self.llm.invoke(
+                [("system", _STRUCTURED_PROMPT), ("human", _build_human(user_input, recent))]
+            )
         except Exception as exc:  # noqa: BLE001 — 外部调用需兜底所有错误（env_check 同款先例）
             self._last_error = f"LLM 调用异常: {exc!r}"
             return None

@@ -63,15 +63,26 @@ class ClarifyDecider:
     def _default_llm() -> BaseChatModel:
         return build_llm()
 
-    def decide(self, history: list[str], user_text: str, missed: bool) -> ClarifyDecision:
+    def decide(
+        self,
+        history: list[str],
+        user_text: str,
+        missed: bool,
+        recent: list[str] | None = None,
+    ) -> ClarifyDecision:
         """决定 ask 追问 / handoff 转人工。
 
         missed 为预留参数：当前实现不参与决策（决策只看 LLM 输出），
         供编排层明确表达"检索未命中才调用本决策器"的语义，避免误用为
         通用问答器；后续如需按命中状态调整策略（如 missed=False 直接答）
         可在此扩展。
+        recent（M12-ZJUT）：近期对话 user 文本，作为背景段理解指代（取代旧
+        history[-4:] 的口径，recent 已含这些 user 原话，避免重复拼接）。
         """
         context = f"对话历史:\n{chr(10).join(history[-4:]) or '（无）'}\n学生本轮: {user_text}"
+        if recent:
+            recent_lines = "\n".join(f"- {m}" for m in recent)
+            context += f"\n\n近期对话（理解指代用）:\n{recent_lines}"
         system_prompt = _DECIDE_PROMPT
         if self.profile:
             system_prompt += f"\n\n关于该学生：{self.profile}"

@@ -72,13 +72,18 @@ def turn(
     msg: str,
     *,
     user_id: str | None = None,
+    recent: list[str] | None = None,
 ) -> dict:
-    """一轮对话：Entry 分流 → 按路由/主意图进 knowledge 或 query 图。"""
+    """一轮对话：Entry 分流 → 按路由/主意图进 knowledge 或 query 图。
+
+    recent（M12-ZJUT）：近期对话 user 文本（messages 表最近 N 轮，已排除当前消息），
+    注入 intent/decide/工具选择理解指代；不进入检索拼接（检索按当前+图内 ≤3 轮）。
+    """
     with (
         telemetry.trace_attrs(user_id=user_id, session_id=thread_id, tags=["zjut-m2"]),
         telemetry.span("orchestrator.turn", metadata={"thread_id": thread_id}),
     ):
-        entry_out = entry_graph.invoke({"user_input": msg})
+        entry_out = entry_graph.invoke({"user_input": msg, "recent": recent})
         route = entry_out["route"]
         intent = entry_out.get("intent")
         cfg_k = {"configurable": {"thread_id": thread_id}}
@@ -96,14 +101,31 @@ def turn(
                 state = knowledge_graph.invoke(Command(resume=msg), cfg_k)
             return _scored(_knowledge_result(state))
 
+        # 非挂起：按 route 选图，invoke 前 reset 该图残留标记，避免同会话已完成
+        # 轮次后 invoke 新问题被持久化的 _consumed=True 吞掉（collect 误判"已处理"
+        # 取空 student_answer）。只 reset 本轮要 invoke 的图——reset 后立刻 invoke，
+        # state 被真实节点覆盖，不会留下假挂起；另一图本轮不 invoke，不 reset 也
+        # 不制造假挂起。挂起分支（Command(resume)）已在上方面 return，不受影响。
+        _reset_k = {
+            "_consumed": False,
+            "history": [],
+            "rounds": 0,
+            "student_answer": None,
+            "pending_question": None,
+            "finished": False,
+        }
+        _reset_q = {**_reset_k, "fail_count": 0, "tool_calls": []}
+
         if route == KNOWLEDGE:
             with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
-                state = knowledge_graph.invoke({"user_input": msg}, cfg_k)
+                knowledge_graph.update_state(cfg_k, _reset_k)
+                state = knowledge_graph.invoke({"user_input": msg, "recent": recent}, cfg_k)
             return _scored(_knowledge_result(state))
 
         if route == TOOL_QUERY:
             with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
-                state = query_graph.invoke({"user_input": msg}, cfg_q)
+                query_graph.update_state(cfg_q, _reset_q)
+                state = query_graph.invoke({"user_input": msg, "recent": recent}, cfg_q)
             return _scored(_query_result(state))
 
         if route == MULTI_INTENT:
@@ -118,11 +140,13 @@ def turn(
                 primary = secondary[0] if secondary else KNOWLEDGE
             if primary == TOOL_QUERY:
                 with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
-                    state = query_graph.invoke({"user_input": msg}, cfg_q)
+                    query_graph.update_state(cfg_q, _reset_q)
+                    state = query_graph.invoke({"user_input": msg, "recent": recent}, cfg_q)
                 result = _query_result(state)
             else:
                 with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
-                    state = knowledge_graph.invoke({"user_input": msg}, cfg_k)
+                    knowledge_graph.update_state(cfg_k, _reset_k)
+                    state = knowledge_graph.invoke({"user_input": msg, "recent": recent}, cfg_k)
                 result = _knowledge_result(state)
             result["route"] = MULTI_INTENT
             reply = result["reply"]

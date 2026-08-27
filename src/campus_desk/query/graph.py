@@ -147,6 +147,7 @@ class QueryState(TypedDict):
     fail_count: int
     finished: bool
     _consumed: bool
+    recent: list[str] | None  # M12-ZJUT：近期对话 user 文本，注入工具选择理解指代
 
 
 class _Deps:
@@ -210,11 +211,22 @@ def _assemble(name: str, result: dict) -> str:
     return assembler(result) if assembler else CIRCUIT_DEGRADED_REPLY
 
 
-def _call_tools(deps: _Deps, text: str):
-    """FC 调用：返回 tool_calls 列表（异常时返回空列表，不抛）。"""
+def _call_tools(deps: _Deps, text: str, recent: list[str] | None = None):
+    """FC 调用：返回 tool_calls 列表（异常时返回空列表，不抛）。
+
+    recent（M12-ZJUT）：近期对话 user 文本，拼入 human 消息帮助工具选择理解
+    指代（如"那栋楼"）；不进入检索拼接（检索只看当前+图内 ≤3 追问轮）。
+    """
     try:
         llm_tools = deps.llm.bind_tools(TOOL_SCHEMAS)
-        reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", text)])
+        human = text
+        if recent:
+            lines = "\n".join(f"- {m}" for m in recent)
+            human = (
+                f"近期对话（仅参考，用于理解指代如'那栋楼/这个'）:\n{lines}\n\n"
+                f"当前问题: {text}"
+            )
+        reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", human)])
         return getattr(reply, "tool_calls", None) or []
     except Exception:  # noqa: BLE001 — 外部调用兜底
         return []
@@ -255,6 +267,9 @@ def _make_collect(deps: _Deps):
             if not state.get("_consumed")
             else (state.get("student_answer") or "")
         )
+        # M12 防御兜底：异常残留 _consumed 且无 student_answer 时取当前输入，避免吞消息
+        if state.get("_consumed") and not state.get("student_answer"):
+            raw = state.get("user_input", "")
         # 追问轮合并全部历史原话（拍板 Q11：对话短无上下文过长风险，早轮关键词不丢）
         text = " ".join(history + [raw]) if history else raw
         fail_count = state.get("fail_count", 0)
@@ -285,7 +300,7 @@ def _make_collect(deps: _Deps):
         # 正常路径：FC 两次尝试（重试 1 次）
         tcs = []
         for _ in range(2):
-            tcs = _call_tools(deps, text)
+            tcs = _call_tools(deps, text, recent=state.get("recent"))
             if tcs:
                 break
         if tcs:

@@ -254,6 +254,21 @@ def test_fc_failure_degrades_for_new_tool(db_session_factory):
     assert "电量" in out["reply"]
 
 
+def test_consecutive_new_questions_not_swallowed(db_session_factory):
+    """M12 B1：同 thread 上一轮直答（_consumed=True, fail_count=0）后，新问题不吞。
+
+    轮1 查空教室直答；轮2 换问宿舍电量必须命中（提取到楼栋/房间）。若 _consumed 残留
+    取空 student_answer，轮2 以空文本走 FC→空参工具→降级而非直答电量。
+    """
+    from conftest import FakeToolLLM
+
+    graph, cfg = make(db_session_factory, FakeToolLLM([rooms_call(), power_call()]))
+    first = graph.invoke({"user_input": "3号楼下午有空教室吗"}, cfg)
+    assert first["outcome"] == "answer" and "空闲教室" in first["reply"]
+    second = graph.invoke({"user_input": "3号楼205宿舍还有多少电"}, cfg)
+    assert second["outcome"] == "answer" and "剩余电量" in second["reply"]
+
+
 def test_clarify_routes_to_timetable_asks_weekday(db_session_factory):
     """课表缺参追问按领域路由：问星期几，而非默认的楼栋追问。"""
     from conftest import FakeToolLLM

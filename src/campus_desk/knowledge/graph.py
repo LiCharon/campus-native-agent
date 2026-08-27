@@ -32,6 +32,7 @@ class KnowledgeState(TypedDict):
     hits: list[int]
     finished: bool
     _consumed: bool
+    recent: list[str] | None  # M12-ZJUT：近期对话 user 文本，注入 decide 理解指代
 
 
 class _Deps:
@@ -57,6 +58,9 @@ def _make_collect(deps: _Deps):
         else:
             raw = state.get("student_answer") or ""
             consumed = True
+        # M12 防御兜底：异常残留 _consumed 且无 student_answer 时取当前输入，避免吞消息
+        if state.get("_consumed") and not state.get("student_answer"):
+            raw = state.get("user_input", "")
 
         # 追问轮：全部历史（学生每轮原话）+ 本轮补充合并检索。
         # join 全 history 而非只取 history[-1]：多轮追问时早轮关键词不丢
@@ -77,7 +81,7 @@ def _make_collect(deps: _Deps):
             }
 
         rounds = state.get("rounds", 0) + 1
-        decision = deps.decider.decide(history, text, missed=True)
+        decision = deps.decider.decide(history, text, missed=True, recent=state.get("recent"))
         if decision.action == "ask" and rounds <= MAX_CLARIFY_ROUNDS:
             questions = [q for q in decision.questions if q][:2]
             question_text = (

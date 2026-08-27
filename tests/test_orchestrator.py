@@ -57,6 +57,11 @@ class FakeGraph:
         self.invoked.append((args, kwargs))
         return self.state
 
+    def update_state(self, cfg, values):
+        # 测试替身：无状态，reset 对 FakeGraph 无意义（仅生产 CompiledGraph 需要）
+        self.reset_cfgs = getattr(self, "reset_cfgs", [])
+        self.reset_cfgs.append((cfg, values))
+
 
 def test_knowledge_route_invokes_graph_with_user_input():
     entry = FakeEntryGraph(KNOWLEDGE)
@@ -64,7 +69,7 @@ def test_knowledge_route_invokes_graph_with_user_input():
     out = turn(entry, kg, FakeGraph(), THREAD, "校历？")
     assert kg.invoked, "knowledge 路由必须 invoke knowledge_graph"
     args, _ = kg.invoked[0]
-    assert args[0] == {"user_input": "校历？"}
+    assert args[0]["user_input"] == "校历？"
     assert out["route"] == KNOWLEDGE
     assert out["reply"] == "校历见教务处网站"
 
@@ -162,3 +167,33 @@ def test_knowledge_hits_passthrough():
     kg = FakeGraph(state={"reply": "命中", "finished": True, "outcome": "answer", "hits": [1, 4]})
     out = turn(entry, kg, FakeGraph(), THREAD, "什么时候放寒假？")
     assert out["hits"] == [1, 4]
+
+
+def test_two_consecutive_new_questions_not_swallowed(db_session_factory):
+    """M12 B1：orchestrator 非挂起分支 invoke 前 update_state 重置 _consumed，
+    同 thread 两轮独立问题都不应被吞（验证 reset 是生产修复主路径）。"""
+    from langgraph.checkpoint.memory import InMemorySaver
+    from campus_desk.db.models import KnowledgeEntry
+    from campus_desk.entry.entry_graph import build_entry_graph
+    from campus_desk.entry.intent import IntentResult
+    from campus_desk.knowledge.decide import ClarifyDecider
+    from campus_desk.knowledge.graph import build_knowledge_graph
+    from campus_desk.query.graph import build_query_graph
+    from conftest import FakeToolLLM
+
+    class KClassifier:
+        def classify(self, user_input, recent=None):
+            return IntentResult(intent="knowledge", confidence=0.9, secondary_intents=[], reason="t")
+
+    with db_session_factory() as s, s.begin():
+        s.query(KnowledgeEntry).delete()
+        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放寒假", type="info", answer="寒假以通知为准。"))
+        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位", question="图书馆座位", type="info", answer="目前有空余座位。"))
+
+    entry = build_entry_graph(classifier=KClassifier())
+    kg = build_knowledge_graph(db_session_factory, decider=ClarifyDecider(), checkpointer=InMemorySaver())
+    qg = build_query_graph(db_session_factory, llm=FakeToolLLM([]), checkpointer=InMemorySaver())
+    out1 = turn(entry, kg, qg, "t-consec-o", "什么时候放寒假")
+    assert "寒假" in out1["reply"]
+    out2 = turn(entry, kg, qg, "t-consec-o", "图书馆还有座位吗")
+    assert "座位" in out2["reply"]

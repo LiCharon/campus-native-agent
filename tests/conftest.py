@@ -32,9 +32,13 @@ class FakeStructuredLLM:
     def __init__(self, sequence):
         self.sequence = list(sequence)
         self.calls = 0
+        self.last_messages = None  # M12 B2：记录最近一次 invoke 的 messages，便于断言注入
+        self.all_messages = []  # M12 B2：累计所有 invoke 的 messages
 
     def invoke(self, messages):
         self.calls += 1
+        self.last_messages = messages
+        self.all_messages.append(messages)
         if not self.sequence:
             return type("FakeAIMessage", (), {"content": "这不是JSON"})()
         item = self.sequence.pop(0)
@@ -54,12 +58,16 @@ class FakeToolLLM:
     def __init__(self, sequence):
         self.sequence = list(sequence)
         self.calls = 0
+        self.last_messages = None  # M12 B2：记录最近一次 invoke 的 messages
+        self.all_messages = []
 
     def bind_tools(self, schemas):
         return self
 
     def invoke(self, messages):
         self.calls += 1
+        self.last_messages = messages
+        self.all_messages.append(messages)
         if not self.sequence:
             return AIMessage(content="", tool_calls=[])
         item = self.sequence.pop(0)
@@ -74,7 +82,7 @@ class FakeIntentClassifier:
     def __init__(self, result):
         self.result = result
 
-    def classify(self, user_input):
+    def classify(self, user_input, recent=None):
         return self.result
 
 
@@ -153,7 +161,7 @@ def api_client(db_session_factory):
     from campus_desk.knowledge.graph import build_knowledge_graph
 
     class FakeClassifier:
-        def classify(self, user_input):
+        def classify(self, user_input, recent=None):
             return IntentResult(
                 intent="knowledge", confidence=0.9, secondary_intents=[], reason="t"
             )

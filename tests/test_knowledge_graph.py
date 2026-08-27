@@ -26,7 +26,7 @@ class FakeDecider:
     def __init__(self, sequence):
         self.sequence = list(sequence)
 
-    def decide(self, history, user_text, missed):
+    def decide(self, history, user_text, missed, recent=None):
         return self.sequence.pop(0)
 
 
@@ -141,6 +141,26 @@ def test_max_clarify_rounds_forced_handoff(db_session_factory):
         assert s.query(BadCase).one().status == "PENDING"
 
 
+def test_consecutive_new_questions_not_swallowed(db_session_factory):
+    """M12 B1：同 thread 已完成一轮（_consumed=True）后，新问题不应被吞。
+
+    轮1 命中 A 直答；轮2 换问不同条目 B 必须命中 B。若 _consumed 残留取空
+    student_answer，轮2 会以空文本检索→不命中→decider.pop(0) 越界；此处断言命中 B。
+    """
+    from campus_desk.db.models import KnowledgeEntry
+
+    _clear_knowledge(db_session_factory)
+    with db_session_factory() as s, s.begin():
+        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放寒假", type="info", answer="寒假以通知为准。"))
+        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位", question="图书馆座位", type="info", answer="目前有空余座位。"))
+    graph = build_knowledge_graph(db_session_factory, decider=FakeDecider([]), checkpointer=InMemorySaver())
+    cfg = {"configurable": {"thread_id": "t-consec-k"}}
+    first = graph.invoke({"user_input": "什么时候放寒假"}, cfg)
+    assert "寒假" in first["reply"]
+    second = graph.invoke({"user_input": "图书馆还有座位吗"}, cfg)
+    assert "座位" in second["reply"]
+
+
 def test_clarify_merge_joins_all_history(db_session_factory):
     """T6 Minor：合并检索 join 全部 history（而非仅上一轮），早轮关键词不丢。
 
@@ -154,7 +174,7 @@ def test_clarify_merge_joins_all_history(db_session_factory):
     seen = []
 
     class RecordingDecider:
-        def decide(self, history, user_text, missed):
+        def decide(self, history, user_text, missed, recent=None):
             seen.append((list(history), user_text))
             return ClarifyDecision(
                 action="ask", questions=["请补充。"], reply="请补充。", summary="追问"

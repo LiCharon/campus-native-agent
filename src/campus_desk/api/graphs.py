@@ -10,7 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from langgraph.checkpoint.sqlite import SqliteSaver
+from sqlalchemy import select
 
+from campus_desk.config import settings
 from campus_desk.db.session import SessionFactory
 from campus_desk.entry.entry_graph import build_entry_graph
 from campus_desk.entry.orchestrator import turn as orchestrator_turn
@@ -110,10 +112,62 @@ class GraphRegistry:
         )
 
 
-def run_turn(registry: GraphRegistry, user_id: str, thread_id: str, msg: str) -> dict:
-    """锁内调 orchestrator.turn（同步；FastAPI 路由用 def 走线程池）。"""
+def _recent_history(
+    thread_id: str,
+    session_factory: SessionFactory,
+    exclude_message_id: int | None,
+    n: int,
+) -> list[str]:
+    """取会话最近 n 条 user 文本（排除当前消息），升序，供 LLM 上下文窗口。
+
+    chat.py 先落库当前消息再 run_turn，故当前条已在库；用 exclude_message_id
+    显式排除，单/多 worker 都正确（为 M12+ 水平并发预留，不依赖执行顺序）。
+    失败按空返回（上下文窗口为增强项，不阻断主流程）。
+    """
+    try:
+        from campus_desk.db.models import Conversation, Message
+
+        with session_factory() as session:
+            conv_id = session.execute(
+                select(Conversation.id).where(Conversation.thread_id == thread_id)
+            ).scalar()
+            if conv_id is None:
+                return []
+            stmt = select(Message.content).where(
+                Message.conversation_id == conv_id, Message.role == "user"
+            )
+            if exclude_message_id is not None:
+                stmt = stmt.where(Message.id != exclude_message_id)
+            stmt = stmt.order_by(Message.id.desc()).limit(n)
+            rows = session.execute(stmt).scalars().all()
+        return list(reversed(rows))
+    except Exception:  # noqa: BLE001 — 上下文窗口失败不阻断主对话
+        return []
+
+
+def run_turn(
+    registry: GraphRegistry,
+    user_id: str,
+    thread_id: str,
+    msg: str,
+    current_message_id: int | None = None,
+) -> dict:
+    """锁内调 orchestrator.turn（同步；FastAPI 路由用 def 走线程池）。
+
+    current_message_id：chat.py 落库的当前 user 消息 id，用于从近期历史排除自身
+    （避免当前问题重复进上下文窗口）。无值时 _recent_history 不排除任何条。
+    """
     bundle = registry.bundle_for(user_id)
+    recent = _recent_history(
+        thread_id, registry._session_factory, current_message_id, settings.context_window_rounds
+    )
     with registry.turn_lock:
         return orchestrator_turn(
-            bundle.entry, bundle.knowledge, bundle.query, thread_id, msg, user_id=user_id
+            bundle.entry,
+            bundle.knowledge,
+            bundle.query,
+            thread_id,
+            msg,
+            user_id=user_id,
+            recent=recent,
         )

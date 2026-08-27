@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # 登录鉴权：JWT 密钥（演示环境默认值 ≥32 字节，生产必须改）与过期分钟数
     jwt_secret: str = "dev-secret-change-me-0123456789abcdef"
     jwt_expire_minutes: int = 1440
+    # M12-ZJUT 上下文窗口：注入 LLM 的"近期对话"轮数（按 user 消息计，默认最近 8 轮）。
+    # 仅约束 LLM prompt（意图/追问决策/工具选择），不约束检索拼接（embedding/关键词计分）。
+    context_window_rounds: int = 8
 
     @property
     def langfuse_enabled(self) -> bool:
