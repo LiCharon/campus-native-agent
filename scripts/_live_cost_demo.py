@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,7 +33,7 @@ TURNS = [
 ]
 
 USER_ID = "student-001"
-THREAD = "live-cost-demo-20260829"
+THREAD = os.environ.get("LIVE_THREAD", "live-cost-demo-20260829")
 
 
 def main() -> None:
