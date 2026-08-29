@@ -162,6 +162,9 @@ class _Deps:
     ):
         self.session_factory = session_factory
         self.llm = llm
+        # M13B-ZJUT：tools 绑定编译期一次（图生命周期内复用），避免每次 FC 调用重复构造对象
+        # llm=None 时（仅测 prompt 等只读场景）跳过绑定，_call_tools 走异常兜底返回 []
+        self.llm_tools = llm.bind_tools(TOOL_SCHEMAS) if llm is not None else None
         self.user_id = user_id
         self.student_no = student_no
         self.today = today
@@ -218,7 +221,7 @@ def _call_tools(deps: _Deps, text: str, recent: list[str] | None = None):
     指代（如"那栋楼"）；不进入检索拼接（检索只看当前+图内 ≤3 追问轮）。
     """
     try:
-        llm_tools = deps.llm.bind_tools(TOOL_SCHEMAS)
+        llm_tools = deps.llm_tools  # M13B-ZJUT：复用编译期一次绑定的 tools
         human = text
         if recent:
             lines = "\n".join(f"- {m}" for m in recent)

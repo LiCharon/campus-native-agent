@@ -278,7 +278,8 @@ class TestCallPointTagging:
         assert usage.CALL_POINT_DECIDE in spy_call_point
 
     def test_tool_select_call_tagged(self, spy_call_point):
-        deps = SimpleNamespace(llm=_FakeLLM(), query_prompt=lambda: "prompt")
+        # M13B-ZJUT：_call_tools 复用 deps.llm_tools（与生产 _Deps 对齐）
+        deps = SimpleNamespace(llm=_FakeLLM(), llm_tools=_FakeLLM(), query_prompt=lambda: "prompt")
         _call_tools(deps, "明天有空教室吗")
         assert usage.CALL_POINT_TOOL_SELECT in spy_call_point
 

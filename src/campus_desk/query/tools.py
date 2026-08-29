@@ -530,7 +530,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "query_timetable",
-            "description": "查询学生某教学周某天的课程表（学生学号由系统注入，无需询问）",
+            "description": "查询学生某教学周某天的课程表",
             "strict": True,
             "parameters": {
                 "type": "object",
@@ -550,7 +550,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "query_exam_scores",
-            "description": "查询学生某学期的课程成绩（学生学号由系统注入，无需询问）",
+            "description": "查询学生某学期的课程成绩",
             "strict": True,
             "parameters": {
                 "type": "object",
@@ -566,7 +566,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "query_exam_schedule",
-            "description": "查询学生某学期的考试时间地点安排（学生学号由系统注入，无需询问）",
+            "description": "查询学生某学期的考试时间地点安排",
             "strict": True,
             "parameters": {
                 "type": "object",
@@ -582,7 +582,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "query_library_borrow",
-            "description": "查询学生在借图书与应还日期（学生学号由系统注入，无需询问）",
+            "description": "查询学生在借图书与应还日期",
             "strict": True,
             "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
         },
@@ -591,7 +591,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "query_card_balance",
-            "description": "查询学生校园卡余额（学生学号由系统注入，无需询问）",
+            "description": "查询学生校园卡余额",
             "strict": True,
             "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
         },
@@ -707,7 +707,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "retrieve_knowledge",
-            "description": "检索校园知识库，回答校园办事类问题（校园卡/图书馆/奖助/宿舍/教务等）。当对话中需要解答校园常识或办事流程、且不是纯数据查询时使用。",
+            "description": "检索校园知识库，解答校园办事类常识与流程（非纯数据查询时使用）。",
             "strict": True,
             "parameters": {
                 "type": "object",

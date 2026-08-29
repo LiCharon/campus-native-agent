@@ -72,6 +72,7 @@ def test_query_call_tools_injects_recent():
     class _FakeDeps:
         def __init__(self, llm):
             self.llm = llm
+            self.llm_tools = llm  # M13B-ZJUT：复用编译期一次绑定（与生产 _Deps 对齐）
 
         def query_prompt(self):
             return "你是校园查询助手"
