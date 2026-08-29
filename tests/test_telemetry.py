@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-from campus_desk import telemetry
+from campus_desk import telemetry, usage
 from campus_desk.config import settings
 from campus_desk.llm import build_llm
 
@@ -35,10 +35,16 @@ def test_trace_attrs_noop_without_keys():
         pass
 
 
-def test_build_llm_without_callbacks():
-    """build_llm() 无 key 时不挂 callbacks（llm.callbacks 为 None）。"""
+def test_build_llm_without_langfuse_callback():
+    """build_llm() 无 key 时不挂 langfuse handler（M13 起仍挂 usage handler）。
+
+    M13 语义变更：本地成本计量 handler 无条件挂载（不依赖任何 key），所以
+    callbacks 不再为 None——这里锁的是"没有 langfuse handler"这一条。
+    """
     llm = build_llm()
-    assert llm.callbacks is None
+    callbacks = list(llm.callbacks or [])
+    assert all(type(c).__module__.split(".")[0] != "langfuse" for c in callbacks)
+    assert any(isinstance(c, usage.UsageCallbackHandler) for c in callbacks)
     assert llm.model_kwargs == {"response_format": {"type": "json_object"}}  # 结构化模板不动
 
 

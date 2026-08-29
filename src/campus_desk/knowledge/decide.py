@@ -10,6 +10,7 @@ from typing import Literal
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field, ValidationError
 
+from campus_desk import usage
 from campus_desk.llm import build_llm
 
 _USE_DEFAULT_LLM = object()
@@ -90,7 +91,9 @@ class ClarifyDecider:
             return ClarifyDecision(action="handoff", reply=_FALLBACK_REPLY)
         for _ in range(self.max_attempts):
             try:
-                raw = self.llm.invoke([("system", system_prompt), ("human", context)])
+                # M13：标记调用点（ContextVar，见 usage.call_point 注释）
+                with usage.call_point(usage.CALL_POINT_DECIDE):
+                    raw = self.llm.invoke([("system", system_prompt), ("human", context)])
             except Exception as exc:  # noqa: BLE001 — 外部调用兜底
                 self._last_error = f"LLM 调用异常: {exc!r}"
                 continue

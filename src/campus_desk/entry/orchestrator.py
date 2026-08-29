@@ -15,7 +15,7 @@ primary=other/缺失 → 取 secondary 首个非 other 意图（回复加"您好
 
 from langgraph.types import Command
 
-from campus_desk import telemetry
+from campus_desk import telemetry, usage
 from campus_desk.entry.entry_graph import _INTENT_LABELS, _ROUTE_REPLIES
 from campus_desk.entry.routes import KNOWLEDGE, MULTI_INTENT, TOOL_QUERY
 
@@ -38,6 +38,8 @@ def _scored(result: dict) -> dict:
 
 
 def _knowledge_result(state: dict) -> dict:
+    # M13：回写最终 route，供 usage 埋点归属（两处 knowledge 出口 + 挂起恢复都过这里）
+    usage.patch_usage_ctx(route=KNOWLEDGE)
     return {
         "reply": state.get("reply", ""),
         "route": KNOWLEDGE,
@@ -49,6 +51,7 @@ def _knowledge_result(state: dict) -> dict:
 
 
 def _query_result(state: dict) -> dict:
+    usage.patch_usage_ctx(route=TOOL_QUERY)
     return {
         "reply": state.get("reply", ""),
         "route": TOOL_QUERY,
@@ -82,6 +85,8 @@ def turn(
     with (
         telemetry.trace_attrs(user_id=user_id, session_id=thread_id, tags=["zjut-m2"]),
         telemetry.span("orchestrator.turn", metadata={"thread_id": thread_id}),
+        # M13：归属上下文（user/thread 入口设置，route 由各出口回写）——退出自动清理
+        usage.usage_ctx(user_id=user_id, thread_id=thread_id),
     ):
         entry_out = entry_graph.invoke({"user_input": msg, "recent": recent})
         route = entry_out["route"]
@@ -92,11 +97,14 @@ def turn(
         q_pending = query_graph.get_state(cfg_q).next != ()
 
         # 挂起恢复优先（防御按 query 优先；两图不会同时挂起）
+        # M13：route 在 invoke **前**回写——图内 LLM 调用（decide/tool_select）才能带上正确归属
         if q_pending:
+            usage.patch_usage_ctx(route=TOOL_QUERY)
             with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
                 state = query_graph.invoke(Command(resume=msg), cfg_q)
             return _scored(_query_result(state))
         if k_pending:
+            usage.patch_usage_ctx(route=KNOWLEDGE)
             with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
                 state = knowledge_graph.invoke(Command(resume=msg), cfg_k)
             return _scored(_knowledge_result(state))
@@ -117,12 +125,14 @@ def turn(
         _reset_q = {**_reset_k, "fail_count": 0, "tool_calls": []}
 
         if route == KNOWLEDGE:
+            usage.patch_usage_ctx(route=KNOWLEDGE)
             with telemetry.span("agent.knowledge", metadata={"thread_id": thread_id}):
                 knowledge_graph.update_state(cfg_k, _reset_k)
                 state = knowledge_graph.invoke({"user_input": msg, "recent": recent}, cfg_k)
             return _scored(_knowledge_result(state))
 
         if route == TOOL_QUERY:
+            usage.patch_usage_ctx(route=TOOL_QUERY)
             with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
                 query_graph.update_state(cfg_q, _reset_q)
                 state = query_graph.invoke({"user_input": msg, "recent": recent}, cfg_q)
@@ -138,6 +148,7 @@ def turn(
                     if s in (KNOWLEDGE, TOOL_QUERY)
                 ]
                 primary = secondary[0] if secondary else KNOWLEDGE
+            usage.patch_usage_ctx(route=MULTI_INTENT)
             if primary == TOOL_QUERY:
                 with telemetry.span("agent.query", metadata={"thread_id": thread_id}):
                     query_graph.update_state(cfg_q, _reset_q)
@@ -149,6 +160,7 @@ def turn(
                     state = knowledge_graph.invoke({"user_input": msg, "recent": recent}, cfg_k)
                 result = _knowledge_result(state)
             result["route"] = MULTI_INTENT
+            usage.patch_usage_ctx(route=MULTI_INTENT)
             reply = result["reply"]
             if polite:
                 reply = _POLITE_PREFIX + reply

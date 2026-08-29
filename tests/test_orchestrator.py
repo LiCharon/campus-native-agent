@@ -172,14 +172,15 @@ def test_knowledge_hits_passthrough():
 def test_two_consecutive_new_questions_not_swallowed(db_session_factory):
     """M12 B1：orchestrator 非挂起分支 invoke 前 update_state 重置 _consumed，
     同 thread 两轮独立问题都不应被吞（验证 reset 是生产修复主路径）。"""
+    from conftest import FakeToolLLM
     from langgraph.checkpoint.memory import InMemorySaver
+
     from campus_desk.db.models import KnowledgeEntry
     from campus_desk.entry.entry_graph import build_entry_graph
     from campus_desk.entry.intent import IntentResult
     from campus_desk.knowledge.decide import ClarifyDecider
     from campus_desk.knowledge.graph import build_knowledge_graph
     from campus_desk.query.graph import build_query_graph
-    from conftest import FakeToolLLM
 
     class KClassifier:
         def classify(self, user_input, recent=None):

@@ -12,6 +12,7 @@
 - **知识库管理**：浏览 / 筛选 / 新建 / 编辑 / 删除知识条目，管理员改动即时生效（审查采纳与直接编辑双入口）
 - **长期记忆画像**：记住学生常驻楼栋与常问领域，后续回答更贴合个人上下文，避免重复追问
 - **可观测与权限**：Langfuse 全链路埋点；角色默认权限 ∪ 附加权限位
+- **调用成本计量**：每次大模型调用的实际 token 用量自动入库，可按天 / 调用点 / 用户 / 会话统计并估算费用（报表脚本，单价可配置）
 - **前端闭环**：对话 / 客服工作台 / 知识库审查 / 看板 / 用户管理 / 审计日志（Vue3 + Element Plus，JWT 鉴权）
 
 ## 技术栈
@@ -23,7 +24,7 @@
 | 后端  | FastAPI + Pydantic v2                                   |
 | 数据  | MySQL 8 + SQLAlchemy 2.0（alembic 迁移）                    |
 | 前端  | Vue3 + Element Plus                                     |
-| 可观测 | Langfuse（agent 步骤级 trace）                               |
+| 可观测 | Langfuse（agent 步骤级 trace）+ 调用计量（token 落库 + 报表）    |
 | 语言  | Python 3.14                                             |
 
 ## 快速开始
@@ -73,7 +74,7 @@ campus-desk/
 │  ├─ db/              SQLAlchemy + alembic + 幂等种子
 │  └─ telemetry.py     Langfuse 全链路埋点
 ├─ frontend/src/views/ Vue3 页面（Login / Chat / CsWorkbench / AdminReview / StatsDashboard / UserManage / LogViewer）
-├─ scripts/            种子 / 环境验证 / 本地数据注入脚本
+├─ scripts/            种子 / 环境验证 / 本地数据注入 / 成本报表脚本
 ├─ tests/              pytest
 └─ docs/               项目文档（独立私有文档仓，不随主仓公开）
 ```

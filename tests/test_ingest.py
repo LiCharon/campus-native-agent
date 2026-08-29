@@ -8,12 +8,12 @@ from campus_desk.eval.models import ScriptedCase
 
 class TestIngest:
     def test_ingest_all_cases(self, db_session_factory):
-        """47 条全部入库（M1-T11 ZJUT 意图集 + M2+ FC 扩展 23 条；turns 为空）。"""
+        """56 条全部入库（ZJUT 意图集，S5 评测深化由 47→56；turns 为空）。"""
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 47
+        assert cases == 56
         assert turns == 0  # 意图剧本 turns 留空（入口分流评测）
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 47
+            assert session.query(EvalCase).count() == 56
             first = session.query(EvalCase).filter(EvalCase.id == "zjut-intent-001").first()
             assert first.student_input == "什么时候放寒假？"
             assert first.expected_route == "knowledge"
@@ -23,9 +23,9 @@ class TestIngest:
         """重入库不累积（EvalCase upsert + EvalTurn 先删后插）。"""
         ingest_cases(db_session_factory)
         cases, turns = ingest_cases(db_session_factory)
-        assert cases == 47
+        assert cases == 56
         with db_session_factory() as session, session.begin():
-            assert session.query(EvalCase).count() == 47
+            assert session.query(EvalCase).count() == 56
             total_turns = session.query(EvalTurn).count()
         assert total_turns == turns  # 重跑后 turn 数与本次写入一致（无累积）
 

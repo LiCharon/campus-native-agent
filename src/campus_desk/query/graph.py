@@ -20,7 +20,7 @@ from typing import Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from campus_desk import telemetry
+from campus_desk import telemetry, usage
 from campus_desk.llm import build_tool_llm
 from campus_desk.query.assemble import (
     CIRCUIT_DEGRADED_REPLY,
@@ -226,7 +226,9 @@ def _call_tools(deps: _Deps, text: str, recent: list[str] | None = None):
                 f"近期对话（仅参考，用于理解指代如'那栋楼/这个'）:\n{lines}\n\n"
                 f"当前问题: {text}"
             )
-        reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", human)])
+        # M13：标记调用点（ContextVar，见 usage.call_point 注释）
+        with usage.call_point(usage.CALL_POINT_TOOL_SELECT):
+            reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", human)])
         return getattr(reply, "tool_calls", None) or []
     except Exception:  # noqa: BLE001 — 外部调用兜底
         return []

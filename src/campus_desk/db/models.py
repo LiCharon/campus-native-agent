@@ -10,6 +10,7 @@
 - bad_cases         未解决反馈双通道：① M1 转人工自动沉淀 ② M3 对话页"没解决"按钮
 - suggestions       用户提议通道（M3）："问题没答案"主动提议，管理员审查采纳/驳回
 - audit_logs        审计日志（M4）：登录/审查/接待/用户管理关键操作留痕
+- llm_usage         LLM 调用计量（M13）：每次调用一行 token（prompt/completion/total）+ 调用点/模型/归属；费用不落库，由报表按当前单价派生
 
 约束要点：
 - knowledge_entries.domain 11 领域（教务/图书馆/网络与IT/校园卡与证件/住宿后勤/奖助/医疗健康/社团与活动/就业与职业发展/安全与保卫/生活服务）；
@@ -417,3 +418,32 @@ class RolePermission(Base):
 
     role_id: Mapped[str] = mapped_column(ForeignKey("roles.id"), primary_key=True)
     permission_id: Mapped[str] = mapped_column(ForeignKey("permissions.id"), primary_key=True)
+
+
+class LLMUsage(Base):
+    """LLM 调用计量（M13-ZJUT 成本检测）：每次 LLM 调用一行 token 记录。
+
+    只存原始事实（token 三件套 + 归属 + 调用点 + 模型），**不存估算费用**——
+    单价可变，费用一律由 scripts/cost_report.py 按当前 config 单价派生（改价不必改表、
+    历史记录不重算，符合"派生值"设计）。
+
+    - call_point：intent（入口意图分类）/ decide（知识库追问决策）/ tool_select（工具选择），
+      无 tag 记 unknown
+    - status：success / error（error 行 token 记 0，报表可按 status 过滤误差）
+    - user_id/thread_id/route：来自 orchestrator.turn 设置的 ContextVar（旁路无值时可空）
+    """
+
+    __tablename__ = "llm_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # user_id/thread_id 旁路埋点可能拿不到（如脚本直调 LLM），故可空
+    user_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    thread_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    route: Mapped[str | None] = mapped_column(String(16), nullable=True)  # knowledge/multi_intent/...
+    call_point: Mapped[str] = mapped_column(String(16), default="unknown")  # intent/decide/tool_select
+    model: Mapped[str] = mapped_column(String(64), default="")
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(8), default="success")  # success/error
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)

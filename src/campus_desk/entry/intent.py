@@ -26,6 +26,7 @@ from typing import Literal
 from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic import BaseModel, Field, ValidationError
 
+from campus_desk import usage
 from campus_desk.llm import build_llm
 
 # 4 类意图（与路由分离，见 routes.py）
@@ -189,9 +190,11 @@ class IntentClassifier:
     ) -> IntentResult | None:
         """第一/二层：调 LLM 并解析 JSON；失败返回 None（不抛）。"""
         try:
-            raw = self.llm.invoke(
-                [("system", _STRUCTURED_PROMPT), ("human", _build_human(user_input, recent))]
-            )
+            # M13：标记调用点（ContextVar，不依赖 invoke 签名；见 usage.call_point 注释）
+            with usage.call_point(usage.CALL_POINT_INTENT):
+                raw = self.llm.invoke(
+                    [("system", _STRUCTURED_PROMPT), ("human", _build_human(user_input, recent))]
+                )
         except Exception as exc:  # noqa: BLE001 — 外部调用需兜底所有错误（env_check 同款先例）
             self._last_error = f"LLM 调用异常: {exc!r}"
             return None

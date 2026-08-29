@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # M12-ZJUT 上下文窗口：注入 LLM 的"近期对话"轮数（按 user 消息计，默认最近 8 轮）。
     # 仅约束 LLM prompt（意图/追问决策/工具选择），不约束检索拼接（embedding/关键词计分）。
     context_window_rounds: int = 8
+    # M13-ZJUT 成本单价（元 / 百万 token）：仅报表层按当前值派生费用（llm_usage 不存钱，
+    # 改价不重算历史）。默认按 DeepSeek 公开价（输入 2 / 输出 8），换模型/调价改 .env 即可
+    deepseek_input_price: float = 2.0
+    deepseek_output_price: float = 8.0
 
     @property
     def langfuse_enabled(self) -> bool:

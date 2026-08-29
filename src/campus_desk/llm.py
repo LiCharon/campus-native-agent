@@ -7,13 +7,16 @@
   tool_calls）；2026-08-16 实测裸 bind_tools 全链路可用。FC 的 strict 工具 schema
   见 query/tools.py
 
-埋点：enabled() 时挂 langfuse CallbackHandler；无 key 时 langfuse_handler() 返回
-None → 不传 callbacks。
+埋点（两个独立 handler，同一次 invoke 各自触发，无需去重）：
+- langfuse：enabled() 时挂 CallbackHandler（观测）；无 key 时 langfuse_handler()
+  返回 None → 不传
+- usage（M13）：**无条件**挂载 UsageCallbackHandler（本地成本记账）。不依赖任何
+  key；无 DATABASE_URL 时落库在 usage._write_usage 内被吞，不影响调用
 """
 
 from langchain_openai import ChatOpenAI
 
-from campus_desk import telemetry
+from campus_desk import telemetry, usage
 from campus_desk.config import settings
 
 
@@ -29,9 +32,12 @@ def _base_kwargs() -> dict:
     # 无 key 时交 SDK 读 OPENAI_API_KEY 环境变量——CI/无 .env 环境可"构造不调用"
     if settings.deepseek_api_key:
         kwargs["api_key"] = settings.deepseek_api_key
+    callbacks = []
     handler = telemetry.langfuse_handler()
     if handler is not None:
-        kwargs["callbacks"] = [handler]
+        callbacks.append(handler)
+    callbacks.append(usage.usage_handler())  # M13：本地计量无条件挂载
+    kwargs["callbacks"] = callbacks
     return kwargs
 
 
