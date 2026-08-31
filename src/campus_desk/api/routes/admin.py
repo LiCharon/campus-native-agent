@@ -17,6 +17,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 
+from campus_desk import rate_limit
 from campus_desk.api.deps import AuthUser, get_session_factory, require_perm
 from campus_desk.api.schemas import (
     AdoptRequest,
@@ -622,6 +623,40 @@ def update_user(
         name=obj.name,
         role=obj.role,
         permissions=payload.permissions,
+        enabled=obj.enabled,
+        student_no=obj.student_no,
+    )
+
+
+@router.post("/users/{uid}/unlock", response_model=UserListItem)
+def unlock_login(
+    uid: str,
+    user: AuthUser = Depends(require_perm("user_mgmt")),
+    session_factory: SessionFactory = Depends(get_session_factory),
+):
+    """M15A-③ 解除登录锁定：清空该用户的失败计数与锁定时长。
+
+    存在的必要性：账号锁本身可被反向利用——任何人连错 5 次就能把真管理员
+    锁死 15 分钟，没有解锁通道的话这是比暴力破解更现实的事故。
+    """
+    with session_factory() as session:
+        obj = session.get(User, uid)
+        if obj is None:
+            raise HTTPException(status_code=404, detail="用户不存在")
+    cleared = rate_limit.unlock(uid)
+    write_audit(
+        session_factory,
+        user_id=user.id,
+        action="login_unlocked",
+        object_type="user",
+        object_id=uid,
+        detail=f"解除登录锁定 {uid}" + ("" if cleared else "（该账号原本未锁定）"),
+    )
+    return UserListItem(
+        id=obj.id,
+        name=obj.name,
+        role=obj.role,
+        permissions=[p for p in obj.permissions.split(",") if p],
         enabled=obj.enabled,
         student_no=obj.student_no,
     )

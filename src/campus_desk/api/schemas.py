@@ -13,6 +13,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+# M15A-⑥ 请求体长度上限（单源；超限 422，绝不静默截断——截断会让用户以为发全了）
+MAX_MSG_LEN = 2000  # /api/chat msg：直接进 LLM 与 messages 表，无上限可刷爆 token 账单
+MAX_THREAD_ID_LEN = 64  # 与 conversations.thread_id 列宽一致
+MAX_QUESTION_LEN = 2000  # 反馈/提议的问题原文
+MAX_REPLY_LEN = 8000  # 助手回复原文（前端回传），比 msg 宽松但同样要防灌库
+MAX_NOTE_LEN = 500  # 用户补充说明
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -35,8 +42,8 @@ class LoginResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    thread_id: str
-    msg: str
+    thread_id: str = Field(max_length=MAX_THREAD_ID_LEN)
+    msg: str = Field(max_length=MAX_MSG_LEN)
 
 
 class SourceItem(BaseModel):
@@ -72,10 +79,10 @@ def _strip_nonblank(value: str) -> str:
 class FeedbackBadCaseRequest(BaseModel):
     """对话页"没解决"手动反馈（进化闭环①）：写 bad_cases。"""
 
-    thread_id: str
-    question: str
-    reply: str = ""
-    note: str = ""
+    thread_id: str = Field(max_length=MAX_THREAD_ID_LEN)
+    question: str = Field(max_length=MAX_QUESTION_LEN)
+    reply: str = Field(default="", max_length=MAX_REPLY_LEN)
+    note: str = Field(default="", max_length=MAX_NOTE_LEN)
 
     _question = field_validator("question")(_strip_nonblank)
 
@@ -83,8 +90,8 @@ class FeedbackBadCaseRequest(BaseModel):
 class FeedbackSuggestionRequest(BaseModel):
     """对话页"问题没答案"提议（进化闭环②）：写 suggestions。"""
 
-    question: str
-    note: str = ""
+    question: str = Field(max_length=MAX_QUESTION_LEN)
+    note: str = Field(default="", max_length=MAX_NOTE_LEN)
 
     _question = field_validator("question")(_strip_nonblank)
 

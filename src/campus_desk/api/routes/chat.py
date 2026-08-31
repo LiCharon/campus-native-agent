@@ -17,12 +17,14 @@ import json
 import re
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
 from campus_desk.api.deps import (
     AuthUser,
+    find_owned_conversation,
     get_current_user,
+    get_owned_conversation,
     get_registry,
     get_session_factory,
 )
@@ -84,18 +86,8 @@ def chat(
     """
     # 1. 归属校验 + user 消息落库（独立事务，发送中刷新用户消息不丢）
     with session_factory() as session, session.begin():
-        conv = (
-            session.execute(
-                select(Conversation).where(
-                    Conversation.thread_id == payload.thread_id,
-                    Conversation.user_id == user.id,
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if conv is None:
-            raise HTTPException(status_code=404, detail="会话不存在")
+        # M15A-⑦ 归属校验改用共享 helper（与 feedback 同口径）
+        conv = get_owned_conversation(session, payload.thread_id, user.id)
         user_msg = Message(conversation_id=conv.id, role="user", content=payload.msg)
         session.add(user_msg)
         session.flush()  # 取主键 id，供 _recent_history 排除当前消息（避免重复进窗口）
@@ -115,16 +107,8 @@ def chat(
 
     # 3. assistant 消息落库（独立事务）
     with session_factory() as session, session.begin():
-        conv = (
-            session.execute(
-                select(Conversation).where(
-                    Conversation.thread_id == payload.thread_id,
-                    Conversation.user_id == user.id,
-                )
-            )
-            .scalars()
-            .first()
-        )
+        # 容错分支：会话可能在处理期间被并发删除，查不到就跳过落库（不报错）
+        conv = find_owned_conversation(session, payload.thread_id, user.id)
         if conv is not None:
             session.add(
                 Message(

@@ -18,7 +18,9 @@ import jwt
 
 from campus_desk.config import settings
 
-PBKDF2_ITERATIONS = 100_000  # 演示级迭代次数（测试拖慢防护：seed 按明文缓存哈希）
+# M15A ⑨ 对齐 OWASP（原 10 万；实测 26.1ms → 161.3ms/次，+135ms）
+# 存储串内嵌次数 → 历史弱哈希无需迁移仍可验证，登录成功时按需重哈希升级（needs_rehash）
+PBKDF2_ITERATIONS = 600_000
 TOKEN_ALGORITHM = "HS256"
 _HASH_PREFIX = "pbkdf2_sha256"
 
@@ -40,7 +42,22 @@ def verify_password(plain: str, stored: str) -> bool:
             "sha256", plain.encode(), bytes.fromhex(salt), int(iterations_s)
         )
         return hmac.compare_digest(digest.hex(), expected)
-    except ValueError, TypeError:
+    except (ValueError, TypeError):  # M15A ⑧ 标准元组写法（原 PEP 758 语法仅 3.14 可编译）
+        return False
+
+
+def needs_rehash(stored: str) -> bool:
+    """存储串的迭代次数低于当前值 → 需要重哈希（登录成功时由调用方回写）。
+
+    M15A ⑨ rehash-on-login：历史弱哈希在用户下次登录时自动升级到 60 万次，
+    无需数据迁移。畸形串返回 False（交由 verify_password 判失败，不抛异常）。
+    """
+    try:
+        prefix, iterations_s, _salt, _expected = stored.split("$")
+        if prefix != _HASH_PREFIX:
+            return False
+        return int(iterations_s) < PBKDF2_ITERATIONS
+    except (ValueError, TypeError):
         return False
 
 

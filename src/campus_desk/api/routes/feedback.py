@@ -8,7 +8,12 @@ user_id 取自 JWT（绝不信请求体，沿用 chat 路由约定）。
 
 from fastapi import APIRouter, Depends
 
-from campus_desk.api.deps import AuthUser, get_current_user, get_session_factory
+from campus_desk.api.deps import (
+    AuthUser,
+    get_current_user,
+    get_owned_conversation,
+    get_session_factory,
+)
 from campus_desk.api.schemas import (
     FeedbackBadCaseRequest,
     FeedbackResponse,
@@ -26,8 +31,13 @@ def feedback_bad_case(
     user: AuthUser = Depends(get_current_user),
     session_factory: SessionFactory = Depends(get_session_factory),
 ):
-    """手动"没解决"反馈：question 必填，reply/note 可选（带回复便于审查判断）。"""
+    """手动"没解决"反馈：question 必填，reply/note 可选（带回复便于审查判断）。
+
+    M15A-⑦ 归属校验：thread_id 必须是当前用户的会话，否则 404（此前任何人拿到
+    会话 ID 都能往反馈表写脏数据）。
+    """
     with session_factory() as session, session.begin():
+        get_owned_conversation(session, payload.thread_id, user.id)
         row = BadCase(
             user_id=user.id,
             thread_id=payload.thread_id,

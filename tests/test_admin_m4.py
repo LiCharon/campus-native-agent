@@ -29,10 +29,18 @@ def _login_data(client, username, password="123456"):
 
 def _seed_bad_case(client):
     stu = _login(client, "student-001")
+    # M15A-⑦：feedback 校验 thread_id 归属，必须用真实会话
+    r_thread = client.post("/api/sessions", headers=stu)
+    assert r_thread.status_code == 200
     r = client.post(
         "/api/feedback/bad-case",
         headers=stu,
-        json={"thread_id": "m4-1", "question": "食堂在哪？", "reply": "超出范围", "note": ""},
+        json={
+            "thread_id": r_thread.json()["thread_id"],
+            "question": "食堂在哪？",
+            "reply": "超出范围",
+            "note": "",
+        },
     )
     assert r.status_code == 200
     return r.json()["id"]

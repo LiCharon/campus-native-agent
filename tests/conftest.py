@@ -16,6 +16,12 @@ knowledge 意图（门控放行）+ InMemorySaver 真 KnowledgeGraph（走真检
 checkpointer.db 与真 LLM。
 """
 
+import os
+
+# M15A-① 测试显式 opt-in：测试用仓库公开的默认密钥，但服务不对外的网络可达点，
+# 无伪造令牌风险。必须设在 import campus_desk.config 之前——settings 是模块级单例。
+os.environ.setdefault("ALLOW_INSECURE_DEV", "1")
+
 import pytest
 from langchain_core.messages import AIMessage
 from sqlalchemy import create_engine, event

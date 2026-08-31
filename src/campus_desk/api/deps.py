@@ -9,8 +9,10 @@ from dataclasses import dataclass
 
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
+from sqlalchemy import select
 
 from campus_desk.api.graphs import GraphRegistry
+from campus_desk.db.models import Conversation
 from campus_desk.db.session import SessionFactory
 from campus_desk.security import decode_access_token
 
@@ -49,6 +51,39 @@ def get_current_user(authorization: str | None = Header(None)) -> AuthUser:
         )
     except (jwt.PyJWTError, KeyError) as exc:
         raise HTTPException(status_code=401, detail="未登录或登录已过期") from exc
+
+
+def find_owned_conversation(session, thread_id: str, user_id: str) -> Conversation | None:
+    """按 thread_id + user_id 取归属会话，查不到返回 None（不抛）。
+
+    用于"有则处理、无则跳过"的容错分支（如落 assistant 消息时会话可能已被并发删除）。
+    """
+    return (
+        session.execute(
+            select(Conversation).where(
+                Conversation.thread_id == thread_id,
+                Conversation.user_id == user_id,
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
+def get_owned_conversation(session, thread_id: str, user_id: str) -> Conversation:
+    """归属校验（M15A-⑦）：查不到或不属于该用户 → 404。
+
+    chat 与 feedback 共用同一口径——此前 feedback 完全没校验、chat 是内联查询，
+    两份逻辑各自漂移风险高（归属口径变了只改一处即可）。
+
+    一律 404、不用 403：区分"不存在"与"存在但越权"等于泄露"该 thread 存在"。
+
+    调用方须在已有事务内调用（chat 需要"校验 + 落 user 消息"同事务）。
+    """
+    conv = find_owned_conversation(session, thread_id, user_id)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return conv
 
 
 def require_roles(*roles: str):

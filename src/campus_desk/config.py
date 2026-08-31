@@ -18,6 +18,11 @@
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# M15A-① JWT 密钥安全基线（单源：默认值常量即校验基准）
+# 该默认值随仓库公开在 GitHub，任何人都能用它伪造管理员令牌。
+DEFAULT_JWT_SECRET = "dev-secret-change-me-0123456789abcdef"
+JWT_SECRET_MIN_LENGTH = 32  # HS256 建议 ≥32 字节，短于此 PyJWT 会告警
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -42,8 +47,11 @@ class Settings(BaseSettings):
     # 非空 → embeddings 用 specific_model_path 直接加载（默认空=走 HF）。中文须配合 jieba 分词注入
     bm25_local_path: str = ""
     # 登录鉴权：JWT 密钥（演示环境默认值 ≥32 字节，生产必须改）与过期分钟数
-    jwt_secret: str = "dev-secret-change-me-0123456789abcdef"
+    jwt_secret: str = DEFAULT_JWT_SECRET
     jwt_expire_minutes: int = 1440
+    # M15A-① 逃生阀：本地开发懒得换密钥时显式置 1 放行默认密钥。
+    # ⚠️ 只放行"默认值"这一个已知弱串，自己设的短密钥照样拒。
+    allow_insecure_dev: bool = False
     # M12-ZJUT 上下文窗口：注入 LLM 的"近期对话"轮数（按 user 消息计，默认最近 8 轮）。
     # 仅约束 LLM prompt（意图/追问决策/工具选择），不约束检索拼接（embedding/关键词计分）。
     context_window_rounds: int = 8
@@ -56,6 +64,34 @@ class Settings(BaseSettings):
     def langfuse_enabled(self) -> bool:
         """埋点开关：公钥私钥都配了才算启用。"""
         return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
+    def validate_jwt_secret(self) -> None:
+        """M15A-① 启动期密钥自检：不合法直接拒绝启动（fail-fast）。
+
+        判定只看密钥值本身，不看 APP_ENV——真实部署最典型的翻车是忘了设
+        APP_ENV，那样"仅 production 才拦"的保护永远不会触发。
+
+        Raises:
+            RuntimeError: 密钥仍是公开默认值 / 与默认值高度相似 / 长度不足。
+        """
+        secret = (self.jwt_secret or "").strip()
+        default = DEFAULT_JWT_SECRET.lower()
+
+        is_default_like = secret.lower() == default or (
+            len(secret) >= 8 and (secret.lower() in default or default in secret.lower())
+        )
+        if is_default_like and not self.allow_insecure_dev:
+            raise RuntimeError(
+                "JWT_SECRET 仍为仓库公开的默认密钥，拒绝启动。"
+                "请生成新密钥：python -c \"import secrets;print(secrets.token_urlsafe(48))\"，"
+                "写入 .env 的 JWT_SECRET；"
+                "仅本地开发可在 .env 设 ALLOW_INSECURE_DEV=1 放行（切勿用于部署）。"
+            )
+        if len(secret) < JWT_SECRET_MIN_LENGTH:
+            raise RuntimeError(
+                f"JWT_SECRET 长度不足（当前 {len(secret)}，要求 ≥{JWT_SECRET_MIN_LENGTH} 字符），"
+                "拒绝启动。请改用足够长的随机串，ALLOW_INSECURE_DEV 对此项无效。"
+            )
 
 
 settings = Settings()

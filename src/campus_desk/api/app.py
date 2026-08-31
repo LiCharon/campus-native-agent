@@ -13,10 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from campus_desk.api.graphs import GraphRegistry
 from campus_desk.api.routes import admin, auth, chat, cs, feedback, sessions
+from campus_desk.config import settings
 from campus_desk.db.session import default_session_factory
 
 
 def create_app(*, session_factory=None, registry: GraphRegistry | None = None) -> FastAPI:
+    # M15A-① 密钥自检必须在最前：密钥不合法时连库/建图都是白做，且无参调用
+    # 会去连真 MySQL（校验先行才能拦在连接之前）。测试经 conftest 显式 opt-in。
+    settings.validate_jwt_secret()
     app = FastAPI(title="CampusDesk API", version="0.1.0")
     # Vite dev server（5173）跨域；生产同源（nginx 反代）不需要
     app.add_middleware(
