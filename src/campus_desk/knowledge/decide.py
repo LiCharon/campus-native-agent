@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from campus_desk import usage
 from campus_desk.llm import build_llm
+from campus_desk.prompt_guard import UNTRUSTED_INPUT_NOTICE, wrap_input
 
 _USE_DEFAULT_LLM = object()
 
@@ -29,7 +30,7 @@ JSON 格式（严格只输出 JSON）：
 注意：
 - action=ask 时 questions 必填且最多 2 个，追问具体简短
 - action=handoff 时 questions 给空数组
-"""
+""" + UNTRUSTED_INPUT_NOTICE
 
 
 class ClarifyDecision(BaseModel):
@@ -84,6 +85,8 @@ class ClarifyDecider:
         if recent:
             recent_lines = "\n".join(f"- {m}" for m in recent)
             context += f"\n\n近期对话（理解指代用）:\n{recent_lines}"
+        # M15B-⑤：对话历史/本轮输入/recent 均为不可信数据，统一包裹（声明在 system 末尾）
+        context = wrap_input(context)
         system_prompt = _DECIDE_PROMPT
         if self.profile:
             system_prompt += f"\n\n关于该学生：{self.profile}"

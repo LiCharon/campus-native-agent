@@ -60,7 +60,9 @@ cd frontend && npm run dev    # 访问 http://localhost:5173
 | cs-001                  | cs_staff | 人工客服（工作台接待）           |
 | admin-001               | admin    | 管理（用户管理 / 知识库审查 / 看板） |
 
-密码统一 `123456`。JWT 鉴权，user_id 取自 token 绝不信任请求体。
+密码默认统一 `123456`，可用环境变量 `SEED_PASSWORD` 覆盖（部署时改为强密码：
+`SEED_PASSWORD=xxx python scripts/seed_db.py`，须在首次入库前设置，已入库账号
+改后用管理后台重置密码）。JWT 鉴权，user_id 取自 token 绝不信任请求体。
 
 ## 项目结构
 

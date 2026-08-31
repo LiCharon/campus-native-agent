@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from campus_desk import usage
 from campus_desk.llm import build_llm
+from campus_desk.prompt_guard import UNTRUSTED_INPUT_NOTICE, wrap_input
 
 # 4 类意图（与路由分离，见 routes.py）
 IntentName = Literal["knowledge", "tool_query", "multi_intent", "other"]
@@ -137,7 +138,7 @@ JSON 格式（严格只输出 JSON，不要任何其他文字）：
 - 问候语/语气词不算意图："你好，顺便问下校历"只算一个知识问题（intent=knowledge），不要因为有个问候语就判 multi_intent 或 other
 - 区分知识 vs 动态查询：问"流程/怎么办/怎么预约/开放时间/怎么查/在哪查"是 knowledge（静态知识库可答，如"成绩怎么查"是问查询方法）；问"现在有没有/余量/我的成绩多少分/课表/考试安排/借的书/卡里余额/宿舍电量/校车/通知"才是 tool_query（动态数据查询）
 - 校历区分：问"校历什么时候出/怎么查校历"是 knowledge（静态方法）；问"第几周是考试周/这学期上到第几周/查校历数据"是 tool_query（校历动态数据查询）
-"""
+""" + UNTRUSTED_INPUT_NOTICE
 
 
 def _build_human(user_input: str, recent: list[str] | None) -> str:
@@ -147,11 +148,14 @@ def _build_human(user_input: str, recent: list[str] | None) -> str:
     """
     if recent:
         lines = "\n".join(f"- {m}" for m in recent)
-        return (
+        text = (
             f"近期对话（仅参考，用于理解指代如'那栋楼/这个'）:\n{lines}\n\n"
             f"当前问题: {user_input}"
         )
-    return user_input
+    else:
+        text = user_input
+    # M15B-⑤：用户输入与历史原话均为不可信数据，统一分隔符包裹（声明在 system prompt 末尾）
+    return wrap_input(text)
 
 
 class IntentClassifier:

@@ -22,6 +22,7 @@ from langgraph.types import interrupt
 
 from campus_desk import telemetry, usage
 from campus_desk.llm import build_tool_llm
+from campus_desk.prompt_guard import UNTRUSTED_INPUT_NOTICE, wrap_input
 from campus_desk.query.assemble import (
     CIRCUIT_DEGRADED_REPLY,
     DEGRADED_REPLIES,
@@ -79,6 +80,7 @@ _QUERY_PROMPT_TEMPLATE = (
     "校车 line 格式为'起点-终点'（如 屏峰-朝晖），direction=去程 表示从起点发车，"
     "direction=返程 表示从终点返回；学生说'屏峰到朝晖'即 line=屏峰-朝晖、direction=去程。\n"
     "学生未提供宿舍楼栋/房间号、校车线路/方向、课表查询的星期几时，不要猜测，先向学生确认。"
+    + UNTRUSTED_INPUT_NOTICE
 )
 
 
@@ -229,6 +231,8 @@ def _call_tools(deps: _Deps, text: str, recent: list[str] | None = None):
                 f"近期对话（仅参考，用于理解指代如'那栋楼/这个'）:\n{lines}\n\n"
                 f"当前问题: {text}"
             )
+        # M15B-⑤：用户输入与历史原话不可信，统一包裹（声明在 system prompt 末尾）
+        human = wrap_input(human)
         # M13：标记调用点（ContextVar，见 usage.call_point 注释）
         with usage.call_point(usage.CALL_POINT_TOOL_SELECT):
             reply = llm_tools.invoke([("system", deps.query_prompt()), ("human", human)])

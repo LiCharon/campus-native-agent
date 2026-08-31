@@ -14,6 +14,7 @@
 业务函数通过 factory 注入会话（工具层同款依赖注入模式）。
 """
 
+import os
 from datetime import date, timedelta
 
 from sqlalchemy import select
@@ -44,6 +45,16 @@ from campus_desk.security import hash_password
 # 幂等键列必须是种子列之一；自增 id 表不显式插 id（幂等键用业务唯一列）。
 # M6 登录鉴权：所有演示账号统一密码 "123456"（seed_all 内转哈希入库）。
 _DEMO_PASSWORD = "123456"
+
+
+def _seed_password() -> str:
+    """演示账号密码：`SEED_PASSWORD` 环境变量可覆盖，默认 123456。
+
+    M15B-②：clone 后开箱即用（默认弱口令）+ 部署方可用强密码覆盖。
+    ⚠️ 幂等坑：seed_all 只回填 `password_hash is None` 的存量用户，
+    已 seed 的库改 SEED_PASSWORD 重跑**不会**更新旧账号（用 M6 重置密码改）。
+    """
+    return os.environ.get("SEED_PASSWORD", _DEMO_PASSWORD)
 
 # ---- M6 RBAC 三表种子：角色/权限定义入库（与 perms.py 硬编码映射一致，运行时查库） ----
 _ROLES = [
@@ -747,8 +758,11 @@ def seed_all(factory: SessionFactory, *, force: bool = False) -> dict[str, int]:
             for row in rows:
                 data = dict(zip(cols, row))
                 if model is User and data.get("password"):
-                    # 种子明文密码 → 哈希入库（force 路径同样生效）
-                    data["password_hash"] = _hash_cached(data.pop("password"))
+                    # 种子明文密码 → 哈希入库（force 路径同样生效）。
+                    # M15B-②：实际落库密码取 _seed_password()（SEED_PASSWORD 覆盖），
+                    # _USERS 元组里的 _DEMO_PASSWORD 仅是占位。
+                    data["password_hash"] = _hash_cached(_seed_password())
+                    data.pop("password")
                 obj = session.execute(
                     select(model).where(*(getattr(model, c) == data[c] for c in key_cols))
                 ).scalar_one_or_none()

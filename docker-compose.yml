@@ -37,6 +37,8 @@ services:
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash-vision-exp}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-0123456789abcdef}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+      # M15B-② 演示账号密码（默认 123456，部署可覆盖；幂等坑见 .env.example）
+      SEED_PASSWORD: ${SEED_PASSWORD:-123456}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       # 容器内访问宿主机 Langfuse 用 host.docker.internal（localhost 指向容器自身会 Connection refused）
@@ -44,8 +46,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    # M15B-④ 不发布 8000：前端只经 nginx(8080) 反代访问后端，
+    # 防止绕过 nginx 安全层直连后端（本机开发仍走 uvicorn 8000，不受影响）
+    # ports:
+    #   - "8000:8000"
 
   frontend:
     build: ./frontend
