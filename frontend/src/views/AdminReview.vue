@@ -63,6 +63,9 @@
         <button class="cd-btn sm" @click="loadKnowledge">搜索</button>
         <button class="cd-btn sm" @click="openCreate">新建</button>
       </div>
+      <p v-if="kbTruncated" class="cd-tip">
+        当前仅显示前 {{ knowledge.length }} 条（共 {{ kbTotal }} 条匹配）。请用上方「领域 / 类型 / 关键词」筛选缩小范围。
+      </p>
       <div class="cd-table-card">
         <table>
           <thead>
@@ -144,6 +147,9 @@ const knowledge = ref([])
 const kfDomain = ref('')
 const kfType = ref('')
 const kfQ = ref('')
+// BUG-003 截断告知：后端默认 limit=200，超限时提示用筛选缩小范围
+const kbTotal = ref(0)
+const kbTruncated = ref(false)
 const dialogVisible = ref(false)
 const dialogMode = ref('adopt') // adopt 补入 / create 新建 / edit 编辑
 const submitting = ref(false)
@@ -177,9 +183,13 @@ async function loadKnowledge() {
     if (kfQ.value.trim()) params.q = kfQ.value.trim()
     const resp = await fetchKnowledge(params)
     knowledge.value = resp.data.items || []
+    kbTotal.value = resp.data.total ?? knowledge.value.length
+    kbTruncated.value = !!resp.data.truncated
   } catch {
     ElMessage.error('加载失败，请检查后端是否启动')
     knowledge.value = []
+    kbTotal.value = 0
+    kbTruncated.value = false
   }
 }
 
@@ -392,6 +402,17 @@ onMounted(loadTab)
 
 .cd-filters input {
   min-width: 220px;
+}
+
+.cd-tip {
+  margin: 0 0 12px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--cd-text-2);
+  background: var(--cd-bg-soft, #f3f6fb);
+  border-left: 3px solid var(--cd-primary, #14549c);
+  border-radius: 4px;
 }
 
 .overlay {

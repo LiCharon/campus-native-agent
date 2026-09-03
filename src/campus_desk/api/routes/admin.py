@@ -211,15 +211,21 @@ def dismiss_review(
 # ---------- M4 知识库浏览（kb_review） ----------
 
 
+# BUG-003 方案 C：默认截断上限。管理页是浏览+筛选场景，库 834 条全量渲染会卡，
+# 故默认只回前 N 条并用 total/truncated 明确告知；limit<=0 表示不截断（导出/脚本用）。
+_DEFAULT_KNOWLEDGE_LIMIT = 200
+
+
 @router.get("/knowledge", response_model=KnowledgeListResponse)
 def list_knowledge(
     domain: str = "",
     type: str = "",
     q: str = "",
+    limit: int = _DEFAULT_KNOWLEDGE_LIMIT,
     user: AuthUser = Depends(require_perm("kb_review")),
     session_factory: SessionFactory = Depends(get_session_factory),
 ):
-    """知识条目列表 + 领域/类型/关键词筛选（只读浏览）。"""
+    """知识条目列表 + 领域/类型/关键词筛选 + 截断告知（只读浏览）。"""
     stmt = select(KnowledgeEntry).order_by(KnowledgeEntry.id)
     if domain:
         stmt = stmt.where(KnowledgeEntry.domain == domain)
@@ -231,6 +237,12 @@ def list_knowledge(
             (KnowledgeEntry.question.like(like)) | (KnowledgeEntry.keywords.like(like))
         )
     with session_factory() as session:
+        # total 必须是「过滤后」的总数，供前端判断是否被截断
+        total = session.execute(
+            select(func.count()).select_from(stmt.subquery())
+        ).scalar_one()
+        if limit > 0:
+            stmt = stmt.limit(limit)
         rows = session.execute(stmt).scalars().all()
     return KnowledgeListResponse(
         items=[
@@ -243,7 +255,9 @@ def list_knowledge(
                 answer=r.answer,
             )
             for r in rows
-        ]
+        ],
+        total=total,
+        truncated=len(rows) < total,
     )
 
 

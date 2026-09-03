@@ -261,7 +261,16 @@ class KnowledgeItem(BaseModel):
 
 
 class KnowledgeListResponse(BaseModel):
+    """知识列表（M4 浏览）+ BUG-003 截断告知（方案 C）。
+
+    items 语义不变（过滤后的条目）；`total` 是**过滤后**的总数（不是整表条数），
+    `truncated=True` 表示因 limit 被截断——前端据此提示"请用筛选缩小范围"。
+    契约：truncated=True ⇒ total > len(items)。
+    """
+
     items: list[KnowledgeItem]
+    total: int
+    truncated: bool
 
 
 class BusinessStats(BaseModel):
