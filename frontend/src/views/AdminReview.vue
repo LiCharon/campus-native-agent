@@ -49,11 +49,11 @@
     <!-- 浏览 tab -->
     <div v-else class="content">
       <div class="cd-filters">
-        <select v-model="kfDomain">
+        <select v-model="kfDomain" @change="loadKnowledge">
           <option value="">全部领域</option>
           <option v-for="d in DOMAINS" :key="d" :value="d">{{ d }}</option>
         </select>
-        <select v-model="kfType">
+        <select v-model="kfType" @change="loadKnowledge">
           <option value="">全部类型</option>
           <option value="info">info 知识型</option>
           <option value="process">process 流程型</option>
