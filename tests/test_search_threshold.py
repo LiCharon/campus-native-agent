@@ -2,7 +2,7 @@
 
 每档先按 settings 相关性下限过滤再返回非空；滤空则自然落入下一档 /
 最终走追问或转人工——问库里没有的东西不再硬发沾边内容。
-阈值为 settings 字段（初值保守），T8 校准后回写。
+阈值经 T8 校准定线（dense 0.50 / keyword 2，2026-09-07 实测，见 config.py 注释）。
 """
 
 from __future__ import annotations
@@ -51,10 +51,17 @@ def _offline_tier3(monkeypatch):
     monkeypatch.setattr(embeddings, "embed_dense", _raise)
 
 
-def test_t2_keyword_single_hit_filtered(seeded_kb, monkeypatch):
-    """单关键词命中（2 分）< KEYWORD_MIN_SCORE(4) ⇒ 不再沾边硬答。"""
+def test_t2_keyword_single_hit_passes_at_calibrated_line(seeded_kb, monkeypatch):
+    """校准定线 keyword_min_score=2：单关键词 2 分保留（T8 实测初值 4 白丢 0.14 召回）。"""
     _offline_tier3(monkeypatch)
-    hits = search_knowledge(seeded_kb, "成绩")  # 只命中"成绩"一个关键词
+    hits = search_knowledge(seeded_kb, "成绩")  # 只命中"成绩"一个关键词 = 2 分
+    assert len(hits) == 1 and hits[0]["score"] == 2.0
+
+
+def test_t2_keyword_question_substring_only_filtered(seeded_kb, monkeypatch):
+    """部分字面撞车但计分为 0（关键词与完整问题均不子串命中）⇒ 空返回。"""
+    _offline_tier3(monkeypatch)
+    hits = search_knowledge(seeded_kb, "怎么查")  # "查询"/"成绩"/question 均非子串 → 0 分
     assert hits == []
 
 

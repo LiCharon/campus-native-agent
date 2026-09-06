@@ -3,11 +3,11 @@
 覆盖：命中直答 / 未命中追问→补充后命中 / decider 判 handoff 存 bad_cases /
 追问超限 MAX_CLARIFY_ROUNDS 强制 handoff。全部注入 FakeDecider，不依赖 LLM。
 
-种子关键词说明（对齐 search_knowledge 的子串匹配语义 + M17A 阈值 ≥4 分即选）：
+种子关键词说明（对齐 search_knowledge 的子串匹配语义 + M17A 阈值 ≥2 分即选（T8 校准定线））：
 - test_hit 用 "校历,寒假,放假"：查询"什么时候放寒假？"含"寒假"+"放假"双命中 = 4 分
-  （M17A 前单关键词 2 分即可入选，阈值上线后种子须达 KEYWORD_MIN_SCORE）
-- test_miss 用 "开放时间,校图书馆,开门"：首轮"图书馆几点开门"仅"开门" 2 分 <4 → 追问；
-  补充"校图书馆"后合并文本 4 分命中
+  （M17A 阈值上线后种子须达 KEYWORD_MIN_SCORE(2)）
+- test_miss 用 "开放时间,校图书馆"：首轮"图书馆几点开门"0 分（"校图书馆"非子串）→ 追问；
+  补充"校图书馆"后合并文本 2 分命中（≥ 校准定线 2）
 """
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -68,7 +68,7 @@ def test_miss_asks_then_answers_after_clarify(db_session_factory):
         s.add(
             KnowledgeEntry(
                 domain="图书馆",
-                keywords="开放时间,校图书馆,开门",
+                keywords="开放时间,校图书馆",
                 question="图书馆几点开门？",
                 type="info",
                 answer="8:00-22:00。",
