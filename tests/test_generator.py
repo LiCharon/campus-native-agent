@@ -106,13 +106,20 @@ def test_generate_llm_exception_propagates(monkeypatch):
         generator.generate_answer(_HITS, "q")
 
 
+# conftest autouse 会把 generator._get_llm 换成掐断 stub——模块导入期捕获原实现供缓存用例还原
+_REAL_GET_LLM = generator._get_llm
+
+
 def test_llm_cache_built_once(monkeypatch):
     calls = []
-    monkeypatch.setattr(generator, "build_tool_llm", lambda: calls.append(1) or FakeLLM())
+    monkeypatch.setattr(
+        generator, "build_tool_llm", lambda: (calls.append(1), FakeLLM())[1]
+    )
+    monkeypatch.setattr(generator, "_get_llm", _REAL_GET_LLM)  # 绕开 autouse 掐断
     generator._reset_llm_cache()
     try:
-        generator._get_llm()
-        generator._get_llm()
-        assert len(calls) == 1  # 模块级缓存：只构造一次
+        first = generator._get_llm()
+        second = generator._get_llm()
+        assert first is second and len(calls) == 1  # 模块级缓存：只构造一次
     finally:
         generator._reset_llm_cache()
