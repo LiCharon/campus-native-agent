@@ -14,7 +14,7 @@ from campus_desk.knowledge import embeddings, vector_store
 from campus_desk.knowledge.search import assemble_answer, search_knowledge
 from campus_desk.query.tools import TOOL_FUNCS, TOOL_SCHEMAS
 
-_EXPECTED_KEYS = {"id", "domain", "keywords", "question", "type", "answer"}
+_EXPECTED_KEYS = {"id", "domain", "keywords", "question", "type", "answer", "score"}
 
 
 @pytest.fixture

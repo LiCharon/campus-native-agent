@@ -1,6 +1,8 @@
 """知识库检索层（M10-ZJUT）：Qdrant 混合检索 + MySQL 稠密向量兜底 + 关键词保底。
 
-三档降级（均返回相同结构 list[dict]{id,domain,keywords,question,type,answer}）：
+三档降级（均返回相同结构 list[dict]{id,domain,keywords,question,type,answer,score}；
+score 为 M17A 新增的相关性分——Tier1 Qdrant RRF 分 / Tier2 余弦 sim / Tier3 关键词计分，
+供阈值过滤（BUG-004）与校准脚本使用）：
 - Tier1 Qdrant 混合（稠密‖稀疏 RRF）：需 fastembed + Qdrant 在线
 - Tier2 MySQL 稠密向量 + numpy 余弦：需 fastembed（保语义，不退回纯关键词）
 - Tier3 纯关键词计分：无嵌入依赖，最终保底
@@ -56,7 +58,7 @@ def _keyword_search(session_factory, text: str, domain: str | None = None) -> li
         if score > 0:
             scored.append((score, row))
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [_row_to_dict(r) for _, r in scored[:_MAX_RESULTS]]
+    return [_row_to_dict(r, score=float(sc)) for sc, r in scored[:_MAX_RESULTS]]
 
 
 def _mysql_dense_search(session_factory, text: str, domain: str | None = None) -> list[dict]:
@@ -74,10 +76,10 @@ def _mysql_dense_search(session_factory, text: str, domain: str | None = None) -
         sim = float(np.dot(q, dv) / (np.linalg.norm(q) * np.linalg.norm(dv) + 1e-9))
         scored.append((sim, row))
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [_row_to_dict(r) for _, r in scored[:_MAX_RESULTS]]
+    return [_row_to_dict(r, score=float(sim)) for sim, r in scored[:_MAX_RESULTS]]
 
 
-def _row_to_dict(r) -> dict:
+def _row_to_dict(r, score: float | None = None) -> dict:
     return {
         "id": r.id,
         "domain": r.domain,
@@ -85,6 +87,7 @@ def _row_to_dict(r) -> dict:
         "question": r.question,
         "type": r.type,
         "answer": r.answer,
+        "score": score,
     }
 
 

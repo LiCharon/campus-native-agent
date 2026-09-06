@@ -137,6 +137,7 @@ def hybrid_search(text: str, top_k: int = 3, domain: str | None = None) -> list[
             "question": p.payload.get("question", ""),
             "type": p.payload.get("type", "info"),
             "answer": p.payload.get("answer", ""),
+            "score": float(p.score),  # M17A：RRF 融合分贯穿（阈值过滤/校准用）
         }
         for p in resp.points
     ]
