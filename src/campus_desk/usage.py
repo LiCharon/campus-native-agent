@@ -27,10 +27,11 @@ from campus_desk.config import settings
 from campus_desk.db.models import LLMUsage
 from campus_desk.db.session import SessionFactory
 
-# 调用点常量（3 个运行时 LLM 调用点；未打 tag 的调用记 unknown）
+# 调用点常量（运行时 LLM 调用点；未打 tag 的调用记 unknown）
 CALL_POINT_INTENT = "intent"
 CALL_POINT_DECIDE = "decide"
 CALL_POINT_TOOL_SELECT = "tool_select"
+CALL_POINT_GENERATE = "generate"  # M17A：知识答案生成节点
 CALL_POINT_UNKNOWN = "unknown"
 
 _TAG_PREFIX = "call_point:"
