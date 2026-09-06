@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "baseline_rows": 834,
+    "scales": [
+      834,
+      2000,
+      4000,
+      8000
+    ],
+    "tier": "tier1",
+    "qdrant_on": true,
+    "qdrant_url": "E:\\桌面\\资料\\CampusDesk\\campus-desk\\bench_qdrant",
+    "database_url": "mysql+pymysql://root:***@127.0.0.1:3306/campus_desk_bench",
+    "fullchain_n": 15,
+    "retrieval_n": 60,
+    "warmup": 20,
+    "generated_at": "2026-08-31T15:09:14"
+  },
+  "results": [
+    {
+      "scale": 834,
+      "actual_rows": 834,
+      "rebuild": {
+        "upserted": 834,
+        "qdrant": true
+      },
+      "fullchain": {
+        "n": 15,
+        "mean": 1823.7,
+        "p50": 1504.5,
+        "p95": 2018.9,
+        "p99": 6573.9,
+        "min": 924.9,
+        "max": 6573.9
+      },
+      "routes": {
+        "knowledge": 12,
+        "human_handoff": 1,
+        "multi_intent": 2
+      },
+      "retrieval_cascade": {
+        "n": 60,
+        "mean": 12.1,
+        "p50": 12.0,
+        "p95": 14.2,
+        "p99": 14.8,
+        "min": 9.7,
+        "max": 15.2
+      },
+      "tier1_qdrant": {
+        "n": 60,
+        "mean": 13.4,
+        "p50": 13.6,
+        "p95": 15.3,
+        "p99": 15.7,
+        "min": 9.8,
+        "max": 16.8
+      },
+      "tier2_mysql": {
+        "n": 60,
+        "mean": 186.3,
+        "p50": 180.7,
+        "p95": 213.6,
+        "p99": 223.9,
+        "min": 161.7,
+        "max": 337.8
+      },
+      "tier3_keyword": {
+        "n": 60,
+        "mean": 118.6,
+        "p50": 123.8,
+        "p95": 136.2,
+        "p99": 144.0,
+        "min": 33.3,
+        "max": 150.3
+      }
+    },
+    {
+      "scale": 2000,
+      "actual_rows": 2000,
+      "rebuild": {
+        "upserted": 2000,
+        "qdrant": true
+      },
+      "fullchain": {
+        "n": 15,
+        "mean": 1561.4,
+        "p50": 1459.2,
+        "p95": 2046.8,
+        "p99": 2266.9,
+        "min": 1222.0,
+        "max": 2266.9
+      },
+      "routes": {
+        "knowledge": 14,
+        "multi_intent": 1
+      },
+      "retrieval_cascade": {
+        "n": 60,
+        "mean": 27.2,
+        "p50": 27.0,
+        "p95": 31.2,
+        "p99": 31.7,
+        "min": 21.6,
+        "max": 33.4
+      },
+      "tier1_qdrant": {
+        "n": 60,
+        "mean": 27.4,
+        "p50": 27.0,
+        "p95": 32.4,
+        "p99": 33.1,
+        "min": 22.9,
+        "max": 34.1
+      },
+      "tier2_mysql": {
+        "n": 60,
+        "mean": 508.8,
+        "p50": 496.2,
+        "p95": 591.2,
+        "p99": 604.3,
+        "min": 464.3,
+        "max": 658.8
+      },
+      "tier3_keyword": {
+        "n": 60,
+        "mean": 290.1,
+        "p50": 294.2,
+        "p95": 355.2,
+        "p99": 409.2,
+        "min": 174.1,
+        "max": 422.3
+      }
+    },
+    {
+      "scale": 4000,
+      "actual_rows": 4000,
+      "rebuild": {
+        "upserted": 4000,
+        "qdrant": true
+      },
+      "fullchain": {
+        "n": 15,
+        "mean": 2169.0,
+        "p50": 1263.3,
+        "p95": 1893.9,
+        "p99": 14032.6,
+        "min": 926.0,
+        "max": 14032.6
+      },
+      "routes": {
+        "knowledge": 12,
+        "human_handoff": 2,
+        "multi_intent": 1
+      },
+      "retrieval_cascade": {
+        "n": 60,
+        "mean": 56.4,
+        "p50": 56.9,
+        "p95": 66.3,
+        "p99": 68.0,
+        "min": 40.1,
+        "max": 71.1
+      },
+      "tier1_qdrant": {
+        "n": 60,
+        "mean": 59.3,
+        "p50": 58.7,
+        "p95": 68.8,
+        "p99": 70.2,
+        "min": 45.3,
+        "max": 77.2
+      },
+      "tier2_mysql": {
+        "n": 60,
+        "mean": 912.0,
+        "p50": 889.1,
+        "p95": 1053.4,
+        "p99": 1098.9,
+        "min": 816.4,
+        "max": 1111.9
+      },
+      "tier3_keyword": {
+        "n": 60,
+        "mean": 592.8,
+        "p50": 594.3,
+        "p95": 708.6,
+        "p99": 715.3,
+        "min": 441.4,
+        "max": 716.8
+      }
+    },
+    {
+      "scale": 8000,
+      "actual_rows": 8000,
+      "rebuild": {
+        "upserted": 8000,
+        "qdrant": true
+      },
+      "fullchain": {
+        "n": 15,
+        "mean": 1637.8,
+        "p50": 1605.6,
+        "p95": 1796.5,
+        "p99": 2788.8,
+        "min": 1183.9,
+        "max": 2788.8
+      },
+      "routes": {
+        "knowledge": 12,
+        "multi_intent": 1,
+        "human_handoff": 1,
+        "tool_query": 1
+      },
+      "retrieval_cascade": {
+        "n": 60,
+        "mean": 96.4,
+        "p50": 96.7,
+        "p95": 111.7,
+        "p99": 116.3,
+        "min": 67.4,
+        "max": 120.2
+      },
+      "tier1_qdrant": {
+        "n": 60,
+        "mean": 93.6,
+        "p50": 93.8,
+        "p95": 111.2,
+        "p99": 117.3,
+        "min": 69.9,
+        "max": 120.0
+      },
+      "tier2_mysql": {
+        "n": 60,
+        "mean": 2498.4,
+        "p50": 2485.9,
+        "p95": 2677.1,
+        "p99": 2823.9,
+        "min": 2342.1,
+        "max": 2906.8
+      },
+      "tier3_keyword": {
+        "n": 60,
+        "mean": 1696.7,
+        "p50": 1648.2,
+        "p95": 2113.1,
+        "p99": 2473.1,
+        "min": 1497.0,
+        "max": 2534.8
+      }
+    }
+  ]
+}
