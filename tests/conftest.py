@@ -147,6 +147,19 @@ def _openai_key_fallback(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
 
 
+@pytest.fixture(autouse=True)
+def _no_llm_generator(monkeypatch):
+    """M17A-T6：默认掐断生成节点的真实 LLM——_get_llm→None ⇒ generate_answer
+    抛 RuntimeError ⇒ KnowledgeGraph.collect 回退模板拼装（行为=M17A 之前）。
+
+    生成路径的专属测试自行注入假 LLM / 假 generator 覆盖本 stub。
+    与 _openai_key_fallback 同理：测试永不真调 LLM。
+    """
+    from campus_desk.knowledge import generator
+
+    monkeypatch.setattr(generator, "_get_llm", lambda: None)
+
+
 @pytest.fixture
 def api_client(db_session_factory):
     """FastAPI TestClient：Fake 意图（恒 knowledge）+ 真检索 KnowledgeGraph。

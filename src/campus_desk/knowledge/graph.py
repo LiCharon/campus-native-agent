@@ -8,12 +8,14 @@
 （summary 会丢检索词），追问轮以"上一轮原问题 + 本轮补充"合并后重检索。
 """
 
+from collections.abc import Callable
 from typing import Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from campus_desk.knowledge.decide import ClarifyDecider
+from campus_desk.knowledge.generator import generate_answer
 from campus_desk.knowledge.search import assemble_answer, search_knowledge
 
 MAX_CLARIFY_ROUNDS = 3
@@ -36,10 +38,26 @@ class KnowledgeState(TypedDict):
 
 
 class _Deps:
-    def __init__(self, session_factory, decider: ClarifyDecider, user_id: str = "student-001"):
+    def __init__(
+        self,
+        session_factory,
+        decider: ClarifyDecider,
+        user_id: str = "student-001",
+        generator: Callable | None = None,
+    ):
         self.session_factory = session_factory
         self.decider = decider
         self.user_id = user_id
+        # M17A-T6：默认 LLM 生成节点（惰性构造），测试可注入假实现
+        self.generator = generator or generate_answer
+
+
+def _generate_reply(deps: _Deps, hits: list[dict], question: str) -> str:
+    """M17A-T6：LLM 整合生成答案；任何异常回退模板拼装（可用性不退化）。"""
+    try:
+        return deps.generator(hits, question)
+    except Exception:  # noqa: BLE001 — LLM 超时/解析错/不可用一律回退模板
+        return assemble_answer(hits)
 
 
 def _save_bad_case(deps: _Deps, question: str) -> None:
@@ -69,7 +87,7 @@ def _make_collect(deps: _Deps):
 
         hits = search_knowledge(deps.session_factory, text)
         if hits:
-            answer = assemble_answer(hits)
+            answer = _generate_reply(deps, hits, text)
             return {
                 "reply": answer,
                 "outcome": "answer",
@@ -134,15 +152,18 @@ def build_knowledge_graph(
     checkpointer=None,
     user_id: str = "student-001",
     profile: str = "",
+    generate_fn: Callable | None = None,
 ):
     """构建知识问答图。checkpointer 必传（interrupt 需持久化；测试传 InMemorySaver）。
 
     profile（M7-ZJUT）：可选画像文本段，仅对内部默认构造的 ClarifyDecider 生效
     （调用方显式传 decider 时由调用方决定是否带画像）。
+    generate_fn（M17A-T6）：答案生成器 (hits, question) -> str；默认 LLM 生成节点
+    （knowledge/generator.py，异常自动回退模板拼装），测试可注入假实现。
     """
     if decider is None:
         decider = ClarifyDecider(profile=profile)
-    deps = _Deps(session_factory, decider, user_id=user_id)
+    deps = _Deps(session_factory, decider, user_id=user_id, generator=generate_fn)
     graph = (
         StateGraph(KnowledgeState)
         .add_node("collect", _make_collect(deps))
