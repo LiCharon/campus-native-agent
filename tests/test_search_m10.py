@@ -59,7 +59,7 @@ def test_keyword_fallback_when_qdrant_and_embed_unavailable(seeded_kb, monkeypat
 
     monkeypatch.setattr(embeddings, "embed_dense", _raise)
 
-    hits = search_knowledge(seeded_kb, "图书馆闭馆时间")
+    hits = search_knowledge(seeded_kb, "图书馆闭馆和关门时间")
     assert hits, "关键词档应召回『图书馆几点闭馆』"
     assert set(hits[0].keys()) == _EXPECTED_KEYS
     assert any(h["question"] == "图书馆几点闭馆" for h in hits)

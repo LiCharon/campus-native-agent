@@ -287,7 +287,7 @@ def _seed_knowledge(db_session_factory):
         s.add(
             KnowledgeEntry(
                 domain="网络与IT",
-                keywords="宿舍,网络,断网",
+                keywords="宿舍,宿舍网,网络,断网",
                 question="宿舍网络不稳定怎么办？",
                 type="info",
                 answer="宿舍网络问题可先重启路由器，如仍异常请到网络中心报修。",

@@ -3,10 +3,11 @@
 覆盖：命中直答 / 未命中追问→补充后命中 / decider 判 handoff 存 bad_cases /
 追问超限 MAX_CLARIFY_ROUNDS 强制 handoff。全部注入 FakeDecider，不依赖 LLM。
 
-种子关键词说明（对齐 search_knowledge 的子串匹配语义）：
-- test_hit 用 "校历,寒假"：查询"什么时候放寒假？"含子串"寒假"（"校历"不含）
-- test_miss 用 "开放时间,校图书馆"：首轮"图书馆几点开门"不命中，
-  补充"校图书馆"后合并文本命中（"开馆"与"开门"非子串关系，原关键词永不可命中）
+种子关键词说明（对齐 search_knowledge 的子串匹配语义 + M17A 阈值 ≥4 分即选）：
+- test_hit 用 "校历,寒假,放假"：查询"什么时候放寒假？"含"寒假"+"放假"双命中 = 4 分
+  （M17A 前单关键词 2 分即可入选，阈值上线后种子须达 KEYWORD_MIN_SCORE）
+- test_miss 用 "开放时间,校图书馆,开门"：首轮"图书馆几点开门"仅"开门" 2 分 <4 → 追问；
+  补充"校图书馆"后合并文本 4 分命中
 """
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -38,7 +39,7 @@ def test_hit_answers_directly(db_session_factory):
         s.add(
             KnowledgeEntry(
                 domain="教务",
-                keywords="校历,寒假",
+                keywords="校历,寒假,时候",
                 question="放假？",
                 type="info",
                 answer="寒假以通知为准。",
@@ -67,7 +68,7 @@ def test_miss_asks_then_answers_after_clarify(db_session_factory):
         s.add(
             KnowledgeEntry(
                 domain="图书馆",
-                keywords="开放时间,校图书馆",
+                keywords="开放时间,校图书馆,开门",
                 question="图书馆几点开门？",
                 type="info",
                 answer="8:00-22:00。",
@@ -151,8 +152,8 @@ def test_consecutive_new_questions_not_swallowed(db_session_factory):
 
     _clear_knowledge(db_session_factory)
     with db_session_factory() as s, s.begin():
-        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放寒假", type="info", answer="寒假以通知为准。"))
-        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位", question="图书馆座位", type="info", answer="目前有空余座位。"))
+        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假,时候", question="放寒假", type="info", answer="寒假以通知为准。"))
+        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位,图书馆", question="图书馆座位", type="info", answer="目前有空余座位。"))
     graph = build_knowledge_graph(db_session_factory, decider=FakeDecider([]), checkpointer=InMemorySaver())
     cfg = {"configurable": {"thread_id": "t-consec-k"}}
     first = graph.invoke({"user_input": "什么时候放寒假"}, cfg)

@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # BM25 稀疏模型本地快照目录：HF 手动拉取的 Qdrant/bm25 解压快照；
     # 非空 → embeddings 用 specific_model_path 直接加载（默认空=走 HF）。中文须配合 jieba 分词注入
     bm25_local_path: str = ""
+    # M17A（BUG-004）三档检索相关性下限：初值保守，T8 用 S5 评测集实测校准后回写并记基准
+    keyword_min_score: float = 4.0  # Tier3 关键词分：≥2 关键词命中（单关键词 2 分被切，防沾边误召回）
+    dense_min_sim: float = 0.35  # Tier2 余弦 sim 下限（校准前初值）
+    qdrant_min_score: float = 0.0  # Tier1 RRF 融合分下限（分数量级待 T8 探明后定，0=暂不过滤）
     # 登录鉴权：JWT 密钥（演示环境默认值 ≥32 字节，生产必须改）与过期分钟数
     jwt_secret: str = DEFAULT_JWT_SECRET
     jwt_expire_minutes: int = 1440

@@ -312,7 +312,7 @@ def test_chat_sources_kb_hit(api_client):
     r = api_client.post(
         "/api/chat",
         headers=stu,
-        json={"thread_id": conv["thread_id"], "msg": "什么时候放寒假？"},
+        json={"thread_id": conv["thread_id"], "msg": "怎么选课退课"},
     )
     assert r.status_code == 200
     data = r.json()

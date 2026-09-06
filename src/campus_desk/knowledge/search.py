@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from campus_desk.config import settings
 from campus_desk.db.models import KnowledgeEntry
 from campus_desk.knowledge import embeddings, vector_store
 
@@ -21,11 +22,16 @@ _MAX_RESULTS = 3
 
 
 def search_knowledge(session_factory, text: str, domain: str | None = None) -> list[dict]:
-    """三档降级检索，返回结构一致。domain 可选，缩小范围（向后兼容，默认不过滤）。"""
+    """三档降级检索，返回结构一致。domain 可选，缩小范围（向后兼容，默认不过滤）。
+
+    M17A（BUG-004）：各档先按 settings 相关性下限过滤再返回非空——滤空即落入
+    下一档 / 最终走追问或转人工，不再"沾边硬答"。
+    """
     # Tier1：Qdrant 混合检索
     if vector_store.is_available():
         try:
             hits = vector_store.hybrid_search(text, top_k=_MAX_RESULTS, domain=domain)
+            hits = [h for h in hits if (h.get("score") or 0.0) >= settings.qdrant_min_score]
             if hits:
                 return hits
         except Exception:  # noqa: BLE001, S110 — Qdrant 检索失败→降级，不应静默记录
@@ -33,6 +39,7 @@ def search_knowledge(session_factory, text: str, domain: str | None = None) -> l
     # Tier2：MySQL 稠密向量 + numpy 余弦（保语义，不退回纯关键词）
     try:
         hits = _mysql_dense_search(session_factory, text, domain)
+        hits = [h for h in hits if (h.get("score") or 0.0) >= settings.dense_min_sim]
         if hits:
             return hits
     except embeddings.EmbeddingUnavailable:
@@ -55,7 +62,7 @@ def _keyword_search(session_factory, text: str, domain: str | None = None) -> li
                 score += 2
         if row.question and row.question in text:
             score += 1
-        if score > 0:
+        if score >= settings.keyword_min_score:  # M17A：单关键词(2分)不再沾边入选
             scored.append((score, row))
     scored.sort(key=lambda x: x[0], reverse=True)
     return [_row_to_dict(r, score=float(sc)) for sc, r in scored[:_MAX_RESULTS]]

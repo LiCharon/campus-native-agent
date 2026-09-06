@@ -30,7 +30,7 @@ def _seed_knowledge(db_session_factory):
         s.add(
             KnowledgeEntry(
                 domain="教务",
-                keywords="校历,寒假",
+                keywords="校历,寒假,时候",
                 question="什么时候放寒假？",
                 type="info",
                 answer="寒假以学校通知为准。",

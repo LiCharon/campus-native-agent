@@ -17,10 +17,9 @@
 """
 
 from sqlalchemy import func, select
+from test_admin import _login
 
 from campus_desk.db.models import KnowledgeEntry
-
-from test_admin import _login
 
 Q_PREFIX = "分页测试问题"
 

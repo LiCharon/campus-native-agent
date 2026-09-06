@@ -188,8 +188,8 @@ def test_two_consecutive_new_questions_not_swallowed(db_session_factory):
 
     with db_session_factory() as s, s.begin():
         s.query(KnowledgeEntry).delete()
-        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假", question="放寒假", type="info", answer="寒假以通知为准。"))
-        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位", question="图书馆座位", type="info", answer="目前有空余座位。"))
+        s.add(KnowledgeEntry(domain="教务", keywords="校历,寒假,时候", question="放寒假", type="info", answer="寒假以通知为准。"))
+        s.add(KnowledgeEntry(domain="图书馆", keywords="开放时间,座位,图书馆", question="图书馆座位", type="info", answer="目前有空余座位。"))
 
     entry = build_entry_graph(classifier=KClassifier())
     kg = build_knowledge_graph(db_session_factory, decider=ClarifyDecider(), checkpointer=InMemorySaver())
