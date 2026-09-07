@@ -29,7 +29,7 @@ from campus_desk import usage
 from campus_desk.llm import build_llm
 from campus_desk.prompt_guard import UNTRUSTED_INPUT_NOTICE, wrap_input
 
-DATASET = Path(__file__).parent / "dataset" / "zjut_judge.json"
+DATASET = Path(__file__).parent / "dataset" / "judge" / "zjut_judge.json"
 CHAIN_DATASET = Path(__file__).parent / "dataset" / "chain" / "zjut_chain.json"
 REPORT = ROOT / "scripts" / "judge_report.json"
 
