@@ -32,6 +32,7 @@ CALL_POINT_INTENT = "intent"
 CALL_POINT_DECIDE = "decide"
 CALL_POINT_TOOL_SELECT = "tool_select"
 CALL_POINT_GENERATE = "generate"  # M17A：知识答案生成节点
+CALL_POINT_JUDGE = "judge"  # E1：LLM-as-judge 离线评测（可按调用点过滤，不与业务链路混淆）
 CALL_POINT_UNKNOWN = "unknown"
 
 _TAG_PREFIX = "call_point:"

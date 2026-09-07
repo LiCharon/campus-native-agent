@@ -1,0 +1,22 @@
+{
+ "meta": {
+  "version": 1,
+  "date": "2026-09-07",
+  "note": "E1 LLM-as-judge 数据集：ref 引用链路集用例（题面/gold 单源复用，不复制）；inline 为库外拒答用例。k-009/k-010 排除——gold 62/119 不在种子库（结构性死 gold，见 STATUS 链路回归记录）。",
+  "gate_discipline": "零门：judge 分数只进报表，规则断言（链路 runner）仍是唯一上线闸门"
+ },
+ "cases": [
+  {"ref": "zjut-chain-k-001", "expected_refusal": false},
+  {"ref": "zjut-chain-k-002", "expected_refusal": false},
+  {"ref": "zjut-chain-k-003", "expected_refusal": false},
+  {"ref": "zjut-chain-k-004", "expected_refusal": false},
+  {"ref": "zjut-chain-k-005", "expected_refusal": false},
+  {"ref": "zjut-chain-k-006", "expected_refusal": false},
+  {"ref": "zjut-chain-k-007", "expected_refusal": false},
+  {"ref": "zjut-chain-k-008", "expected_refusal": true},
+  {"query": "怎么申请教室借用", "expected_refusal": true},
+  {"query": "怎么申请出国读博", "expected_refusal": true},
+  {"query": "量子力学怎么学", "expected_refusal": true},
+  {"query": "怎么办护照去旅游", "expected_refusal": true}
+ ]
+}
