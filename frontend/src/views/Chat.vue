@@ -191,7 +191,8 @@ function canFeedback(msg) {
 
 function srcDetail(sources) {
   const kb = sources.filter((s) => s.type === 'kb')
-  if (kb.length) return `来源：${kb[0].refId} ${kb[0].detail}`
+  // BUG-005：后端 SourceItem 序列化蛇形 ref_id（非驼峰），曾读成 undefined
+  if (kb.length) return `来源：${kb[0].ref_id} ${kb[0].detail}`
   const t = sources.find((s) => s.type === 'tool')
   return t ? `来源：${t.detail}` : ''
 }
