@@ -1,0 +1,301 @@
+{
+ "meta": {
+  "gate": "零门：judge 只进报表，不拦发布",
+  "dataset": "E:\\桌面\\资料\\CampusDesk\\campus-desk\\src\\campus_desk\\eval\\dataset\\judge\\zjut_judge.json"
+ },
+ "aggregate": {
+  "n": 12,
+  "judge_errors": 0,
+  "means": {
+   "faithfulness": 5.0,
+   "relevance": 4.83,
+   "format": 5.0
+  },
+  "distribution": {
+   "faithfulness": {
+    "5": 12
+   },
+   "relevance": {
+    "5": 10,
+    "4": 2
+   },
+   "format": {
+    "5": 12
+   }
+  },
+  "refusal_n": 5,
+  "refusal_ok_n": 5
+ },
+ "rows": [
+  {
+   "case_id": "zjut-chain-k-001",
+   "query": "什么时候放寒假？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "寒假起止时间以学校官方通知为准，通常在 1 月中旬至 2 月下旬。[1]",
+   "hits": [
+    1
+   ],
+   "hit_texts": [
+    {
+     "id": 1,
+     "question": "什么时候放寒假？",
+     "answer": "寒假起止时间以学校官方通知为准，通常在 1 月中旬至 2 月下旬。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "回答严格基于检索材料，直接切题并包含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-002",
+   "query": "考试冲突怎么申请缓考？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "申请缓考需准备缓考申请表及相关证明，流程为：先到学院教务办盖章，再到教务处备案；请在考前 3 个工作日内办理 [1]。",
+   "hits": [
+    4
+   ],
+   "hit_texts": [
+    {
+     "id": 4,
+     "question": "考试冲突怎么申请缓考？",
+     "answer": "材料：缓考申请表+证明。流程：学院教务办盖章 → 教务处备案。时间：考前 3 个工作日内。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "助手回答严格基于检索材料，直答切题，且包含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-003",
+   "query": "图书馆座位怎么预约？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "根据知识库，图书馆座位预约可通过“图书馆公众号/座位预约系统”进行，需选座签到，离座时需释放座位 [1]。",
+   "hits": [
+    15
+   ],
+   "hit_texts": [
+    {
+     "id": 15,
+     "question": "图书馆座位怎么预约？",
+     "answer": "图书馆公众号/座位预约系统，选座签到，离座需释放。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "回答严格基于检索材料，直接回应问题，且包含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-004",
+   "query": "一卡通丢了怎么补办？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "一卡通丢失后，请携带身份证和学生证到服务大厅窗口办理挂失并补办，工本费按公示标准收取。[1]",
+   "hits": [
+    25,
+    26,
+    27
+   ],
+   "hit_texts": [
+    {
+     "id": 25,
+     "question": "一卡通丢了怎么补办？",
+     "answer": "材料：身份证+学生证。流程：服务大厅窗口挂失并补办，工本费按公示标准。"
+    },
+    {
+     "id": 26,
+     "question": "一卡通怎么充值？",
+     "answer": "线上：校园服务号 → 一卡通充值；线下：服务大厅充值窗口。"
+    },
+    {
+     "id": 27,
+     "question": "学生证怎么补办？",
+     "answer": "材料：一寸照+申请表。流程：学院盖章 → 教务处制证，周期约一周。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "助手回答严格基于检索材料直答，格式规范包含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-005",
+   "query": "校医院在哪？几点开？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "校医院位于生活区，门诊时间为 8:00-17:00，急诊 24 小时。[1]",
+   "hits": [
+    33
+   ],
+   "hit_texts": [
+    {
+     "id": 33,
+     "question": "校医院在哪？几点开？",
+     "answer": "校医院位于生活区，门诊 8:00-17:00，急诊 24 小时。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "回答严格基于检索材料，直答切题且含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-006",
+   "query": "宿舍断网了怎么办？",
+   "expected_refusal": false,
+   "expected_outcome": "answer",
+   "outcome": "answer",
+   "reply": "宿舍断网时，可以先尝试重启路由器与终端设备；如果仍然无法恢复，请联系信息中心报障电话或通过工单平台提交报修。[1]",
+   "hits": [
+    24,
+    7
+   ],
+   "hit_texts": [
+    {
+     "id": 24,
+     "question": "宿舍断网了怎么办？",
+     "answer": "先重启路由器与终端；仍不通 → 信息中心报障电话/工单平台报修。"
+    },
+    {
+     "id": 7,
+     "question": "宿舍东西坏了找谁？",
+     "answer": "报修请走后勤报修平台（如公众号后勤服务），线上提交即可。"
+    }
+   ],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "回答严格基于检索材料中的标准答案，直答切题且包含引用标注。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-007",
+   "query": "体育馆几点开门？",
+   "expected_refusal": false,
+   "expected_outcome": "ask",
+   "outcome": "ask",
+   "reply": "您问的是哪个校区的体育馆？",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 4,
+    "format": 5
+   },
+   "reason": "助手追问校区是合理澄清，无编造事实，追问类格式不适用记5。",
+   "error": null
+  },
+  {
+   "case_id": "zjut-chain-k-008",
+   "query": "研究生导师怎么选？",
+   "expected_refusal": true,
+   "expected_outcome": "handoff",
+   "outcome": "ask",
+   "reply": "请问你是什么学院的？、你是想了解选导师的流程还是选择建议？",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "追问澄清属于恰当拒答，无编造内容，格式不适用记5。",
+   "error": null
+  },
+  {
+   "case_id": "inline-refusal-8",
+   "query": "怎么申请教室借用",
+   "expected_refusal": true,
+   "expected_outcome": "handoff",
+   "outcome": "ask",
+   "reply": "您要借用哪个校区的教室？、用于什么活动？",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "追问澄清，无编造事实，恰当拒答且格式不适用",
+   "error": null
+  },
+  {
+   "case_id": "inline-refusal-9",
+   "query": "怎么申请出国读博",
+   "expected_refusal": true,
+   "expected_outcome": "handoff",
+   "outcome": "ask",
+   "reply": "请问你想申请哪个国家或地区的博士？、你的专业背景是什么？",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "合理追问澄清，未编造内容，符合拒答预期。",
+   "error": null
+  },
+  {
+   "case_id": "inline-refusal-10",
+   "query": "量子力学怎么学",
+   "expected_refusal": true,
+   "expected_outcome": "handoff",
+   "outcome": "ask",
+   "reply": "你是哪个专业的？、你目前是本科生还是研究生？",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 4,
+    "format": 5
+   },
+   "reason": "要求学生澄清专业和年级，属于合理追问，无编造内容。",
+   "error": null
+  },
+  {
+   "case_id": "inline-refusal-11",
+   "query": "怎么办护照去旅游",
+   "expected_refusal": true,
+   "expected_outcome": "handoff",
+   "outcome": "handoff",
+   "reply": "已记录您的问题，工作人员会尽快回复（当前为演示环境）。",
+   "hits": [],
+   "hit_texts": [],
+   "scores": {
+    "faithfulness": 5,
+    "relevance": 5,
+    "format": 5
+   },
+   "reason": "恰当转人工，无编造，格式不适用",
+   "error": null
+  }
+ ]
+}

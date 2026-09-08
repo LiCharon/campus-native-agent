@@ -46,6 +46,13 @@ pythonpath = ["src"]
 target-version = "py314"
 line-length = 100
 
+[tool.ruff.lint.per-file-ignores]
+# scripts/bench_fullchain.py 的 import 顺序是**刻意的**：必须先 os.environ 设好
+# BENCH_URL/QDRANT_URL 再 import campus_desk（settings 在导入期读库地址），
+# 故不能让 I001 重排（自动修复会静默把配置读错库）；RUF100 是这些 E402 noqa
+# 在本配置下未启用而产生的连带告警，一并豁免。
+"scripts/bench_fullchain.py" = ["I001", "RUF100"]
+
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI 惯用写法：Depends/Query 在参数默认值中调用（B008 官方豁免配置）；
 # require_roles / require_perm 是"工厂返回依赖"的标准模式（deps.py）
