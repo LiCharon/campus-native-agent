@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src"))
 
 from campus_desk import usage
+from campus_desk.knowledge.generator import NOT_FOUND_MARK
 from campus_desk.llm import build_llm
 from campus_desk.prompt_guard import UNTRUSTED_INPUT_NOTICE, wrap_input
 
@@ -153,7 +154,13 @@ def _parse_judge_json(content: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     dims = ("faithfulness", "relevance", "format")
-    if not all(isinstance(data.get(d), (int, float)) and 0 <= data[d] <= 5 for d in dims):
+    # bool 是 int 子类：不排除的话 LLM 返回 true 会被当成 1 分（2026-09-08 review）
+    if not all(
+        isinstance(data.get(d), (int, float))
+        and not isinstance(data.get(d), bool)
+        and 0 <= data[d] <= 5
+        for d in dims
+    ):
         return None
     return {d: data[d] for d in dims} | {"reason": str(data.get("reason", ""))}
 
@@ -196,8 +203,12 @@ def _run_case(kg, judge_llm, case: dict, factory=None) -> dict:
 
 
 def _refusal_ok(row: dict) -> bool:
-    """合格拒答：未找到文案 或 追问/转人工 outcome（不硬发沾边内容即算）。"""
-    return row["outcome"] in ("ask", "handoff") or "未在知识库中找到" in row["reply"]
+    """合格拒答：未找到文案 或 追问/转人工 outcome（不硬发沾边内容即算）。
+
+    未找到文案引用 generator.NOT_FOUND_MARK 常量——此前本处与 prompt 各自硬编码
+    同一串，改任一处都会让判据静默失效（2026-09-08 code review 发现）。
+    """
+    return row["outcome"] in ("ask", "handoff") or NOT_FOUND_MARK in row["reply"]
 
 
 def _aggregate(rows: list[dict]) -> dict:
@@ -207,7 +218,10 @@ def _aggregate(rows: list[dict]) -> dict:
         for d in ("faithfulness", "relevance", "format")
     }
     dist = {d: dict(Counter(r["scores"][d] for r in scored)) for d in ("faithfulness", "relevance", "format")}
-    refusal_rows = [r for r in rows if r["expected_refusal"] and r["error"] is None]
+    # 拒答是纯规则判定（outcome/reply），与 judge LLM 无关：按 error 过滤会在
+    # judge 挂掉时把 refusal_n 归零，白丢一份不依赖 LLM 的指标。
+    # 只排除链路本身没跑出回复的行（那种无内容可判）。
+    refusal_rows = [r for r in rows if r["expected_refusal"] and r.get("reply")]
     return {
         "n": len(rows),
         "judge_errors": sum(1 for r in rows if r["error"] is not None),
@@ -233,13 +247,17 @@ def main() -> None:
     print(f"judge 集 {len(cases)} 条（拒答 {sum(1 for c in cases if c['expected_refusal'])} 条）\n")
 
     rows = []
-    for c in cases:
-        row = _run_case(kg, judge_llm, c, factory=factory)
-        mark = "ERR" if row["error"] else (
-            f"F{row['scores']['faithfulness']}/R{row['scores']['relevance']}/G{row['scores']['format']}"
-        )
-        print(f"- {row['case_id']} [{mark}] {row['query'][:24]}")
-        rows.append(row)
+    # route="eval" 包住整轮：judge 触发的 decide/generate 也归属评测，
+    # 否则它们与线上流量同名（call_point=generate、route 空），
+    # 成本报表里"过滤 judge"会过滤不干净（2026-09-08 review）
+    with usage.usage_ctx(route="eval"):
+        for c in cases:
+            row = _run_case(kg, judge_llm, c, factory=factory)
+            mark = "ERR" if row["error"] else (
+                f"F{row['scores']['faithfulness']}/R{row['scores']['relevance']}/G{row['scores']['format']}"
+            )
+            print(f"- {row['case_id']} [{mark}] {row['query'][:24]}")
+            rows.append(row)
 
     agg = _aggregate(rows)
     report = {"meta": {"gate": "零门：judge 只进报表，不拦发布", "dataset": str(DATASET)}, "aggregate": agg, "rows": rows}

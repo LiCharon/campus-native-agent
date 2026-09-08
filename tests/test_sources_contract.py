@@ -26,7 +26,12 @@ def test_source_item_serializes_snake_case_ref_id():
 
 
 def test_frontend_reads_snake_case_ref_id():
-    """前端不得再按驼峰 refId 取来源编号。"""
+    """前端不得再按驼峰 refId 取来源编号，且必须在来源行里真的读它。
+
+    `assert "ref_id" in src` 过弱——文件任意位置出现字符串即通过。收紧为断言
+    来源行构造处确实按 kb[0].ref_id 取值（2026-09-08 review）。
+    """
     src = _CHAT_VUE.read_text(encoding="utf-8")
     assert ".refId" not in src
-    assert "ref_id" in src
+    assert "kb[0].ref_id" in src, "来源行须按蛇形取值（BUG-005 回归）"
+    assert "来源：" in src

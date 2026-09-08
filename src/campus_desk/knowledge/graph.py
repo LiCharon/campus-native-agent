@@ -15,7 +15,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from campus_desk.knowledge.decide import ClarifyDecider
-from campus_desk.knowledge.generator import generate_answer
+from campus_desk.knowledge.generator import NOT_FOUND_MARK, generate_answer
 from campus_desk.knowledge.search import assemble_answer, search_knowledge
 
 MAX_CLARIFY_ROUNDS = 3
@@ -53,9 +53,13 @@ class _Deps:
 
 
 def _generate_reply(deps: _Deps, hits: list[dict], question: str) -> str:
-    """M17A-T6：LLM 整合生成答案；任何异常回退模板拼装（可用性不退化）。"""
+    """M17A-T6：LLM 整合生成答案；任何异常/空输出回退模板拼装（可用性不退化）。
+
+    空输出兜底：LLM 返回空 content 时 .strip() 得 ""，原样透传会产出空气泡
+    （2026-09-08 code review 发现）。此处一并兜住。
+    """
     try:
-        return deps.generator(hits, question)
+        return (deps.generator(hits, question) or "").strip() or assemble_answer(hits)
     except Exception:  # noqa: BLE001 — LLM 超时/解析错/不可用一律回退模板
         return assemble_answer(hits)
 
@@ -86,17 +90,24 @@ def _make_collect(deps: _Deps):
         text = " ".join(history + [raw]) if (consumed and history) else raw
 
         hits = search_knowledge(deps.session_factory, text)
+        # 生成层说"材料不足"时按未命中处理（2026-09-08 code review 修复）：
+        # 检索阈值杀不掉的硬假阳性（如"教室借用"sim 0.64）设计上交给生成层兜底，
+        # 但兜底只改文案、仍记 outcome=answer ⇒ 不追问、不 handoff、不落 bad_case、
+        # 来源 chip 照挂，等于兜底没落地。故在此回落未命中分支。
+        missed = not hits
         if hits:
             answer = _generate_reply(deps, hits, text)
-            return {
-                "reply": answer,
-                "outcome": "answer",
-                "finished": True,
-                "pending_question": None,
-                "history": history,
-                "_consumed": consumed,
-                "hits": [h["id"] for h in hits],
-            }
+            missed = NOT_FOUND_MARK in answer
+            if not missed:
+                return {
+                    "reply": answer,
+                    "outcome": "answer",
+                    "finished": True,
+                    "pending_question": None,
+                    "history": history,
+                    "_consumed": consumed,
+                    "hits": [h["id"] for h in hits],
+                }
 
         rounds = state.get("rounds", 0) + 1
         decision = deps.decider.decide(history, text, missed=True, recent=state.get("recent"))
